@@ -195,7 +195,10 @@ export function buildCardSvg(opts: CardOptions): string {
   const stats: Array<{ label: string; value: string }> = [
     { label: "TOKENS", value: opts.tokens },
   ];
-  if (!hide.has("spend")) stats.push({ label: "SPEND", value: opts.spend });
+  // "EQUIV. COST", not "SPEND": these tokens were mostly bought under subscriptions where
+  // no per-token charge ever happened, and a card embedded in a README repeats whatever it
+  // claims to every visitor. The `spend` key stays as-is — it is the public query-param name.
+  if (!hide.has("spend")) stats.push({ label: "EQUIV. COST", value: opts.spend });
   if (!hide.has("streak")) stats.push({ label: "STREAK", value: opts.streak });
 
   const mix = hide.has("mix") ? [] : opts.mix;
@@ -388,7 +391,9 @@ export function buildCardSvg(opts: CardOptions): string {
             "font-size": 8.5,
             fill: pal.legend,
           },
-          text: `${m.agent} ${m.pct}%`,
+          // Rounded here rather than by the caller: the legend sits at 8.5px in a fixed
+          // slot, and one unrounded float ("98.677606%") overruns into the next entry.
+          text: `${m.agent} ${Math.round(m.pct)}%`,
         }),
       );
     });

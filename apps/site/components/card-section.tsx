@@ -3,7 +3,7 @@
 import { CopyButton } from "@/components/copy-button";
 import { SectionHeading } from "@/components/section-heading";
 import { useSiteState } from "@/components/site-state";
-import { buildCardSvg } from "@/lib/card-svg";
+import { buildCardSvg } from "@tokencard/core";
 import { DEFAULT_HANDLE, OWN_STATS, QUERY_OPTIONS } from "@/lib/sample-data";
 import styles from "./card-section.module.css";
 
@@ -111,6 +111,13 @@ export function CardSection() {
       <p className={styles.footnote}>
         Markdown will not place two images on one line. The HTML form is the only way to
         sit cards side by side in a README, which is why the compact width exists.
+      </p>
+
+      <p className={styles.footnote}>
+        <strong>Equiv. cost is not what you paid.</strong> It is what these tokens would
+        cost at list API rates. Most agent usage runs under a subscription where no
+        per-token charge ever happens, and models with no public price — bundled or
+        self-hosted ones — are counted in the token total but left out of the figure.
       </p>
     </section>
   );

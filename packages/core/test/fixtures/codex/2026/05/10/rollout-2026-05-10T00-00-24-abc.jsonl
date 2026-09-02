@@ -1,0 +1,5 @@
+{"timestamp":"2026-05-10T00:00:24.724Z","type":"session_meta","payload":{"id":"abc","model_provider":"openai"}}
+{"timestamp":"2026-05-10T00:00:25.000Z","type":"turn_context","payload":{"turn_id":"t1","model":"gpt-5.5"}}
+{"timestamp":"2026-05-10T00:01:00.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"limit_id":"codex"}}}
+{"timestamp":"2026-05-10T00:02:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":400,"output_tokens":100,"total_tokens":1100}}}}
+{"timestamp":"2026-05-10T00:03:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":3000,"cached_input_tokens":1200,"output_tokens":300,"total_tokens":3300}}}}

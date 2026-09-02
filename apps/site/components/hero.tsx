@@ -14,7 +14,7 @@ export function Hero() {
     <section className={styles.hero}>
       <div className={styles.left}>
         <div className={styles.chips}>
-          <span className={styles.chipInk}>5 agents</span>
+          <span className={styles.chipInk}>3 agents</span>
           <span className={styles.chipYellow}>parsed locally</span>
           <span className={styles.chipWhite}>no prompts sent</span>
         </div>
@@ -26,9 +26,9 @@ export function Hero() {
         </h1>
 
         <p className={styles.lede}>
-          tokencard reads your local Claude Code, Codex, Gemini CLI, Copilot CLI and
-          OpenCode logs and prints one embeddable card. Sign in with GitHub to prove the
-          handle is yours and switch on the hosted endpoint.
+          tokencard reads your local Claude Code, Codex and OpenCode logs and renders one
+          embeddable card straight into your repo. Nothing is uploaded — the card is a file
+          you commit.
         </p>
 
         <div className={styles.install}>

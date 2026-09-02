@@ -23,19 +23,19 @@ export type BoardRow = {
   tokens: string;
   spend: string;
   streak: string;
-  /** Four agent-mix percentages, in claude-code / codex / gemini-cli / copilot-cli order. */
-  mix: [number, number, number, number];
+  /** Agent-mix percentages, in claude-code / codex / opencode order. */
+  mix: [number, number, number];
 };
 
 export const BOARD_ROWS: BoardRow[] = [
-  { user: "mirak",    tokens: "8.91B", spend: "$2,740", streak: "211d", mix: [64, 18, 10, 8] },
-  { user: "p-han",    tokens: "7.32B", spend: "$2,118", streak: "96d",  mix: [41, 34, 15, 10] },
-  { user: "sunnyv",   tokens: "6.05B", spend: "$1,802", streak: "154d", mix: [72, 9, 12, 7] },
-  { user: "dlacey",   tokens: "4.24B", spend: "$1,284", streak: "63d",  mix: [58, 21, 12, 9] },
-  { user: "ottoline", tokens: "3.88B", spend: "$1,090", streak: "41d",  mix: [30, 44, 14, 12] },
-  { user: "kmerrit",  tokens: "3.10B", spend: "$946",   streak: "88d",  mix: [55, 20, 18, 7] },
-  { user: "bex_c",    tokens: "2.47B", spend: "$714",   streak: "129d", mix: [48, 12, 26, 14] },
-  { user: "nlundq",   tokens: "1.96B", spend: "$538",   streak: "22d",  mix: [22, 51, 9, 18] },
+  { user: "mirak",    tokens: "8.91B", spend: "$2,740", streak: "211d", mix: [64, 18, 18] },
+  { user: "p-han",    tokens: "7.32B", spend: "$2,118", streak: "96d",  mix: [41, 34, 25] },
+  { user: "sunnyv",   tokens: "6.05B", spend: "$1,802", streak: "154d", mix: [72, 9, 19] },
+  { user: "dlacey",   tokens: "4.24B", spend: "$1,284", streak: "63d",  mix: [58, 21, 21] },
+  { user: "ottoline", tokens: "3.88B", spend: "$1,090", streak: "41d",  mix: [30, 44, 26] },
+  { user: "kmerrit",  tokens: "3.10B", spend: "$946",   streak: "88d",  mix: [55, 20, 25] },
+  { user: "bex_c",    tokens: "2.47B", spend: "$714",   streak: "129d", mix: [48, 12, 40] },
+  { user: "nlundq",   tokens: "1.96B", spend: "$538",   streak: "22d",  mix: [22, 51, 27] },
 ];
 
 export const QUERY_OPTIONS = [
@@ -56,9 +56,7 @@ export const PRIVACY_TESTS = [
 export const AGENT_BREAKDOWN = [
   { name: "claude-code", pct: "58%", w: "58%", color: "#C6FF3D", tokens: "2.46B", cost: "$742.10" },
   { name: "codex",       pct: "21%", w: "21%", color: "#FF5C3D", tokens: "890M",  cost: "$268.40" },
-  { name: "gemini-cli",  pct: "12%", w: "12%", color: "#FFD23D", tokens: "508M",  cost: "$151.20" },
-  { name: "copilot-cli", pct: "9%",  w: "9%",  color: "#101010", tokens: "382M",  cost: "$122.90" },
-  { name: "opencode",    pct: "0%",  w: "0%",  color: "#101010", tokens: "—",     cost: "—" },
+  { name: "opencode",    pct: "21%", w: "21%", color: "#8A8A82", tokens: "902M",  cost: "—" },
 ];
 
 /** The signed-in developer's own card figures — what the hero preview and the endpoint show. */
@@ -70,8 +68,7 @@ export const OWN_STATS = {
   mix: [
     { agent: "claude-code", pct: 58 },
     { agent: "codex",       pct: 21 },
-    { agent: "gemini-cli",  pct: 12 },
-    { agent: "copilot-cli", pct: 9 },
+    { agent: "opencode",    pct: 21 },
   ],
 };
 
@@ -141,14 +138,12 @@ export const PEAK_MASK = Array.from({ length: 24 }, (_, i) =>
   i >= 14 && i <= 19 ? "#FF5C3D" : "transparent",
 );
 
-/** Sanitise a handle the way the input and the endpoint both must. */
-export function sanitizeHandle(raw: string): string {
-  return raw.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 16) || "dev";
-}
+/** Re-exported so components have one import for placeholder data and handle rules alike. */
+export { sanitizeHandle } from "@tokencard/core";
 
 /**
  * Year-in-review tiles. Kept separate from OWN_STATS because the recap page has no
- * card constraints and shows unabbreviated figures — recap spend is "$1,284.60"
+ * card constraints and shows unabbreviated figures — the recap cost is "$1,284.60"
  * where the card rounds it to "$1,284".
  */
 export const RECAP_TILES = {

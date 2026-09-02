@@ -1,0 +1,27 @@
+{
+  "name": "@tokencard/cli",
+  "version": "0.1.0",
+  "description": "Read your local AI coding agent logs and render a stat card into your repo.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "tokencard": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@tokencard/core": "0.1.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
