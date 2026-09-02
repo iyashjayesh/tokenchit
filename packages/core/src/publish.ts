@@ -1,5 +1,6 @@
 import type { Stats } from "./aggregate.js";
 import { sanitizeHandle } from "./card-svg.js";
+import type { AgentId } from "./types.js";
 
 /**
  * What leaves the machine, and nothing else.
@@ -23,7 +24,14 @@ export type Payload = {
   lastDay: string;
   agents: { agent: string; tokens: number }[];
   models: { model: string; tokens: number; equivCostUsd: number; priced: boolean }[];
-  days: { day: string; tokens: number }[];
+  /**
+   * One row per day per agent, carrying both tokens and cost.
+   *
+   * Split this finely so the board can window every column on the same range. A lifetime
+   * cost total beside a seven-day token total is the kind of mismatch people misread and
+   * then quote at each other.
+   */
+  days: { day: string; agent: AgentId; tokens: number; equivCostUsd: number }[];
   clientVersion: string;
 };
 
@@ -55,7 +63,14 @@ export function buildPayload(
       equivCostUsd: round(m.equivCostUsd, 2),
       priced: m.priced,
     })),
-    days: [...stats.byDay.entries()].map(([day, tokens]) => ({ day, tokens })),
+    days: [...stats.dayAgent.entries()].flatMap(([day, agents]) =>
+      [...agents.entries()].map(([agent, cell]) => ({
+        day,
+        agent,
+        tokens: cell.tokens,
+        equivCostUsd: round(cell.equivCostUsd, 4),
+      })),
+    ),
     clientVersion: opts.clientVersion,
   };
 }

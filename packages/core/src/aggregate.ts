@@ -17,6 +17,14 @@ export type Stats = {
   /** Local `YYYY-MM-DD` to tokens, ascending. */
   byDay: Map<string, number>;
   byModel: Map<string, number>;
+  /**
+   * Local day -> agent -> that agent's usage on that day.
+   *
+   * Exists so the board's window filters can be honest. Windowing tokens from a per-day
+   * series while cost and agent mix come from lifetime totals would put a week of tokens
+   * beside a year of spend in the same row.
+   */
+  dayAgent: Map<string, Map<AgentId, { tokens: number; equivCostUsd: number }>>;
   /** Tokens per hour of the local day, 0-23. */
   byHour: number[];
   /** Tokens per weekday, Monday first. */
@@ -60,6 +68,7 @@ export async function aggregate(
 
   const byDay = new Map<string, number>();
   const byModel = new Map<string, number>();
+  const dayAgent = new Map<string, Map<AgentId, { tokens: number; equivCostUsd: number }>>();
   const byHour: number[] = Array(24).fill(0);
   const byWeekday: number[] = Array(7).fill(0);
   const heat: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
@@ -91,6 +100,17 @@ export async function aggregate(
 
     const day = localDay(e.ts);
     byDay.set(day, (byDay.get(day) ?? 0) + n);
+
+    let agents = dayAgent.get(day);
+    if (!agents) {
+      agents = new Map();
+      dayAgent.set(day, agents);
+    }
+    const cell = agents.get(e.agent) ?? { tokens: 0, equivCostUsd: 0 };
+    cell.tokens += n;
+    // An unpriced model contributes tokens and no cost, exactly as it does in the headline.
+    cell.equivCostUsd += cost ?? 0;
+    agents.set(e.agent, cell);
 
     // Monday-first, because a week of work reads Mon-Sun; JS counts from Sunday.
     const wd = (e.ts.getDay() + 6) % 7;
@@ -128,6 +148,7 @@ export async function aggregate(
     firstDay: days[0] ?? null,
     lastDay: days[days.length - 1] ?? null,
     byDay: new Map(days.map((d) => [d, byDay.get(d) as number])),
+    dayAgent: new Map(days.map((d) => [d, dayAgent.get(d) as Map<AgentId, { tokens: number; equivCostUsd: number }>])),
     byModel: new Map([...byModel].sort((a, b) => b[1] - a[1])),
     byHour,
     byWeekday,

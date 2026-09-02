@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 import { validatePayload, type Payload } from "@tokencard/core";
 
 import { userFromRequest } from "@/lib/auth";
-import { pool, transaction } from "@/lib/db";
+import { DEFAULT_WINDOW, isWindow } from "@/lib/board";
+import { readBoard } from "@/lib/board-query";
+import { transaction } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -83,10 +85,21 @@ export async function POST(req: Request) {
       await client.query("DELETE FROM user_days WHERE user_id = $1", [user.id]);
       if (payload.days.length > 0) {
         await client.query(
-          `INSERT INTO user_days (user_id, day, tokens)
-           SELECT $1, d.day::date, d.tokens::bigint
-           FROM jsonb_to_recordset($2::jsonb) AS d(day text, tokens bigint)`,
-          [user.id, JSON.stringify(payload.days)],
+          `INSERT INTO user_days (user_id, day, agent, tokens, cost_usd)
+           SELECT $1, d.day::date, d.agent, d.tokens::bigint, d.cost::numeric
+           FROM jsonb_to_recordset($2::jsonb)
+                AS d(day text, agent text, tokens bigint, cost numeric)`,
+          [
+            user.id,
+            JSON.stringify(
+              payload.days.map((d) => ({
+                day: d.day,
+                agent: d.agent,
+                tokens: d.tokens,
+                cost: d.equivCostUsd,
+              })),
+            ),
+          ],
         );
       }
 
@@ -111,36 +124,17 @@ export async function POST(req: Request) {
 }
 
 /**
- * The board, as far as it goes in this change: enough to prove the write path end to end.
- * `window` sums the daily series rather than reading a stored aggregate, which is why
- * user_days exists.
+ * The board. The query itself lives in lib/board-query.ts because the server-rendered page
+ * runs the same one — see the note there on why the page does not fetch this endpoint.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const days = Math.min(3650, Math.max(1, Number(url.searchParams.get("days") ?? 365)));
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 20)));
+  const requested = url.searchParams.get("window");
+  const window = isWindow(requested) ? requested : DEFAULT_WINDOW;
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 25)));
 
   try {
-    const { rows } = await pool.query(
-      `SELECT u.handle, u.tier, SUM(d.tokens)::bigint AS tokens
-       FROM users u
-       JOIN user_days d ON d.user_id = u.id
-       WHERE d.day >= (CURRENT_DATE - $1::int)
-       GROUP BY u.handle, u.tier
-       ORDER BY tokens DESC
-       LIMIT $2`,
-      [days, limit],
-    );
-
-    return NextResponse.json({
-      window: `${days}d`,
-      rows: rows.map((r, i) => ({
-        rank: i + 1,
-        handle: r.handle,
-        tier: r.tier,
-        tokens: Number(r.tokens),
-      })),
-    });
+    return NextResponse.json({ window, rows: await readBoard(window, limit) });
   } catch (err) {
     console.error("board query failed", err);
     return NextResponse.json({ error: "could not read board" }, { status: 500 });
