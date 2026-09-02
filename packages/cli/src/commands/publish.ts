@@ -8,6 +8,7 @@ import {
 import { readAll } from "@tokencard/core/adapters";
 
 import { flag, has } from "../args.js";
+import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { bold, dim, fail, green, say, warn, yellow } from "../ui.js";
 import { post } from "../net.js";
@@ -24,7 +25,10 @@ const DEFAULT_API = "https://tokencard.dev";
 export async function publish(argv: string[], version: string): Promise<number> {
   const config = (await readConfig()) ?? DEFAULT_CONFIG;
 
-  const rawHandle = flag(argv, "--handle") ?? config.handle;
+  // Signing in settles the handle: publishing under a different name would be rejected by
+  // the server anyway, so the local default follows the account.
+  const auth = await readAuth();
+  const rawHandle = flag(argv, "--handle") ?? auth?.handle ?? config.handle;
   const handle = sanitizeHandle(rawHandle);
   const api = (flag(argv, "--api") ?? process.env["TOKENCARD_API"] ?? DEFAULT_API).replace(/\/$/, "");
   const dryRun = has(argv, "--dry-run");
@@ -64,7 +68,7 @@ export async function publish(argv: string[], version: string): Promise<number> 
   say();
   say(dim(`  publishing ${payload.days.length} days to ${api}`));
 
-  const res = await post(`${api}/api/submissions`, body);
+  const res = await post(`${api}/api/submissions`, body, auth?.token);
 
   if (!res.ok) {
     fail(`rejected by ${api} (${res.status})`);
@@ -75,10 +79,10 @@ export async function publish(argv: string[], version: string): Promise<number> 
 
   say(`${green("✓")} published as ${bold(`@${payload.handle}`)} ${dim(`(tier: ${res.body?.tier ?? "cli"})`)}`);
 
-  if ((res.body?.tier ?? "cli") === "cli") {
+  if ((res.body?.tier ?? "cli") === "cli" && !auth) {
     say();
     say(dim("  This row is marked unverified on the board — nothing has proved the handle"));
-    say(dim("  is yours. `tokencard login` will upgrade it once GitHub sign-in ships."));
+    say(dim("  is yours. Run `tokencard login` to upgrade it."));
   }
   say();
 

@@ -20,14 +20,22 @@ export type PostResult = {
 /** A submission is small and a leaderboard is not worth hanging a terminal over. */
 const TIMEOUT_MS = 15_000;
 
-export async function post(url: string, body: string): Promise<PostResult> {
+/** POST JSON, optionally authenticated. */
+export async function post(
+  url: string,
+  body: string,
+  token?: string,
+): Promise<PostResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
       body,
       signal: controller.signal,
     });
@@ -54,6 +62,40 @@ export async function post(url: string, body: string): Promise<PostResult> {
       status: 0,
       text: aborted ? `no response within ${TIMEOUT_MS / 1000}s` : String(err),
     };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * A form-encoded POST that expects JSON back. GitHub's device-flow endpoints take
+ * `application/x-www-form-urlencoded` and only return JSON if asked.
+ */
+export async function postForm(
+  url: string,
+  fields: Record<string, string>,
+): Promise<{ ok: boolean; status: number; body: Record<string, unknown> }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        accept: "application/json",
+        "user-agent": "tokencard-cli",
+      },
+      body: new URLSearchParams(fields).toString(),
+      signal: controller.signal,
+    });
+
+    const text = await res.text();
+    try {
+      return { ok: res.ok, status: res.status, body: JSON.parse(text) as Record<string, unknown> };
+    } catch {
+      return { ok: false, status: res.status, body: { error: text.slice(0, 200) } };
+    }
   } finally {
     clearTimeout(timer);
   }
