@@ -78,7 +78,6 @@ export function Leaderboard() {
                       <span className={styles.seg0} style={{ flex: r.mix[0] }} />
                       <span className={styles.seg1} style={{ flex: r.mix[1] }} />
                       <span className={styles.seg2} style={{ flex: r.mix[2] }} />
-                      <span className={styles.seg3} style={{ flex: r.mix[3] }} />
                     </div>
                   </td>
                   <td className={`${styles.num} ${styles.tokens}`}>{r.tokens}</td>

@@ -1,0 +1,11 @@
+{
+  "handle": "iyashjayesh",
+  "agents": [
+    "claude-code",
+    "codex",
+    "opencode"
+  ],
+  "output": "tokencard.svg",
+  "layout": "default",
+  "theme": "auto"
+}

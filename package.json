@@ -1,24 +1,21 @@
 {
-  "name": "tokencard-site",
-  "version": "0.1.0",
+  "name": "tokencard",
+  "version": "0.0.0",
   "private": true,
+  "description": "Turn your local AI coding agent logs into an embeddable stat card.",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.3.4",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
-  },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.4",
-    "typescript": "^5"
+    "build": "npm run build -w @tokencard/core && npm run build -w @tokencard/cli && npm run build -w tokencard-site",
+    "build:core": "npm run build -w @tokencard/core",
+    "dev": "npm run dev -w tokencard-site",
+    "test": "npm run build:core && npm run test -w @tokencard/core",
+    "cli": "node packages/cli/dist/index.js"
   }
 }

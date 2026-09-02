@@ -32,7 +32,7 @@ export function Recap() {
           <div className={styles.figure}>{RECAP_TILES.totalTokens}</div>
         </div>
         <div className={`${styles.tile} ${styles.tileWhite}`}>
-          <div className={styles.tileLabel}>total spend</div>
+          <div className={styles.tileLabel}>equiv. api cost</div>
           <div className={styles.figure}>{RECAP_TILES.totalSpend}</div>
         </div>
         <div className={`${styles.tile} ${styles.tileWhite}`}>

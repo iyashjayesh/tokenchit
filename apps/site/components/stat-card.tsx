@@ -27,7 +27,7 @@ export function StatCard() {
           <div className={styles.statValue}>{OWN_STATS.tokens}</div>
         </div>
         <div className={styles.stat}>
-          <div className={styles.statLabel}>SPEND</div>
+          <div className={styles.statLabel}>EQUIV. COST</div>
           <div className={styles.statValue}>{OWN_STATS.spend}</div>
         </div>
         <div className={styles.stat}>
