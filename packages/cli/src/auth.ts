@@ -1,0 +1,52 @@
+import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+
+/**
+ * Where the tokencard API key lives.
+ *
+ * Deliberately not `.tokencard.json` — that file is committed. Credentials belong in the
+ * user's config directory, on their machine, and nowhere a `git add -A` can reach.
+ */
+const authPath = (): string =>
+  join(
+    process.env["XDG_CONFIG_HOME"] ?? join(homedir(), ".config"),
+    "tokencard",
+    "auth.json",
+  );
+
+export type Auth = {
+  /** Our own API key. The GitHub token is never stored — see commands/login.ts. */
+  token: string;
+  handle: string;
+  api: string;
+  createdAt: string;
+};
+
+export async function readAuth(): Promise<Auth | null> {
+  try {
+    return JSON.parse(await readFile(authPath(), "utf8")) as Auth;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeAuth(auth: Auth): Promise<string> {
+  const path = authPath();
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(auth, null, 2)}\n`, "utf8");
+  // Written before anyone else can read it: 0600, owner only.
+  await chmod(path, 0o600);
+  return path;
+}
+
+export async function clearAuth(): Promise<boolean> {
+  try {
+    await rm(authPath());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const authFile = authPath;

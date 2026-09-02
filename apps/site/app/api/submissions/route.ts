@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { validatePayload, type Payload } from "@tokencard/core";
 
+import { userFromRequest } from "@/lib/auth";
 import { pool, transaction } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "rejected", reasons: errors }, { status: 422 });
   }
 
+  // A signed-in caller publishes as themselves, whatever the payload claims. Trusting the
+  // payload's handle for an authenticated request would let a valid key write to any row.
+  const auth = await userFromRequest(req);
+  if (auth && auth.handle.toLowerCase() !== payload.handle.toLowerCase()) {
+    return NextResponse.json(
+      { error: `signed in as @${auth.handle}, cannot publish as @${payload.handle}` },
+      { status: 403 },
+    );
+  }
+
   try {
     const result = await transaction(async (client) => {
       // An unverified submission may claim a handle nobody has verified. Once a GitHub login
@@ -41,7 +52,7 @@ export async function POST(req: Request) {
         `INSERT INTO users (handle) VALUES ($1)
          ON CONFLICT (handle) DO UPDATE SET updated_at = now()
          RETURNING id, tier`,
-        [payload.handle],
+        [auth?.handle ?? payload.handle],
       );
       const user = userRows[0]!;
 

@@ -61,6 +61,10 @@ tokencard sync
   --json                 print the aggregate instead of writing an SVG
   --dry-run              report what would be written, write nothing
 
+tokencard login          prove your GitHub handle (device flow, no password)
+tokencard logout         forget this machine
+tokencard whoami         who this machine is signed in as
+
 tokencard publish        the only command that uploads anything
   --dry-run              print the exact bytes and send nothing
   --api <url>            default https://tokencard.dev
@@ -111,8 +115,32 @@ of it, which `dryrun.exact` in the test suite enforces by comparing against what
 publish puts on the wire. The payload is aggregates only: totals, per-day token counts, agent
 and model ids. No prompts, no replies, no branch names, no paths.
 
-Until GitHub sign-in ships, submissions land as the unverified `cli` tier. Those rows appear
-on the board with a badge rather than being hidden — a transparency signal, not a gate.
+## Signing in
+
+```
+$ tokencard login
+  Open https://github.com/login/device
+  and enter  WDJB-MJHT
+✓ signed in as @octocat
+```
+
+GitHub's **device flow** — no password, no token to paste, and no localhost callback server,
+which matters because the usual OAuth-in-a-CLI approach breaks over SSH, in containers and on
+remote dev boxes: exactly where people run coding agents.
+
+**No scopes are requested.** GitHub answers `GET /user` for an unscoped token, and your login
+and numeric id are all we need.
+
+The GitHub token is handed to the server **once**, so that the server — not the client — is
+what asks GitHub who you are; a client that simply asserted `{"handle": "octocat"}` would be
+forgeable. It is then discarded, never written to disk on either side. What you keep is a
+tokencard API key in `~/.config/tokencard/auth.json`, mode `0600`, stored server-side only as
+a SHA-256 hash. Never in `.tokencard.json`, which is committed.
+
+Without signing in, submissions land as the unverified `cli` tier. Those rows appear on the
+board with a badge rather than being hidden — a transparency signal, not a gate. Signing in
+upgrades the handle to `verified`, and takes it over from any unverified row that claimed it
+first.
 
 ### Running the board locally
 
@@ -120,6 +148,7 @@ on the board with a badge rather than being hidden — a transparency signal, no
 npm run db:up        # Postgres 17 in Podman
 npm run db:migrate
 npm run dev
+npx @tokencard/cli login   --api http://localhost:3000
 npx @tokencard/cli publish --api http://localhost:3000
 ```
 

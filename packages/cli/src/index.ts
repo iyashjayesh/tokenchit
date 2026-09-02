@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 
 import { init } from "./commands/init.js";
+import { login, logout, whoami } from "./commands/login.js";
 import { publish } from "./commands/publish.js";
 import { recap } from "./commands/recap.js";
 import { sync } from "./commands/sync.js";
@@ -19,6 +20,10 @@ ${bold("tokencard")} — turn your local AI coding agent logs into a stat card
     --theme auto|light|dark
     --json                     print the aggregate instead of writing an SVG
     --dry-run                  report what would be written, write nothing
+
+  ${bold("tokencard login")}             prove your GitHub handle (device flow, no password)
+  ${bold("tokencard logout")}            forget this machine
+  ${bold("tokencard whoami")}            who this machine is signed in as
 
   ${bold("tokencard publish")}           the only command that uploads anything
     --dry-run                  print the exact bytes and send nothing
@@ -63,6 +68,12 @@ async function main(): Promise<number> {
       return recap(argv);
     case "publish":
       return publish(argv, cliVersion());
+    case "login":
+      return login(argv);
+    case "logout":
+      return logout();
+    case "whoami":
+      return whoami();
     default:
       fail(`unknown command: ${command}`);
       say(USAGE);
