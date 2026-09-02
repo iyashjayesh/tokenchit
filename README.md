@@ -183,7 +183,7 @@ to match.
 ## Repo layout
 
 ```
-apps/site/          Next.js marketing site (tokencard.dev)
+apps/site/          Next.js marketing site + the board API
 packages/core/      adapters, aggregation, price table, SVG builder
 packages/cli/       the tokencard binary
 docs/research.md    positioning, competitive landscape, infrastructure decisions
