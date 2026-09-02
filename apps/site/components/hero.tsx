@@ -5,7 +5,9 @@ import { StatCard } from "./stat-card";
 import { useSiteState } from "./site-state";
 import styles from "./hero.module.css";
 
-const INSTALL = "npx tokencard init";
+// Scoped, because the bare `tokencard` name on npm is a 2018 tombstone: it was published
+// and unpublished within a fortnight, and npm never lets an unpublished name be reused.
+const INSTALL = "npx @tokencard/cli init";
 
 export function Hero() {
   const { handle, setHandle } = useSiteState();
