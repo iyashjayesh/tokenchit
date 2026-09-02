@@ -5,6 +5,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { useSiteState } from "@/components/site-state";
 import { buildCardSvg } from "@tokencard/core";
 import { DEFAULT_HANDLE, OWN_STATS, QUERY_OPTIONS } from "@/lib/sample-data";
+import { SITE_URL } from "@/lib/site";
 import styles from "./card-section.module.css";
 
 /* The three variant cards are fixed artefacts of the sample handle, not the live one —
@@ -19,7 +20,7 @@ export function CardSection() {
 
   // A plain image, not a link. There is no per-user page to point at, and inventing one
   // would mean hosting exactly the surface the committed-SVG design exists to avoid.
-  const markdown = `![tokencard](https://tokencard.dev/api/card/${handle}.svg)`;
+  const markdown = `![tokencard](${SITE_URL}/api/card/${handle}.svg)`;
 
   /* The panel shows the origin elided so the two tags fit without scrolling; the
      clipboard gets the full URLs, which is what a README actually needs. */
@@ -27,8 +28,8 @@ export function CardSection() {
     `<img height="195" src="…/card/${handle}.svg">\n` +
     `<img height="195" src="…/card/${handle}.svg?layout=compact">`;
   const htmlCopied =
-    `<img height="195" src="https://tokencard.dev/api/card/${handle}.svg">\n` +
-    `<img height="195" src="https://tokencard.dev/api/card/${handle}.svg?layout=compact">`;
+    `<img height="195" src="${SITE_URL}/api/card/${handle}.svg">\n` +
+    `<img height="195" src="${SITE_URL}/api/card/${handle}.svg?layout=compact">`;
 
   return (
     <section id="card" className={styles.section}>
