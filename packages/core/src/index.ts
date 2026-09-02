@@ -14,3 +14,5 @@ export * from "./recap.js";
 export * from "./recap-svg.js";
 export * from "./pricing.js";
 export * from "./format.js";
+export * from "./publish.js";
+export * from "./validate.js";

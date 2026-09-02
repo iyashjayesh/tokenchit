@@ -1,0 +1,27 @@
+# Local Postgres for development. Nothing here is deployment config: the hosted database is
+# a separate decision (docs/research.md §4 recommends Neon, on the grounds that its idle
+# behaviour is auto-resume rather than a pause a human has to click out of).
+#
+#   npm run db:up       start it
+#   npm run db:migrate  apply migrations
+#   npm run db:reset    destroy the volume and start clean
+services:
+  db:
+    image: docker.io/library/postgres:17-alpine
+    container_name: tokencard-db
+    environment:
+      POSTGRES_USER: tokencard
+      POSTGRES_PASSWORD: tokencard
+      POSTGRES_DB: tokencard
+    ports:
+      - "5432:5432"
+    volumes:
+      - tokencard-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tokencard -d tokencard"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  tokencard-pgdata:

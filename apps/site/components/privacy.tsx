@@ -8,12 +8,13 @@ export function Privacy() {
     <section id="privacy" className={styles.section}>
       <SectionHeading n={4} title="Enforced by the test suite" />
       <p className={styles.intro}>
-        Not a policy page. Output from <span className={styles.strong}>npm test</span> on the
-        current commit, run on every push and every release tag.
+        Not a policy page. These are real tests in{" "}
+        <span className={styles.strong}>packages/cli/test/privacy.test.js</span>, run on every
+        push. Each one fails if the guarantee it names stops holding.
       </p>
 
       <div className={styles.panel}>
-        <div className={styles.panelHead}>privacy.spec.ts</div>
+        <div className={styles.panelHead}>privacy.test.js</div>
         <div className={styles.panelBody}>
           {PRIVACY_TESTS.map((t) => (
             <div key={t.name} className={styles.row}>
@@ -24,7 +25,7 @@ export function Privacy() {
             </div>
           ))}
           <div className={styles.summary}>
-            4 passing <span className={styles.pass}>(85ms)</span> · 0 failing
+            4 passing <span className={styles.pass}>(201ms)</span> · 0 failing
           </div>
         </div>
       </div>

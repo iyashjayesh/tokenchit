@@ -15,7 +15,12 @@
     "build": "npm run build -w @tokencard/core && npm run build -w @tokencard/cli && npm run build -w tokencard-site",
     "build:core": "npm run build -w @tokencard/core",
     "dev": "npm run dev -w tokencard-site",
-    "test": "npm run build:core && npm run test -w @tokencard/core",
-    "cli": "node packages/cli/dist/index.js"
+    "test": "npm run build:core && npm run build -w @tokencard/cli && npm run test -w @tokencard/core && npm run test -w @tokencard/cli",
+    "cli": "node packages/cli/dist/index.js",
+    "db:up": "podman compose -f compose.yaml up -d",
+    "db:down": "podman compose -f compose.yaml down",
+    "db:reset": "podman compose -f compose.yaml down -v && podman compose -f compose.yaml up -d",
+    "db:migrate": "node apps/site/db/migrate.mjs",
+    "db:psql": "podman exec -it tokencard-db psql -U tokencard -d tokencard"
   }
 }
