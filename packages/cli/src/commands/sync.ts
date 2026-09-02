@@ -1,5 +1,5 @@
-import { writeFile } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, relative, resolve } from "node:path";
 
 import {
   aggregate,
@@ -104,6 +104,8 @@ export async function sync(argv: string[]): Promise<number> {
     return 0;
   }
 
+  // `--out docs/card.svg` is a reasonable thing to ask for before docs/ exists.
+  await mkdir(dirname(target), { recursive: true });
   await writeFile(target, svg, "utf8");
   const rel = relative(process.cwd(), target);
   say(`${green("✓")} wrote ${bold(rel)} ${dim(`(${svg.length} bytes)`)}`);

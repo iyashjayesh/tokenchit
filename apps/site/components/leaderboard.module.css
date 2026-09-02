@@ -172,9 +172,6 @@
 .seg2 {
   background: var(--yellow);
 }
-.seg3 {
-  background: var(--surface);
-}
 
 .tokens {
   font-weight: 700;

@@ -85,8 +85,24 @@ const esc = (s: string) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+/**
+ * GitHub handles are up to 39 characters, so that is the cap — truncating at 16 would put a
+ * name on the card that is not the user's. Long handles are handled by shrinking the type
+ * (see `handleSize`), not by cutting the identity short.
+ */
 export function sanitizeHandle(raw: string): string {
-  return raw.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 16) || "dev";
+  return raw.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 39) || "dev";
+}
+
+/**
+ * Shrink the handle just enough to fit the card's width. JetBrains Mono advances roughly
+ * 0.6em per glyph, so a 39-character handle needs about 18px where the design's 20px suits
+ * the common short one. Short handles are untouched.
+ */
+export function handleSize(handle: string, base: number, available: number): number {
+  const chars = handle.length + 1; // the leading "@"
+  const fits = available / (chars * 0.6);
+  return Math.min(base, Math.floor(fits * 10) / 10);
 }
 
 /** "SYNCED 2H AGO" — the card always carries its last sync, because we cache for 4h. */
@@ -232,7 +248,7 @@ export function buildCardSvg(opts: CardOptions): string {
         x: g.handle.x,
         y: g.handle.y,
         "font-family": FONT,
-        "font-size": g.handle.size,
+        "font-size": handleSize(handle, g.handle.size, g.bar.track),
         "font-weight": 800,
         fill: pal.text,
       },
