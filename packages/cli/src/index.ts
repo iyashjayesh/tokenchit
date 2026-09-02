@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 
 import { init } from "./commands/init.js";
+import { publish } from "./commands/publish.js";
 import { recap } from "./commands/recap.js";
 import { sync } from "./commands/sync.js";
 import { bold, dim, fail, muteSqliteWarning, say } from "./ui.js";
@@ -19,6 +20,11 @@ ${bold("tokencard")} — turn your local AI coding agent logs into a stat card
     --json                     print the aggregate instead of writing an SVG
     --dry-run                  report what would be written, write nothing
 
+  ${bold("tokencard publish")}           the only command that uploads anything
+    --dry-run                  print the exact bytes and send nothing
+    --api <url>                default https://tokencard.dev
+    --handle <name>
+
   ${bold("tokencard recap")}             year in review: heatmap, models, totals
     --out <path>               default: tokencard-recap.svg
     --year <yyyy>              label the recap with a different year
@@ -28,6 +34,10 @@ ${bold("tokencard")} — turn your local AI coding agent logs into a stat card
 
 ${dim("Reads only local files. Makes no network requests.")}
 `;
+
+/** The version reported to the server, so a bad submission can be traced to a release. */
+const cliVersion = (): string =>
+  (createRequire(import.meta.url)("../package.json") as { version: string }).version;
 
 async function main(): Promise<number> {
   muteSqliteWarning();
@@ -40,8 +50,7 @@ async function main(): Promise<number> {
   }
 
   if (command === "--version" || command === "-v") {
-    const pkg = createRequire(import.meta.url)("../package.json") as { version: string };
-    say(pkg.version);
+    say(cliVersion());
     return 0;
   }
 
@@ -52,6 +61,8 @@ async function main(): Promise<number> {
       return sync(argv);
     case "recap":
       return recap(argv);
+    case "publish":
+      return publish(argv, cliVersion());
     default:
       fail(`unknown command: ${command}`);
       say(USAGE);

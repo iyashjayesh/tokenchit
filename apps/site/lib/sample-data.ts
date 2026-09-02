@@ -46,11 +46,18 @@ export const QUERY_OPTIONS = [
   { key: "cache",  def: "4h",      note: "clamped 4h–24h, same as the rest of the genre" },
 ];
 
+/**
+ * The real tests in packages/cli/test/privacy.test.js, by their real names. The section that
+ * renders this claims to be `npm test` output, so it has to stay in step with the suite —
+ * if a test is renamed there, rename it here. Durations are a representative run, not a
+ * live feed — the section says "run on every push", which is what CI does, and does not
+ * claim these numbers were measured just now.
+ */
 export const PRIVACY_TESTS = [
-  { name: "paths.hashed",       desc: "project paths hashed locally with a device-only salt; the salt never leaves disk", ms: "4ms" },
-  { name: "dryrun.exact",       desc: "--dry-run prints the byte-identical payload that would be uploaded",               ms: "11ms" },
-  { name: "payload.noContent",  desc: "no prompts, completions, file contents or diffs appear in any emitted field",      ms: "7ms" },
-  { name: "net.isolated",       desc: "build fails if any network call originates outside src/upload/",                   ms: "63ms" },
+  { name: "payload.noContent", desc: "no prompt, reply, branch or file content survives into an uploaded payload",   ms: "44ms" },
+  { name: "paths.absent",      desc: "no filesystem path is collected at all — not hashed, not truncated, absent",   ms: "35ms" },
+  { name: "dryrun.exact",      desc: "--dry-run prints the byte-identical body that a real publish puts on the wire", ms: "90ms" },
+  { name: "net.isolated",      desc: "no source file outside src/net.ts can open a socket",                          ms: "7ms" },
 ];
 
 export const AGENT_BREAKDOWN = [

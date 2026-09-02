@@ -61,6 +61,11 @@ tokencard sync
   --json                 print the aggregate instead of writing an SVG
   --dry-run              report what would be written, write nothing
 
+tokencard publish        the only command that uploads anything
+  --dry-run              print the exact bytes and send nothing
+  --api <url>            default https://tokencard.dev
+  --handle <name>
+
 tokencard recap
   --out <path>           default: tokencard-recap.svg
   --year <yyyy>          label the recap with a different year
@@ -93,6 +98,32 @@ Codex only records a running total per session, so its hours land on the session
 turn. Claude Code and OpenCode are exact to the message.
 
 `sync` writes the SVG and stops — committing on your behalf is your call, not the tool's.
+
+## Publishing to the board
+
+`publish` is the **only** command that sends anything anywhere. `sync` and `recap` are local
+forever, and there is deliberately no config switch to change that: `.tokencard.json` is a
+committed file, and a committed file must never be able to cause a network call on somebody
+else's machine.
+
+`--dry-run` prints the exact bytes that would be uploaded — the same string, not a rendering
+of it, which `dryrun.exact` in the test suite enforces by comparing against what a real
+publish puts on the wire. The payload is aggregates only: totals, per-day token counts, agent
+and model ids. No prompts, no replies, no branch names, no paths.
+
+Until GitHub sign-in ships, submissions land as the unverified `cli` tier. Those rows appear
+on the board with a badge rather than being hidden — a transparency signal, not a gate.
+
+### Running the board locally
+
+```bash
+npm run db:up        # Postgres 17 in Podman
+npm run db:migrate
+npm run dev
+npx @tokencard/cli publish --api http://localhost:3000
+```
+
+`npm run db:reset` destroys the volume and starts clean. `npm run db:psql` opens a shell.
 
 ## Repo layout
 
