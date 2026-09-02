@@ -1,0 +1,47 @@
+.ink,
+.lime,
+.yellow {
+  cursor: pointer;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Full-height button inside the hero install block. */
+.ink {
+  flex: none;
+  padding: 0 16px;
+  background: var(--ink);
+  border: 0;
+  color: var(--lime);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+.ink:hover {
+  background: var(--coral);
+  color: #fff;
+}
+
+/* Snippet panel headers: inverted fill on hover. */
+.lime,
+.yellow {
+  border: 2px solid var(--ink);
+  padding: 3px 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+}
+
+.lime {
+  background: var(--lime);
+}
+.lime:hover {
+  background: var(--ink);
+  color: var(--lime);
+}
+
+.yellow {
+  background: var(--yellow);
+}
+.yellow:hover {
+  background: var(--ink);
+  color: var(--yellow);
+}

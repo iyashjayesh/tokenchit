@@ -1,0 +1,83 @@
+.card {
+  width: 100%;
+  max-width: 495px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  padding: 22px 26px 16px;
+}
+
+.handle {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rule {
+  height: 1px;
+  background: var(--hairline);
+  margin: 16px 0 0;
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.stat {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.statLabel {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-faint);
+}
+
+.statValue {
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+}
+
+.mix {
+  display: flex;
+  height: 6px;
+  margin-top: 16px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 13px;
+  font-size: 8.5px;
+  color: var(--text-muted);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 6px;
+  height: 6px;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 17px;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--card-footer);
+}

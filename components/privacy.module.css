@@ -1,0 +1,79 @@
+.section {
+  padding: clamp(30px, 4vw, 56px) 0;
+  border-top: 3px solid var(--ink);
+}
+
+.intro {
+  margin: 0 0 24px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  max-width: 56em;
+}
+
+.strong {
+  font-weight: 700;
+}
+
+.panel {
+  border: 2px solid var(--ink);
+  background: var(--dark-bg);
+  box-shadow: 6px 6px 0 var(--lime);
+}
+
+.panelHead {
+  padding: 9px 13px;
+  border-bottom: 2px solid var(--lime);
+  color: var(--lime);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.panelBody {
+  padding: 16px 14px;
+  font-size: 12.5px;
+  line-height: 2.05;
+  color: #fff;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.tick {
+  color: var(--lime);
+  font-weight: 800;
+}
+
+.name {
+  color: var(--lime);
+  font-weight: 700;
+}
+
+.desc {
+  flex: 1;
+  min-width: 220px;
+  color: var(--dark-body);
+}
+
+.ms {
+  color: var(--dark-dim);
+}
+
+.summary {
+  margin-top: 14px;
+  padding-top: 14px;
+  /* the one rule colour in the panel with no token; scoped here on purpose */
+  border-top: 1px solid #3A3A34;
+  color: var(--dark-body);
+}
+
+.pass {
+  color: var(--lime);
+  font-weight: 700;
+}

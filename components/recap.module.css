@@ -1,0 +1,343 @@
+.section {
+  padding: clamp(30px, 4vw, 56px) 0;
+  border-top: 3px solid var(--ink);
+}
+
+.intro {
+  margin: 0 0 26px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  max-width: 56em;
+}
+
+/* ── (a) stat tiles ──────────────────────────────────────────────────────── */
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.tile {
+  flex: 1 1 210px;
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 18px;
+}
+
+.tileLime {
+  background: var(--lime);
+}
+
+.tileWhite {
+  background: var(--surface);
+}
+
+.tileCoral {
+  background: var(--coral);
+  color: #fff;
+}
+
+.tileLabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* Only the white tiles dim their label; the lime and coral tiles inherit. */
+.tileWhite .tileLabel {
+  color: var(--text-dim);
+}
+
+.figure {
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(28px, 3.2vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.figureModel {
+  font-size: clamp(15px, 1.6vw, 19px);
+  font-weight: 700;
+  padding-top: 8px;
+}
+
+/* ── (b) per-agent breakdown ─────────────────────────────────────────────── */
+
+.agentPanel {
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--yellow);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.panelTitle {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 14px;
+}
+
+/* Wide tables scroll rather than reflow — there are no media queries here. */
+.scroll {
+  overflow-x: auto;
+}
+
+.agentTable {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.th {
+  padding: 0 12px 9px;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.colAgent {
+  padding: 0 12px 9px 0;
+  width: 150px;
+}
+
+.colNum {
+  width: 100px;
+  text-align: right;
+}
+
+.colLast {
+  padding: 0 0 9px 12px;
+  width: 100px;
+  text-align: right;
+}
+
+.agentRow {
+  border-top: 2px solid var(--ink);
+}
+
+.td {
+  padding: 11px 12px;
+}
+
+.tdName {
+  padding: 11px 12px 11px 0;
+  font-weight: 700;
+}
+
+.tdTokens {
+  text-align: right;
+  font-weight: 700;
+}
+
+.tdCost {
+  padding: 11px 0 11px 12px;
+  text-align: right;
+  color: var(--text-muted);
+}
+
+.shareCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shareTrack {
+  flex: 1;
+  height: 14px;
+  border: 2px solid var(--ink);
+  background: var(--surface-alt);
+}
+
+.shareFill {
+  display: block;
+  height: 100%;
+}
+
+.sharePct {
+  width: 34px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ── (c) activity by day and hour ────────────────────────────────────────── */
+
+.heatPanel {
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 20px;
+}
+
+.heatHead {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* The panel title sits inside the flex head here, so its own margin is dropped. */
+.heatHead .panelTitle {
+  margin-bottom: 0;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--ink);
+}
+
+.grid {
+  min-width: 600px;
+}
+
+.heatRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+
+.dayLabel {
+  width: 36px;
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.tray {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--ink);
+  border: 2px solid var(--ink);
+}
+
+.cell {
+  flex: 1;
+  min-width: 0;
+  height: 17px;
+}
+
+.rowRight {
+  width: 96px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
+.miniBar {
+  width: 44px;
+  height: 7px;
+  background: var(--grid);
+  border: 1px solid var(--ink);
+}
+
+.miniFill {
+  display: block;
+  height: 100%;
+}
+
+.rowTotal {
+  width: 44px;
+  text-align: right;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.axis {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.axisSpacer {
+  width: 36px;
+  flex: none;
+}
+
+.axisMid {
+  flex: 1;
+}
+
+/* No gap here, so the coral peak block reads as one continuous bar. */
+.peakBar {
+  display: flex;
+  padding: 0 2px;
+}
+
+.peakCell {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+}
+
+.hourRow {
+  display: flex;
+  gap: 2px;
+  padding: 9px 2px 0;
+}
+
+.hour {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.axisTotal {
+  width: 96px;
+  flex: none;
+  text-align: right;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.caption {
+  margin: 18px 0 0;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.captionSwatch {
+  display: inline-block;
+  width: 18px;
+  height: 4px;
+  background: var(--coral);
+  vertical-align: middle;
+  margin-right: 6px;
+}

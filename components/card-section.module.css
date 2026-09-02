@@ -1,0 +1,178 @@
+.section {
+  padding: clamp(30px, 4vw, 56px) 0;
+  border-top: 3px solid var(--ink);
+}
+
+.intro {
+  margin: 0 0 30px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  max-width: 56em;
+}
+
+.strong {
+  font-weight: 700;
+}
+
+/* ── rows ─────────────────────────────────────────────────────────────────── */
+
+.rowA,
+.rowB {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(18px, 3vw, 36px);
+  margin-bottom: 32px;
+}
+
+.rowB {
+  align-items: flex-start;
+}
+
+.rowC {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* ── card columns ─────────────────────────────────────────────────────────── */
+
+.cardCol {
+  flex: 0 1 503px;
+  min-width: min(100%, 280px);
+}
+
+.compactCol {
+  flex: 0 1 348px;
+  min-width: min(100%, 260px);
+}
+
+.label {
+  margin-bottom: 12px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* The builder emits width/height attributes; these rules make the card fluid down
+   to 375px while capping it at its true pixel size. */
+.card svg,
+.compactCard svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.card svg {
+  max-width: 495px;
+}
+
+.compactCard svg {
+  max-width: 340px;
+}
+
+/* ── query options panel ──────────────────────────────────────────────────── */
+
+.optionsPanel {
+  flex: 1 1 380px;
+  min-width: min(100%, 280px);
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.strip,
+.snippetStrip {
+  padding: 9px 13px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--surface-alt);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.table tr {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.key,
+.def,
+.note {
+  padding: 9px 13px;
+}
+
+.key {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.def {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* ── snippet panels ───────────────────────────────────────────────────────── */
+
+.snippet,
+.snippetYellow {
+  flex: 1 1 420px;
+  min-width: min(100%, 280px);
+  border: 2px solid var(--ink);
+  background: var(--surface);
+}
+
+.snippet {
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.snippetYellow {
+  box-shadow: 5px 5px 0 var(--yellow);
+}
+
+.snippetStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.codeMd,
+.codeHtml {
+  display: block;
+  padding: 15px 13px;
+  /* <code> would otherwise fall back to the browser's default monospace face. */
+  font-family: inherit;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.codeMd {
+  font-size: 12.5px;
+}
+
+.codeHtml {
+  font-size: 12px;
+}
+
+.footnote {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}

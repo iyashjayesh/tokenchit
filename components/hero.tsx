@@ -1,0 +1,68 @@
+"use client";
+
+import { CopyButton } from "./copy-button";
+import { StatCard } from "./stat-card";
+import { useSiteState } from "./site-state";
+import styles from "./hero.module.css";
+
+const INSTALL = "npx tokencard init";
+
+export function Hero() {
+  const { handle, setHandle } = useSiteState();
+
+  return (
+    <section className={styles.hero}>
+      <div className={styles.left}>
+        <div className={styles.chips}>
+          <span className={styles.chipInk}>5 agents</span>
+          <span className={styles.chipYellow}>parsed locally</span>
+          <span className={styles.chipWhite}>no prompts sent</span>
+        </div>
+
+        <h1 className={styles.h1}>
+          Receipts for
+          <br />
+          your <span className={styles.robots}>robots.</span>
+        </h1>
+
+        <p className={styles.lede}>
+          tokencard reads your local Claude Code, Codex, Gemini CLI, Copilot CLI and
+          OpenCode logs and prints one embeddable card. Sign in with GitHub to prove the
+          handle is yours and switch on the hosted endpoint.
+        </p>
+
+        <div className={styles.install}>
+          <code className={styles.command}>
+            <span className={styles.prompt}>$ </span>
+            {INSTALL}
+            <span className={styles.cursor}>▌</span>
+          </code>
+          <CopyButton
+            value={INSTALL}
+            variant="ink"
+            idleLabel="copy"
+            copiedLabel="copied"
+          />
+        </div>
+      </div>
+
+      <div className={styles.right}>
+        <div className={styles.previewRow}>
+          <span className={styles.label}>live preview</span>
+        </div>
+
+        <StatCard />
+
+        <div className={styles.handleRow}>
+          <span className={styles.label}>handle</span>
+          <input
+            className={styles.input}
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            spellCheck={false}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}

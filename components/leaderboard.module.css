@@ -1,0 +1,193 @@
+.section {
+  padding: clamp(30px, 4vw, 56px) 0;
+  border-top: 3px solid var(--ink);
+}
+
+/* Rotated yellow sticker sitting after the h2 in the section heading. */
+.sticker {
+  padding: 4px 8px;
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-1.5deg);
+}
+
+.intro {
+  margin: 0 0 24px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  max-width: 56em;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filter,
+.filterActive {
+  padding: 7px 12px;
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.filter {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.filterActive {
+  background: var(--ink);
+  color: var(--lime);
+  box-shadow: 3px 3px 0 var(--lime);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+/* min-width keeps the six columns intact; the wrapper scrolls instead of reflowing. */
+.table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.table th {
+  padding: 11px 12px;
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: 12px;
+}
+
+.head {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.wRank {
+  width: 64px;
+}
+.wMix {
+  width: 190px;
+}
+.wTokens {
+  width: 100px;
+}
+.wSpend {
+  width: 110px;
+}
+.wStreak {
+  width: 90px;
+}
+
+.num {
+  text-align: right;
+}
+
+.row,
+.rowOwn {
+  border-top: 2px solid var(--ink);
+}
+
+.row {
+  background: var(--surface);
+}
+
+/* The signed-in developer's own row. */
+.rowOwn {
+  background: var(--tint-lime);
+}
+
+.rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  border: 2px solid var(--ink);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.dev {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.handle {
+  font-weight: 700;
+}
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  background: var(--lime);
+  border: 1.5px solid var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.bar {
+  display: flex;
+  height: 12px;
+  border: 1.5px solid var(--ink);
+  overflow: hidden;
+}
+
+/* Board palette — deliberately not the card's greyscale mix bar. */
+.seg0 {
+  background: var(--lime);
+}
+.seg1 {
+  background: var(--coral);
+}
+.seg2 {
+  background: var(--yellow);
+}
+.seg3 {
+  background: var(--surface);
+}
+
+.tokens {
+  font-weight: 700;
+}
+
+.streak {
+  color: var(--coral);
+  font-weight: 700;
+}
+
+.foot {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}

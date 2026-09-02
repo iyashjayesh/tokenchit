@@ -1,0 +1,118 @@
+.section {
+  padding: clamp(30px, 4vw, 56px) 0;
+  border-top: 3px solid var(--ink);
+}
+
+.intro {
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  max-width: 56em;
+}
+
+.githubChip {
+  padding: 1px 5px;
+  background: var(--lime);
+  border: 1.5px solid var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--yellow);
+}
+
+.table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.headRow {
+  background: var(--surface-alt);
+  border-bottom: 2px solid var(--ink);
+}
+
+.th {
+  padding: 11px 12px;
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.colTier {
+  width: 170px;
+}
+
+.colMethod {
+  width: 180px;
+}
+
+.thAlert {
+  color: var(--coral);
+}
+
+.row,
+.rowDivided {
+  vertical-align: top;
+}
+
+.rowDivided {
+  border-bottom: 2px solid var(--ink);
+}
+
+.rowTinted {
+  background: var(--tint-lime);
+}
+
+.td {
+  padding: 16px 12px;
+}
+
+.chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 2px solid var(--ink);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.chipGrid {
+  background: var(--grid);
+}
+
+.chipLime {
+  background: var(--lime);
+}
+
+.chipYellow {
+  background: var(--yellow);
+}
+
+.method {
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.proves {
+  line-height: 1.7;
+}
+
+.doesNotProve {
+  color: var(--alert);
+  line-height: 1.7;
+}
+
+.footnote {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}

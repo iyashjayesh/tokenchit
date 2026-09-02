@@ -1,0 +1,159 @@
+/**
+ * Placeholder sample data, ported verbatim from the design prototype
+ * (design_handoff_tokencard_site/Tokencard Site v2.dc.html, class Component).
+ *
+ * Every figure here is realistic individual-developer sample data, not a real user.
+ * The real app replaces this with the board rows for the selected window and the
+ * signed-in user's own totals, mix, sync timestamp and verification tier.
+ */
+
+export const DEFAULT_HANDLE = "dlacey";
+
+/** Heatmap ramp, low to high. */
+export const RAMP = ["#F5F4EE", "#E7F5BE", "#C6FF3D", "#FFD23D", "#FF5C3D"] as const;
+
+/** Rank 1–3 medal fills. */
+export const MEDALS = ["#FFD23D", "#E4E2D8", "#F0B37E"] as const;
+
+export const WINDOWS = ["this year", "last 30d", "last 7d", "all time"] as const;
+export type Window = (typeof WINDOWS)[number];
+
+export type BoardRow = {
+  user: string;
+  tokens: string;
+  spend: string;
+  streak: string;
+  /** Four agent-mix percentages, in claude-code / codex / gemini-cli / copilot-cli order. */
+  mix: [number, number, number, number];
+};
+
+export const BOARD_ROWS: BoardRow[] = [
+  { user: "mirak",    tokens: "8.91B", spend: "$2,740", streak: "211d", mix: [64, 18, 10, 8] },
+  { user: "p-han",    tokens: "7.32B", spend: "$2,118", streak: "96d",  mix: [41, 34, 15, 10] },
+  { user: "sunnyv",   tokens: "6.05B", spend: "$1,802", streak: "154d", mix: [72, 9, 12, 7] },
+  { user: "dlacey",   tokens: "4.24B", spend: "$1,284", streak: "63d",  mix: [58, 21, 12, 9] },
+  { user: "ottoline", tokens: "3.88B", spend: "$1,090", streak: "41d",  mix: [30, 44, 14, 12] },
+  { user: "kmerrit",  tokens: "3.10B", spend: "$946",   streak: "88d",  mix: [55, 20, 18, 7] },
+  { user: "bex_c",    tokens: "2.47B", spend: "$714",   streak: "129d", mix: [48, 12, 26, 14] },
+  { user: "nlundq",   tokens: "1.96B", spend: "$538",   streak: "22d",  mix: [22, 51, 9, 18] },
+];
+
+export const QUERY_OPTIONS = [
+  { key: "layout", def: "default", note: "default (495px) or compact (340px)" },
+  { key: "theme",  def: "auto",    note: "auto follows GitHub dark mode; force light or dark" },
+  { key: "agents", def: "all",     note: "comma-separated allowlist, e.g. claude-code,codex" },
+  { key: "hide",   def: "—",       note: "drop any of spend, streak, mix from the card" },
+  { key: "cache",  def: "4h",      note: "clamped 4h–24h, same as the rest of the genre" },
+];
+
+export const PRIVACY_TESTS = [
+  { name: "paths.hashed",       desc: "project paths hashed locally with a device-only salt; the salt never leaves disk", ms: "4ms" },
+  { name: "dryrun.exact",       desc: "--dry-run prints the byte-identical payload that would be uploaded",               ms: "11ms" },
+  { name: "payload.noContent",  desc: "no prompts, completions, file contents or diffs appear in any emitted field",      ms: "7ms" },
+  { name: "net.isolated",       desc: "build fails if any network call originates outside src/upload/",                   ms: "63ms" },
+];
+
+export const AGENT_BREAKDOWN = [
+  { name: "claude-code", pct: "58%", w: "58%", color: "#C6FF3D", tokens: "2.46B", cost: "$742.10" },
+  { name: "codex",       pct: "21%", w: "21%", color: "#FF5C3D", tokens: "890M",  cost: "$268.40" },
+  { name: "gemini-cli",  pct: "12%", w: "12%", color: "#FFD23D", tokens: "508M",  cost: "$151.20" },
+  { name: "copilot-cli", pct: "9%",  w: "9%",  color: "#101010", tokens: "382M",  cost: "$122.90" },
+  { name: "opencode",    pct: "0%",  w: "0%",  color: "#101010", tokens: "—",     cost: "—" },
+];
+
+/** The signed-in developer's own card figures — what the hero preview and the endpoint show. */
+export const OWN_STATS = {
+  tokens: "4.24B",
+  spend: "$1,284",
+  streak: "63d",
+  syncedAt: "SYNCED 2H AGO",
+  mix: [
+    { agent: "claude-code", pct: 58 },
+    { agent: "codex",       pct: 21 },
+    { agent: "gemini-cli",  pct: 12 },
+    { agent: "copilot-cli", pct: 9 },
+  ],
+};
+
+export type HeatRow = {
+  day: string;
+  cells: string[];
+  share: string;
+  total: string;
+  barColor: string;
+  labelColor: string;
+};
+
+/**
+ * Seeded LCG — deterministic, so the server and client renders are byte-identical
+ * and no hydration mismatch is possible. Ported unchanged from the prototype.
+ *
+ * Day totals are derived from the UNROUNDED score, not from the quantised colour
+ * level: quantising first collapses several days onto identical figures, which
+ * reads as a rendering bug.
+ */
+function buildHeatmap(): HeatRow[] {
+  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  let s = 20260901;
+  const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+
+  const rows = days.map((day, di) => {
+    const weekend = di > 4 ? 0.35 : 1;
+    const cells: string[] = [];
+    let score = 0;
+    for (let h = 0; h < 24; h++) {
+      const peak =
+        Math.exp(-Math.pow(h - 16, 2) / 26) +
+        0.45 * Math.exp(-Math.pow(h - 10.5, 2) / 12);
+      const v = peak * weekend * (0.6 + rnd() * 0.8);
+      score += v;
+      cells.push(RAMP[Math.min(4, Math.max(0, Math.round(v * 4.2)))]);
+    }
+    return { day, cells, score };
+  });
+
+  const max = Math.max(...rows.map((r) => r.score));
+  const sum = rows.reduce((a, r) => a + r.score, 0);
+
+  return rows.map((r) => {
+    const tk = 4.24 * (r.score / sum);
+    return {
+      day: r.day,
+      cells: r.cells,
+      share: Math.round((r.score / max) * 100) + "%",
+      total: tk >= 1 ? tk.toFixed(2) + "B" : Math.round(tk * 1000) + "M",
+      barColor: r.score === max ? "#FF5C3D" : "#C6FF3D",
+      labelColor: r.score === max ? "#101010" : "#8A8A82",
+    };
+  });
+}
+
+/** Evaluated once at module scope — pure and deterministic. */
+export const HEATMAP: HeatRow[] = buildHeatmap();
+
+/** Hour labels every third hour, aligned to their columns. */
+export const HOUR_LABELS = Array.from({ length: 24 }, (_, i) =>
+  i % 3 === 0 ? String(i).padStart(2, "0") : "",
+);
+
+/** Continuous coral peak bar spanning hour columns 14–19. */
+export const PEAK_MASK = Array.from({ length: 24 }, (_, i) =>
+  i >= 14 && i <= 19 ? "#FF5C3D" : "transparent",
+);
+
+/** Sanitise a handle the way the input and the endpoint both must. */
+export function sanitizeHandle(raw: string): string {
+  return raw.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 16) || "dev";
+}
+
+/**
+ * Year-in-review tiles. Kept separate from OWN_STATS because the recap page has no
+ * card constraints and shows unabbreviated figures — recap spend is "$1,284.60"
+ * where the card rounds it to "$1,284".
+ */
+export const RECAP_TILES = {
+  totalTokens: "4.24B",
+  totalSpend: "$1,284.60",
+  topModel: "claude-sonnet-4-5",
+  longestStreak: "63d",
+};
