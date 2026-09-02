@@ -154,6 +154,22 @@ npx @tokencard/cli publish --api http://localhost:3000
 
 `npm run db:reset` destroys the volume and starts clean. `npm run db:psql` opens a shell.
 
+### Deploying the database
+
+The migrations are plain Postgres and run anywhere. Two things to know before pointing them
+at a managed host:
+
+- **On Supabase, `003_rls.sql` is not optional.** Supabase exposes every `public` table
+  through PostgREST using the anon key, which is public by design. Without row level security
+  enabled, that key would read `api_tokens` and the whole submissions history. The migration
+  enables RLS with no policies, which closes that surface entirely and changes nothing for
+  our server, which connects directly as the table owner.
+- **Free Supabase projects pause after 7 days of low activity** and need a human to click
+  *Resume* in the dashboard, with a 90-day window before the backup expires. A few requests a
+  day is enough to avoid it, so it matters for a quiet project rather than a busy one. This is
+  why [`docs/research.md`](./docs/research.md) §4 recommends Neon, whose idle behaviour is
+  scale-to-zero with automatic resume.
+
 ## Repo layout
 
 ```

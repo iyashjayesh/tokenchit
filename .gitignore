@@ -45,3 +45,6 @@ packages/*/dist
 
 # scratch space for local verification
 .scratch/
+
+# local MCP server config — personal tooling, not project setup
+.mcp.json
