@@ -1,7 +1,6 @@
 import { SectionHeading } from "@/components/section-heading";
 import {
   AGENT_BREAKDOWN,
-  DEFAULT_HANDLE,
   HEATMAP,
   HOUR_LABELS,
   PEAK_MASK,
@@ -22,7 +21,7 @@ export function Recap() {
     <section id="recap" className={styles.section}>
       <SectionHeading n={5} title="Year in review" tone="coral" />
       <p className={styles.intro}>
-        A static recap page at tokencard.dev/u/{DEFAULT_HANDLE}/2026. Same
+        <code>tokencard recap</code> renders this as a second committable SVG. Same
         data, no card constraints.
       </p>
 

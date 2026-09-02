@@ -17,6 +17,12 @@ export type Stats = {
   /** Local `YYYY-MM-DD` to tokens, ascending. */
   byDay: Map<string, number>;
   byModel: Map<string, number>;
+  /** Tokens per hour of the local day, 0-23. */
+  byHour: number[];
+  /** Tokens per weekday, Monday first. */
+  byWeekday: number[];
+  /** Tokens per [weekday][hour], Monday first — the recap heatmap. */
+  heat: number[][];
   byAgent: Map<AgentId, number>;
   /** Per-agent share of tokens, descending — feeds `segmentWidths()`. */
   mix: { agent: AgentId; pct: number }[];
@@ -54,6 +60,9 @@ export async function aggregate(
 
   const byDay = new Map<string, number>();
   const byModel = new Map<string, number>();
+  const byHour: number[] = Array(24).fill(0);
+  const byWeekday: number[] = Array(7).fill(0);
+  const heat: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
   const byAgent = new Map<AgentId, number>();
   const modelCost = new Map<string, number>();
   const pricedModels = new Set<string>();
@@ -82,6 +91,13 @@ export async function aggregate(
 
     const day = localDay(e.ts);
     byDay.set(day, (byDay.get(day) ?? 0) + n);
+
+    // Monday-first, because a week of work reads Mon-Sun; JS counts from Sunday.
+    const wd = (e.ts.getDay() + 6) % 7;
+    const hr = e.ts.getHours();
+    byHour[hr] = (byHour[hr] as number) + n;
+    byWeekday[wd] = (byWeekday[wd] as number) + n;
+    (heat[wd] as number[])[hr] = ((heat[wd] as number[])[hr] as number) + n;
     byModel.set(e.model, (byModel.get(e.model) ?? 0) + n);
     byAgent.set(e.agent, (byAgent.get(e.agent) ?? 0) + n);
 
@@ -113,6 +129,9 @@ export async function aggregate(
     lastDay: days[days.length - 1] ?? null,
     byDay: new Map(days.map((d) => [d, byDay.get(d) as number])),
     byModel: new Map([...byModel].sort((a, b) => b[1] - a[1])),
+    byHour,
+    byWeekday,
+    heat,
     byAgent,
     mix,
     windows,

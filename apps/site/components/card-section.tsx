@@ -17,9 +17,9 @@ const COMPACT_SVG = buildCardSvg({ ...SAMPLE, layout: "compact", theme: "light" 
 export function CardSection() {
   const { handle } = useSiteState();
 
-  const markdown =
-    `[![tokencard](https://tokencard.dev/api/card/${handle}.svg)]` +
-    `(https://tokencard.dev/u/${handle})`;
+  // A plain image, not a link. There is no per-user page to point at, and inventing one
+  // would mean hosting exactly the surface the committed-SVG design exists to avoid.
+  const markdown = `![tokencard](https://tokencard.dev/api/card/${handle}.svg)`;
 
   /* The panel shows the origin elided so the two tags fit without scrolling; the
      clipboard gets the full URLs, which is what a README actually needs. */

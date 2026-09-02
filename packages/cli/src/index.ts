@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 
 import { init } from "./commands/init.js";
+import { recap } from "./commands/recap.js";
 import { sync } from "./commands/sync.js";
 import { bold, dim, fail, muteSqliteWarning, say } from "./ui.js";
 
@@ -17,6 +18,13 @@ ${bold("tokencard")} — turn your local AI coding agent logs into a stat card
     --theme auto|light|dark
     --json                     print the aggregate instead of writing an SVG
     --dry-run                  report what would be written, write nothing
+
+  ${bold("tokencard recap")}             year in review: heatmap, models, totals
+    --out <path>               default: tokencard-recap.svg
+    --year <yyyy>              label the recap with a different year
+    --theme auto|light|dark
+    --json                     print the recap model instead of writing an SVG
+    --dry-run
 
 ${dim("Reads only local files. Makes no network requests.")}
 `;
@@ -42,6 +50,8 @@ async function main(): Promise<number> {
       return init(argv);
     case "sync":
       return sync(argv);
+    case "recap":
+      return recap(argv);
     default:
       fail(`unknown command: ${command}`);
       say(USAGE);

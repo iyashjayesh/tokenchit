@@ -17,6 +17,8 @@
  *     origin, so it is sanitised to [A-Za-z0-9_-]{1,16} and XML-escaped.
  */
 
+import { DARK, esc, FONT, LIGHT, render, type Palette } from "./svg.js";
+
 export type Layout = "default" | "compact";
 export type Theme = "light" | "dark" | "auto";
 export type HideKey = "spend" | "streak" | "mix";
@@ -36,54 +38,11 @@ export type CardOptions = {
   hide?: HideKey[];
 };
 
-/* ── palettes ─────────────────────────────────────────────────────────────── */
 
-type Palette = {
-  frameFill: string;
-  frameStroke: string;
-  text: string;
-  hairline: string;
-  rule: string;
-  label: string;
-  legend: string;
-  footer: string;
-  segments: [string, string, string, string];
-};
 
-const LIGHT: Palette = {
-  frameFill: "#FFFFFF",
-  frameStroke: "#101010",
-  text: "#101010",
-  hairline: "#E4E2D8",
-  rule: "#F0EFE9",
-  label: "#A5A59D",
-  legend: "#55554E",
-  footer: "#C0BEB6",
-  segments: ["#C6FF3D", "#101010", "#8A8A82", "#D8D6CE"],
-};
 
-const DARK: Palette = {
-  frameFill: "#101010",
-  frameStroke: "#2E2E28",
-  text: "#FFFFFF",
-  hairline: "#2E2E28",
-  rule: "#2E2E28",
-  label: "#6E6E66",
-  legend: "#9A9A92",
-  footer: "#55554E",
-  segments: ["#C6FF3D", "#FFFFFF", "#6E6E66", "#3A3A34"],
-};
-
-const FONT = "'JetBrains Mono', ui-monospace, monospace";
 
 /* ── helpers ──────────────────────────────────────────────────────────────── */
-
-const esc = (s: string) =>
-  s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 
 /**
  * GitHub handles are up to 39 characters, so that is the cap — truncating at 16 would put a
@@ -144,16 +103,7 @@ export function filterAgents(mix: MixEntry[], allow?: string[] | null): MixEntry
   return kept.length ? kept : mix;
 }
 
-type El = { tag: string; attrs: Record<string, string | number>; text?: string };
 
-const render = (el: El) => {
-  const attrs = Object.entries(el.attrs)
-    .map(([k, v]) => `${k}="${typeof v === "string" ? esc(v) : v}"`)
-    .join(" ");
-  return el.text !== undefined
-    ? `<${el.tag} ${attrs}>${esc(el.text)}</${el.tag}>`
-    : `<${el.tag} ${attrs}/>`;
-};
 
 /* ── geometry ─────────────────────────────────────────────────────────────── */
 
