@@ -17,23 +17,22 @@ import { DEFAULT_HANDLE, sanitizeHandle } from "@/lib/sample-data";
  * highlighted row in the board. The window filter and the copy-button timers are
  * local to their own components and deliberately not in here.
  *
- * `signedIn` is local state: signing in proves the account is real, enables the
+ * Handle only. There was a `signedIn` flag here driving a header pill, but nothing ever
+ * set it from a real session — identity is established by `tokencard login` in the terminal,
+ * and the site has no per-user surface for a browser session to unlock.
+ *
  * hosted endpoint and opts into the public board — wire this seam to a real GitHub
  * OAuth flow when there is one. Nothing else in the app should read auth directly.
  */
 type SiteState = {
   handle: string;
   setHandle: (raw: string) => void;
-  signedIn: boolean;
-  signIn: () => void;
-  signOut: () => void;
 };
 
 const Ctx = createContext<SiteState | null>(null);
 
 export function SiteStateProvider({ children }: { children: ReactNode }) {
   const [handle, setHandleRaw] = useState(DEFAULT_HANDLE);
-  const [signedIn, setSignedIn] = useState(false);
 
   const setHandle = useCallback((raw: string) => {
     setHandleRaw(sanitizeHandle(raw));
@@ -43,11 +42,8 @@ export function SiteStateProvider({ children }: { children: ReactNode }) {
     () => ({
       handle,
       setHandle,
-      signedIn,
-      signIn: () => setSignedIn(true),
-      signOut: () => setSignedIn(false),
     }),
-    [handle, setHandle, signedIn],
+    [handle, setHandle],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

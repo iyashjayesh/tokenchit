@@ -219,6 +219,10 @@ media queries, and the blinking `▌` after the install command is the only anim
 
 ## Not built, deliberately
 
-A leaderboard backend, GitHub OAuth, spend-based tier ladders, pricing, a blog, a site
-dark-mode toggle, and scheduled-Action automation. Sign-in on the site is local client state
-behind `useSiteState()`, ready for a real provider if one is ever needed.
+Spend-based tier ladders, pricing, a blog, a site dark-mode toggle, and scheduled-Action
+automation.
+
+**A browser session, deliberately.** Sign-in happens in the terminal, and nothing on the site
+is per-user — no settings, no upload form, no private page. Identity exists to stamp a row on
+the board, and only the CLI can produce a row. Adding browser OAuth would mean GitHub's web
+flow, which is the one flow that needs a client secret, in exchange for a header pill.
