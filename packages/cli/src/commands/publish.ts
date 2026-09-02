@@ -7,13 +7,13 @@ import {
 } from "@tokencard/core";
 import { readAll } from "@tokencard/core/adapters";
 
+import { resolveApi } from "../api.js";
 import { flag, has } from "../args.js";
 import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { bold, dim, fail, green, say, warn, yellow } from "../ui.js";
 import { post } from "../net.js";
 
-const DEFAULT_API = "https://tokencard.dev";
 
 /**
  * The only command that sends anything anywhere.
@@ -30,7 +30,7 @@ export async function publish(argv: string[], version: string): Promise<number> 
   const auth = await readAuth();
   const rawHandle = flag(argv, "--handle") ?? auth?.handle ?? config.handle;
   const handle = sanitizeHandle(rawHandle);
-  const api = (flag(argv, "--api") ?? process.env["TOKENCARD_API"] ?? DEFAULT_API).replace(/\/$/, "");
+  const api = resolveApi(flag(argv, "--api"));
   const dryRun = has(argv, "--dry-run");
 
   if (!rawHandle) {
