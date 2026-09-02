@@ -1,9 +1,9 @@
 import styles from "./site-footer.module.css";
 
 const LINKS = [
-  { label: "github.com/tokencard", href: "https://github.com/tokencard" },
-  { label: "npm / tokencard", href: "https://npmjs.com/package/tokencard" },
-  { label: "self-host docs", href: "https://github.com/tokencard#self-hosting" },
+  { label: "github.com/tokenstats", href: "https://github.com/tokenstats" },
+  { label: "npm / tokenstats", href: "https://npmjs.com/package/tokenstats" },
+  { label: "self-host docs", href: "https://github.com/tokenstats#self-hosting" },
 ];
 
 export function SiteFooter() {
@@ -17,7 +17,7 @@ export function SiteFooter() {
             </a>
           ))}
         </div>
-        <div className={styles.legal}>MIT License · © 2026 tokencard contributors</div>
+        <div className={styles.legal}>MIT License · © 2026 tokenstats contributors</div>
       </div>
     </footer>
   );

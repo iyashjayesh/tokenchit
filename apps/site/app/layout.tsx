@@ -19,9 +19,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "tokencard — receipts for your robots",
+  title: "tokenstats — receipts for your robots",
   description:
-    "tokencard reads your local Claude Code, Codex, Gemini CLI, Copilot CLI and OpenCode logs and prints one embeddable card.",
+    "tokenstats reads your local Claude Code, Codex, Gemini CLI, Copilot CLI and OpenCode logs and prints one embeddable card.",
 };
 
 export default function RootLayout({

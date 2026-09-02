@@ -376,7 +376,7 @@ export function buildCardSvg(opts: CardOptions): string {
     render({
       tag: "text",
       attrs: { ...cls("ft"), x: g.footer.left, y: g.footer.y, ...footAttrs },
-      text: "TOKENCARD.DEV",
+      text: "TOKENSTATS.APP",
     }),
   );
   parts.push(
@@ -398,7 +398,7 @@ export function buildCardSvg(opts: CardOptions): string {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g.w} ${g.h}" ` +
     `width="${g.w}" height="${g.h}" role="img" ` +
-    `aria-label="tokencard stats for @${esc(handle)}">` +
+    `aria-label="tokenstats stats for @${esc(handle)}">` +
     style +
     parts.join("") +
     `</svg>`

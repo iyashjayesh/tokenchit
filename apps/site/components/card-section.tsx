@@ -3,7 +3,7 @@
 import { CopyButton } from "@/components/copy-button";
 import { SectionHeading } from "@/components/section-heading";
 import { useSiteState } from "@/components/site-state";
-import { buildCardSvg } from "@tokencard/core";
+import { buildCardSvg } from "@tokenstats/core";
 import { DEFAULT_HANDLE, OWN_STATS, QUERY_OPTIONS } from "@/lib/sample-data";
 import { SITE_URL } from "@/lib/site";
 import styles from "./card-section.module.css";
@@ -20,7 +20,7 @@ export function CardSection() {
 
   // A plain image, not a link. There is no per-user page to point at, and inventing one
   // would mean hosting exactly the surface the committed-SVG design exists to avoid.
-  const markdown = `![tokencard](${SITE_URL}/api/card/${handle}.svg)`;
+  const markdown = `![tokenstats](${SITE_URL}/api/card/${handle}.svg)`;
 
   /* The panel shows the origin elided so the two tags fit without scrolling; the
      clipboard gets the full URLs, which is what a README actually needs. */

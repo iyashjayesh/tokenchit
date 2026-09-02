@@ -24,9 +24,9 @@ const CORE_SRC = join(HERE, "..", "..", "core", "src");
 
 /** Run the CLI in a sandbox whose HOME contains only the fixture transcripts. */
 async function cli(args, extraEnv = {}) {
-  const cwd = await mkdtemp(join(tmpdir(), "tokencard-test-"));
+  const cwd = await mkdtemp(join(tmpdir(), "tokenstats-test-"));
   await writeFile(
-    join(cwd, ".tokencard.json"),
+    join(cwd, ".tokenstats.json"),
     JSON.stringify({ handle: "canary", agents: ["claude-code"], output: "c.svg", layout: "default", theme: "auto" }),
   );
 

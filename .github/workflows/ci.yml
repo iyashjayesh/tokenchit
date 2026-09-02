@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
 
       # Builds core, then the CLI, then the site. The site build is what catches a Node
-      # built-in leaking into the client bundle through @tokencard/core.
+      # built-in leaking into the client bundle through @tokenstats/core.
       - run: npm run build
 
       - run: npm test
@@ -31,7 +31,7 @@ jobs:
       - name: Site builds standalone, as Vercel builds it
         run: |
           rm -rf packages/core/dist
-          npm run build --workspace=tokencard-site
+          npm run build --workspace=tokenstats-site
 
       # The card is the product; a builder that renders nothing should fail the run.
       - name: Card renders

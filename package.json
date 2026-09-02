@@ -1,5 +1,5 @@
 {
-  "name": "tokencard",
+  "name": "tokenstats",
   "version": "0.0.0",
   "private": true,
   "description": "Turn your local AI coding agent logs into an embeddable stat card.",
@@ -12,10 +12,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "npm run build -w @tokencard/core && npm run build -w @tokencard/cli && npm run build -w tokencard-site",
-    "build:core": "npm run build -w @tokencard/core",
-    "dev": "npm run dev -w tokencard-site",
-    "test": "npm run build:core && npm run build -w @tokencard/cli && npm run test -w @tokencard/core && npm run test -w @tokencard/cli",
+    "build": "npm run build -w @tokenstats/core && npm run build -w @tokenstats/cli && npm run build -w tokenstats-site",
+    "build:core": "npm run build -w @tokenstats/core",
+    "dev": "npm run dev -w tokenstats-site",
+    "test": "npm run build:core && npm run build -w @tokenstats/cli && npm run test -w @tokenstats/core && npm run test -w @tokenstats/cli",
     "cli": "node packages/cli/dist/index.js",
     "db:migrate": "node apps/site/db/migrate.mjs"
   }

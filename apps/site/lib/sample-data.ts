@@ -121,7 +121,7 @@ export const PEAK_MASK = Array.from({ length: 24 }, (_, i) =>
 );
 
 /** Re-exported so components have one import for placeholder data and handle rules alike. */
-export { sanitizeHandle } from "@tokencard/core";
+export { sanitizeHandle } from "@tokenstats/core";
 
 /**
  * Year-in-review tiles. Kept separate from OWN_STATS because the recap page has no

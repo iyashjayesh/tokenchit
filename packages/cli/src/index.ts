@@ -9,29 +9,29 @@ import { sync } from "./commands/sync.js";
 import { bold, dim, fail, muteSqliteWarning, say } from "./ui.js";
 
 const USAGE = `
-${bold("tokencard")} — turn your local AI coding agent logs into a stat card
+${bold("tokenstats")} — turn your local AI coding agent logs into a stat card
 
-  ${bold("tokencard init")}              detect agents, write .tokencard.json
+  ${bold("tokenstats init")}              detect agents, write .tokenstats.json
     --handle <name>            GitHub handle (default: guessed from origin remote)
 
-  ${bold("tokencard sync")}              render the card into your repo
-    --out <path>               where to write it (default: tokencard.svg)
+  ${bold("tokenstats sync")}              render the card into your repo
+    --out <path>               where to write it (default: tokenstats.svg)
     --layout default|compact
     --theme auto|light|dark
     --json                     print the aggregate instead of writing an SVG
     --dry-run                  report what would be written, write nothing
 
-  ${bold("tokencard login")}             prove your GitHub handle (device flow, no password)
-  ${bold("tokencard logout")}            forget this machine
-  ${bold("tokencard whoami")}            who this machine is signed in as
+  ${bold("tokenstats login")}             prove your GitHub handle (device flow, no password)
+  ${bold("tokenstats logout")}            forget this machine
+  ${bold("tokenstats whoami")}            who this machine is signed in as
 
-  ${bold("tokencard publish")}           the only command that uploads anything
+  ${bold("tokenstats publish")}           the only command that uploads anything
     --dry-run                  print the exact bytes and send nothing
-    --api <url>                default https://tokencard-site.vercel.app
+    --api <url>                default https://tokenstats-site.vercel.app
     --handle <name>
 
-  ${bold("tokencard recap")}             year in review: heatmap, models, totals
-    --out <path>               default: tokencard-recap.svg
+  ${bold("tokenstats recap")}             year in review: heatmap, models, totals
+    --out <path>               default: tokenstats-recap.svg
     --year <yyyy>              label the recap with a different year
     --theme auto|light|dark
     --json                     print the recap model instead of writing an SVG

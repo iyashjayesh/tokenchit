@@ -274,7 +274,7 @@ export function buildRecapSvg(opts: RecapCardOptions): string {
     render({
       tag: "text",
       attrs: { ...cls("ft"), x: PAD, y: H - 14, "font-family": FONT, "font-size": 8, "letter-spacing": 1, fill: pal.footer },
-      text: "TOKENCARD.DEV",
+      text: "TOKENSTATS.APP",
     }),
   );
   parts.push(

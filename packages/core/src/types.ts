@@ -26,7 +26,7 @@ export type Detection = "ready" | "installed-no-data" | "absent";
 
 export type Adapter = {
   id: AgentId;
-  /** Display name, as it appears on the card and in `tokencard init`. */
+  /** Display name, as it appears on the card and in `tokenstats init`. */
   name: string;
   /** Where this adapter reads from, shown by `init` so nothing is hidden. */
   source: string;

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { GithubMark } from "./github-mark";
 import styles from "./site-header.module.css";
 
-const LOGIN = "npx @tokencard/cli login";
+const LOGIN = "npx @tokenstats/cli login";
 
 const NAV = [
   { href: "#card", label: "card" },
@@ -46,7 +46,7 @@ export function SiteHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
-        <span className={styles.wordmark}>tokencard</span>
+        <span className={styles.wordmark}>tokenstats</span>
         <span className={styles.version}>v0.4.1 · MIT</span>
       </div>
 

@@ -11,8 +11,8 @@ import {
   toCardOptions,
   type Layout,
   type Theme,
-} from "@tokencard/core";
-import { readAll } from "@tokencard/core/adapters";
+} from "@tokenstats/core";
+import { readAll } from "@tokenstats/core/adapters";
 
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
@@ -38,7 +38,7 @@ export async function sync(argv: string[]): Promise<number> {
   const stats = await aggregate(readAll(config.agents));
 
   if (stats.tokens === 0) {
-    warn("No usage found. Run `tokencard init` to see which agents were detected.");
+    warn("No usage found. Run `tokenstats init` to see which agents were detected.");
     return 1;
   }
 
@@ -112,11 +112,11 @@ export async function sync(argv: string[]): Promise<number> {
 
   say();
   say(dim("  Embed it:"));
-  say(`  ![tokencard](./${rel})`);
+  say(`  ![tokenstats](./${rel})`);
   say();
   // Committing on the user's behalf is not ours to decide — a tool that reads your logs
   // should not also decide what lands in your history on its first run.
-  say(dim(`  Then: git add ${rel} && git commit -m "chore: update tokencard"`));
+  say(dim(`  Then: git add ${rel} && git commit -m "chore: update tokenstats"`));
   say();
 
   return 0;
