@@ -6,6 +6,7 @@
  * a larger dependency to audit than the thing it manages. Each file runs inside a
  * transaction alongside the bookkeeping insert, so a failure leaves nothing half-applied.
  */
+import { readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,8 +15,37 @@ import pg from "pg";
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), "migrations");
 
-const connectionString =
-  process.env.DATABASE_URL ?? "postgres://tokencard:tokencard@localhost:5432/tokencard";
+/**
+ * Load .env.local the way Next does, so `npm run db:migrate` and the running site read the
+ * same connection string. Done here rather than with `--env-file` because that flag errors
+ * when the file is absent, and a fresh clone has no .env.local until someone writes one.
+ */
+function loadEnvLocal() {
+  const path = join(dirname(fileURLToPath(import.meta.url)), "..", ".env.local");
+  let text;
+  try {
+    text = readFileSync(path, "utf8");
+  } catch {
+    return;
+  }
+  for (const line of text.split("\n")) {
+    const match = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
+    if (!match) continue;
+    const [, key, raw] = match;
+    // Existing environment wins, so CI and one-off overrides are not clobbered.
+    if (process.env[key] === undefined) {
+      process.env[key] = raw.trim().replace(/^["']|["']$/g, "");
+    }
+  }
+}
+
+loadEnvLocal();
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error("DATABASE_URL is not set. Copy apps/site/.env.example to .env.local and fill it in.");
+  process.exit(1);
+}
 
 const client = new pg.Client({ connectionString });
 await client.connect();

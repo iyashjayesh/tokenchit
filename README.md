@@ -144,31 +144,41 @@ first.
 
 ### Running the board locally
 
+The board runs against Supabase — there is no local database to start.
+
 ```bash
-npm run db:up        # Postgres 17 in Podman
-npm run db:migrate
+cp apps/site/.env.example apps/site/.env.local   # then fill in the password
+npm run db:migrate                               # idempotent; safe to re-run
 npm run dev
+
 npx @tokencard/cli login   --api http://localhost:3000
 npx @tokencard/cli publish --api http://localhost:3000
 ```
 
-`npm run db:reset` destroys the volume and starts clean. `npm run db:psql` opens a shell.
+`.env.local` is gitignored; `apps/site/.env.example` documents the shape. Next reads
+`.env.local` automatically and the migration runner reads the same file, so the site and the
+migrations cannot end up pointing at different databases.
 
-### Deploying the database
+**Use the shared (transaction) pooler on port 6543, not the direct connection on 5432.**
+Serverless functions open a connection per invocation and exhaust a direct connection limit
+quickly; Supavisor exists for exactly that. The pool in `apps/site/lib/db.ts` is capped at 5
+to match.
 
-The migrations are plain Postgres and run anywhere. Two things to know before pointing them
-at a managed host:
+### Notes on the database
 
-- **On Supabase, `003_rls.sql` is not optional.** Supabase exposes every `public` table
+- **`003_rls.sql` is not optional on Supabase.** Supabase exposes every `public` table
   through PostgREST using the anon key, which is public by design. Without row level security
-  enabled, that key would read `api_tokens` and the whole submissions history. The migration
-  enables RLS with no policies, which closes that surface entirely and changes nothing for
+  enabled, that key would read `api_tokens` and the entire submissions history. The migration
+  enables RLS with no policies, which closes that surface completely and changes nothing for
   our server, which connects directly as the table owner.
 - **Free Supabase projects pause after 7 days of low activity** and need a human to click
   *Resume* in the dashboard, with a 90-day window before the backup expires. A few requests a
-  day is enough to avoid it, so it matters for a quiet project rather than a busy one. This is
-  why [`docs/research.md`](./docs/research.md) §4 recommends Neon, whose idle behaviour is
+  day avoids it, so it bites a quiet project rather than a busy one. That is why
+  [`docs/research.md`](./docs/research.md) §4 prefers Neon, whose idle behaviour is
   scale-to-zero with automatic resume.
+- Migrations are plain SQL in `apps/site/db/migrations/`, applied in filename order and
+  tracked in a `_migrations` table. There is no local Postgres: a contributor who only needs
+  the CLI or the card never touches a database, and `npm test` requires none.
 
 ## Repo layout
 
