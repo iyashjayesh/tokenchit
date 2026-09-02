@@ -13,7 +13,9 @@ export function formatTokens(n: number): string {
     [1e6, "M"],
     [1e3, "K"],
   ] as const) {
-    if (n >= limit) {
+    // 0.9995 rather than 1: 999,999,999 rounds to "1000M" at this precision, which should
+    // have been "1.00B". Promoting just below the boundary keeps the unit correct.
+    if (n >= limit * 0.9995) {
       const v = n / limit;
       return `${v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)}${suffix}`;
     }

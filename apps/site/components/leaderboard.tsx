@@ -49,7 +49,7 @@ export function Leaderboard() {
               <th>developer</th>
               <th className={styles.wMix}>agent mix</th>
               <th className={`${styles.wTokens} ${styles.num}`}>tokens</th>
-              <th className={`${styles.wSpend} ${styles.num}`}>spend</th>
+              <th className={`${styles.wSpend} ${styles.num}`}>equiv. cost</th>
               <th className={`${styles.wStreak} ${styles.num}`}>streak</th>
             </tr>
           </thead>

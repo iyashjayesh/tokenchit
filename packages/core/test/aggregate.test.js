@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { aggregate, buildCardSvg, formatTokens, formatUsd, segmentWidths } from "../dist/index.js";
+import {
+  aggregate,
+  buildCardSvg,
+  formatTokens,
+  formatUsd,
+  handleSize,
+  sanitizeHandle,
+  segmentWidths,
+} from "../dist/index.js";
 
 /** Build an event on a given local day, so the tests are timezone-independent. */
 const on = (y, m, d, over = {}) => ({
@@ -115,4 +123,41 @@ test("an all-unpriced corpus reports a dash, not $0", async () => {
 
   assert.equal(stats.pricedShare, 0);
   assert.ok(stats.tokens > 0);
+});
+
+test("token formatting promotes rather than printing 1000 of a smaller unit", () => {
+  // 999,999,999 rounds to 1000M at this precision; the unit above is the right answer.
+  assert.equal(formatTokens(999_999_999), "1.00B");
+  assert.equal(formatTokens(999_999_999_999), "1.00T");
+  assert.equal(formatTokens(999_400_000), "999M", "just below the boundary stays put");
+});
+
+test("handles keep all 39 characters GitHub allows", () => {
+  const long = "a-very-long-github-handle-x";
+  assert.equal(sanitizeHandle(long), long, "must not be truncated to a different name");
+  assert.equal(sanitizeHandle("a".repeat(50)).length, 39);
+  assert.equal(sanitizeHandle("bad/chars!here"), "badcharshere");
+  assert.equal(sanitizeHandle(""), "dev");
+});
+
+test("a long handle is shrunk to fit rather than cut short", () => {
+  const long = "a-very-long-github-handle-here-abcdefg";
+  assert.equal(long.length, 38);
+
+  const svg = buildCardSvg({
+    handle: long,
+    tokens: "4.23B",
+    spend: "$2,796",
+    streak: "10d",
+    mix: [{ agent: "claude-code", pct: 100 }],
+    syncedAt: "SYNCED 0M AGO",
+  });
+
+  assert.match(svg, new RegExp(`@${long}`), "the whole handle is on the card");
+
+  // 20px is the design size for a short handle; a 38-character one must come down.
+  assert.equal(handleSize("octocat", 20, 439), 20);
+  const shrunk = handleSize(long, 20, 439);
+  assert.ok(shrunk < 20 && shrunk > 10, `expected a smaller readable size, got ${shrunk}`);
+  assert.ok((long.length + 1) * 0.6 * shrunk <= 439, "must fit the 439px track");
 });
