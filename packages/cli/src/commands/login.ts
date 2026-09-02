@@ -105,6 +105,11 @@ export async function login(argv: string[]): Promise<number> {
   // would be trivially forgeable. It is never written to disk on this machine.
   const res = await post(`${api}/api/auth/github`, JSON.stringify({ githubToken }));
 
+  if (res.status === 429) {
+    fail(String(res.body?.["error"] ?? "too many sign-in attempts — try again shortly"));
+    return 1;
+  }
+
   if (!res.ok) {
     fail(`${api} rejected the sign-in (${res.status})`);
     if (res.body?.["error"]) say(dim(`  ${String(res.body["error"])}`));

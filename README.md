@@ -164,6 +164,27 @@ Serverless functions open a connection per invocation and exhaust a direct conne
 quickly; Supavisor exists for exactly that. The pool in `apps/site/lib/db.ts` is capped at 5
 to match.
 
+### Rate limits
+
+Writes are limited per hour, in Postgres rather than in memory — serverless functions share
+no memory, so an in-process counter would reset on every cold start and count separately per
+instance.
+
+| bucket | limit |
+| --- | --- |
+| anonymous publish, per IP | 10/h |
+| signed-in publish, per user | 60/h |
+| publish, per handle | 30/h |
+| sign-in, per IP | 20/h |
+| board reads, per IP | 300/h |
+
+Signed-in callers get more headroom than anonymous ones: they have proved who they are and
+their rows carry their name. The per-handle bucket exists because the per-IP one alone is
+defeated by spreading requests across addresses.
+
+Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals add
+`retry-after`, and the CLI prints the wait rather than a bare status code.
+
 ### Notes on the database
 
 - **`003_rls.sql` is not optional on Supabase.** Supabase exposes every `public` table

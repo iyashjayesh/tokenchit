@@ -6,6 +6,15 @@ import { userFromRequest } from "@/lib/auth";
 import { DEFAULT_WINDOW, isWindow } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
 import { transaction } from "@/lib/db";
+import {
+  clientIp,
+  hit,
+  limitHeaders,
+  LIMITS,
+  sweep,
+  type Limit,
+  type Verdict,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +26,8 @@ export const dynamic = "force-dynamic";
  * rather than in the command.
  */
 export async function POST(req: Request) {
+  sweep();
+
   let payload: Payload;
   try {
     payload = (await req.json()) as Payload;
@@ -43,6 +54,37 @@ export async function POST(req: Request) {
       { error: `signed in as @${auth.handle}, cannot publish as @${payload.handle}` },
       { status: 403 },
     );
+  }
+
+  // Checked after authentication so a signed-in caller gets their own, larger allowance
+  // rather than sharing an address with everyone behind the same NAT or CI runner.
+  const handle = (auth?.handle ?? payload.handle).toLowerCase();
+  const buckets: [string, Limit][] = [
+    auth
+      ? [`publish:user:${auth.handle.toLowerCase()}`, LIMITS.publishUser]
+      : [`publish:ip:${clientIp(req)}`, LIMITS.publishAnonIp],
+    [`publish:handle:${handle}`, LIMITS.publishHandle],
+  ];
+
+  // Kept so the success response can report the tightest remaining allowance: a client that
+  // only learns its budget by being refused cannot slow down before it is.
+  let tightest: Verdict | null = null;
+
+  for (const [bucket, limit] of buckets) {
+    const verdict = await hit(bucket, limit);
+    if (!tightest || verdict.remaining < tightest.remaining) tightest = verdict;
+    if (!verdict.allowed) {
+      return NextResponse.json(
+        {
+          error: "rate limited",
+          reasons: [
+            `too many submissions — the limit is ${verdict.limit} per hour. ` +
+              `Try again in ${verdict.retryAfter}s.`,
+          ],
+        },
+        { status: 429, headers: limitHeaders(verdict) },
+      );
+    }
   }
 
   try {
@@ -115,7 +157,7 @@ export async function POST(req: Request) {
         tokens: payload.tokens,
         days: payload.days.length,
       },
-      { status: 201 },
+      { status: 201, headers: tightest ? limitHeaders(tightest) : undefined },
     );
   } catch (err) {
     console.error("submission failed", err);
@@ -128,13 +170,24 @@ export async function POST(req: Request) {
  * runs the same one — see the note there on why the page does not fetch this endpoint.
  */
 export async function GET(req: Request) {
+  const read = await hit(`board:ip:${clientIp(req)}`, LIMITS.read);
+  if (!read.allowed) {
+    return NextResponse.json(
+      { error: "rate limited" },
+      { status: 429, headers: limitHeaders(read) },
+    );
+  }
+
   const url = new URL(req.url);
   const requested = url.searchParams.get("window");
   const window = isWindow(requested) ? requested : DEFAULT_WINDOW;
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 25)));
 
   try {
-    return NextResponse.json({ window, rows: await readBoard(window, limit) });
+      return NextResponse.json(
+      { window, rows: await readBoard(window, limit) },
+      { headers: limitHeaders(read) },
+    );
   } catch (err) {
     console.error("board query failed", err);
     return NextResponse.json({ error: "could not read board" }, { status: 500 });

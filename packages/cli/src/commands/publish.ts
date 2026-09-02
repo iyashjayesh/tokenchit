@@ -70,6 +70,12 @@ export async function publish(argv: string[], version: string): Promise<number> 
 
   const res = await post(`${api}/api/submissions`, body, auth?.token);
 
+  if (res.status === 429) {
+    // The server names the wait; repeating it beats a bare "rejected (429)".
+    fail(res.reasons?.[0] ?? "rate limited — try again shortly");
+    return 1;
+  }
+
   if (!res.ok) {
     fail(`rejected by ${api} (${res.status})`);
     for (const reason of res.reasons ?? []) say(`  ${yellow("·")} ${reason}`);

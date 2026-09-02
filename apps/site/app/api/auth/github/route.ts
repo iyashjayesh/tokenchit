@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { transaction } from "@/lib/db";
+import { clientIp, hit, limitHeaders, LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,16 @@ export const dynamic = "force-dynamic";
  * never logged, and never written to the client's disk either.
  */
 export async function POST(req: Request) {
+  // Before the GitHub call, not after: an unlimited sign-in endpoint is a way to spend our
+  // outbound rate limit with GitHub as well as our own function budget.
+  const verdict = await hit(`auth:ip:${clientIp(req)}`, LIMITS.auth);
+  if (!verdict.allowed) {
+    return NextResponse.json(
+      { error: `too many sign-in attempts — try again in ${verdict.retryAfter}s` },
+      { status: 429, headers: limitHeaders(verdict) },
+    );
+  }
+
   let githubToken: string;
   try {
     const body = (await req.json()) as { githubToken?: unknown };
