@@ -12,7 +12,7 @@ export type Price = {
 
 const PRICES = table.prices as Record<string, Price>;
 
-/** The day the vendored table was generated, for `tokencard sync --json` and the docs. */
+/** The day the vendored table was generated, for `tokenstats sync --json` and the docs. */
 export const PRICES_GENERATED: string = table.$generated;
 
 /**

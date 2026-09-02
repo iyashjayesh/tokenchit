@@ -1,7 +1,7 @@
 {
-  "name": "@tokencard/core",
+  "name": "@tokenstats/core",
   "version": "0.1.0",
-  "description": "Local agent-log adapters, usage aggregation and the tokencard SVG builder.",
+  "description": "Local agent-log adapters, usage aggregation and the tokenstats SVG builder.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

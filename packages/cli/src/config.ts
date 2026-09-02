@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import type { AgentId, Layout, Theme } from "@tokencard/core";
+import type { AgentId, Layout, Theme } from "@tokenstats/core";
 
-export const CONFIG_FILE = ".tokencard.json";
+export const CONFIG_FILE = ".tokenstats.json";
 
 export type Config = {
   /** GitHub handle shown on the card. */
@@ -19,7 +19,7 @@ export type Config = {
 export const DEFAULT_CONFIG: Config = {
   handle: "",
   agents: [],
-  output: "tokencard.svg",
+  output: "tokenstats.svg",
   layout: "default",
   theme: "auto",
 };

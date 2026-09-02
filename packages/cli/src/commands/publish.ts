@@ -4,8 +4,8 @@ import {
   sanitizeHandle,
   serializePayload,
   validatePayload,
-} from "@tokencard/core";
-import { readAll } from "@tokencard/core/adapters";
+} from "@tokenstats/core";
+import { readAll } from "@tokenstats/core/adapters";
 
 import { resolveApi } from "../api.js";
 import { flag, has } from "../args.js";
@@ -19,7 +19,7 @@ import { post } from "../net.js";
  * The only command that sends anything anywhere.
  *
  * Kept separate from `sync` on purpose, and with no config switch to make `sync` do it:
- * `.tokencard.json` is a committed file, and a committed file must never be able to cause a
+ * `.tokenstats.json` is a committed file, and a committed file must never be able to cause a
  * network call on somebody else's machine.
  */
 export async function publish(argv: string[], version: string): Promise<number> {
@@ -40,7 +40,7 @@ export async function publish(argv: string[], version: string): Promise<number> 
 
   const stats = await aggregate(readAll(config.agents));
   if (stats.tokens === 0) {
-    warn("No usage found. Run `tokencard init` to see which agents were detected.");
+    warn("No usage found. Run `tokenstats init` to see which agents were detected.");
     return 1;
   }
 
@@ -88,7 +88,7 @@ export async function publish(argv: string[], version: string): Promise<number> 
   if ((res.body?.tier ?? "cli") === "cli" && !auth) {
     say();
     say(dim("  This row is marked unverified on the board — nothing has proved the handle"));
-    say(dim("  is yours. Run `tokencard login` to upgrade it."));
+    say(dim("  is yours. Run `tokenstats login` to upgrade it."));
   }
   say();
 

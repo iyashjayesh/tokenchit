@@ -1,20 +1,20 @@
-# tokencard
+# tokenstats
 
 Turn your local AI coding agent logs into an embeddable stat card for your GitHub README.
 
-tokencard reads the transcripts **Claude Code**, **Codex** and **OpenCode** already write to
+tokenstats reads the transcripts **Claude Code**, **Codex** and **OpenCode** already write to
 your disk, totals them, and renders an SVG you commit to your own repo. No account, no
 upload, no server — the card is a file.
 
 ```bash
-npx @tokencard/cli init     # detect agents, write .tokencard.json
-npx @tokencard/cli sync     # render tokencard.svg
-npx @tokencard/cli recap    # render tokencard-recap.svg — the year in review
+npx @tokenstats/cli init     # detect agents, write .tokenstats.json
+npx @tokenstats/cli sync     # render tokenstats.svg
+npx @tokenstats/cli recap    # render tokenstats-recap.svg — the year in review
 ```
 
 ```markdown
-![tokencard](./tokencard.svg)
-![tokencard recap](./tokencard-recap.svg)
+![tokenstats](./tokenstats.svg)
+![tokenstats recap](./tokenstats-recap.svg)
 ```
 
 ## What it reads
@@ -51,27 +51,27 @@ a network request.
 ## Commands
 
 ```
-tokencard init
+tokenstats init
   --handle <name>        GitHub handle (default: guessed from your origin remote)
 
-tokencard sync
-  --out <path>           where to write it (default: tokencard.svg)
+tokenstats sync
+  --out <path>           where to write it (default: tokenstats.svg)
   --layout default|compact
   --theme auto|light|dark
   --json                 print the aggregate instead of writing an SVG
   --dry-run              report what would be written, write nothing
 
-tokencard login          prove your GitHub handle (device flow, no password)
-tokencard logout         forget this machine
-tokencard whoami         who this machine is signed in as
+tokenstats login          prove your GitHub handle (device flow, no password)
+tokenstats logout         forget this machine
+tokenstats whoami         who this machine is signed in as
 
-tokencard publish        the only command that uploads anything
+tokenstats publish        the only command that uploads anything
   --dry-run              print the exact bytes and send nothing
-  --api <url>            default https://tokencard-site.vercel.app
+  --api <url>            default https://tokenstats-site.vercel.app
   --handle <name>
 
-tokencard recap
-  --out <path>           default: tokencard-recap.svg
+tokenstats recap
+  --out <path>           default: tokenstats-recap.svg
   --year <yyyy>          label the recap with a different year
   --theme auto|light|dark
   --json                 print the recap model instead of writing an SVG
@@ -106,7 +106,7 @@ turn. Claude Code and OpenCode are exact to the message.
 ## Publishing to the board
 
 `publish` is the **only** command that sends anything anywhere. `sync` and `recap` are local
-forever, and there is deliberately no config switch to change that: `.tokencard.json` is a
+forever, and there is deliberately no config switch to change that: `.tokenstats.json` is a
 committed file, and a committed file must never be able to cause a network call on somebody
 else's machine.
 
@@ -118,7 +118,7 @@ and model ids. No prompts, no replies, no branch names, no paths.
 ## Signing in
 
 ```
-$ tokencard login
+$ tokenstats login
   Open https://github.com/login/device
   and enter  WDJB-MJHT
 ✓ signed in as @octocat
@@ -134,8 +134,8 @@ and numeric id are all we need.
 The GitHub token is handed to the server **once**, so that the server — not the client — is
 what asks GitHub who you are; a client that simply asserted `{"handle": "octocat"}` would be
 forgeable. It is then discarded, never written to disk on either side. What you keep is a
-tokencard API key in `~/.config/tokencard/auth.json`, mode `0600`, stored server-side only as
-a SHA-256 hash. Never in `.tokencard.json`, which is committed.
+tokenstats API key in `~/.config/tokenstats/auth.json`, mode `0600`, stored server-side only as
+a SHA-256 hash. Never in `.tokenstats.json`, which is committed.
 
 Without signing in, submissions land as the unverified `cli` tier. Those rows appear on the
 board with a badge rather than being hidden — a transparency signal, not a gate. Signing in
@@ -151,8 +151,8 @@ cp apps/site/.env.example apps/site/.env.local   # then fill in the password
 npm run db:migrate                               # idempotent; safe to re-run
 npm run dev
 
-npx @tokencard/cli login   --api http://localhost:3000
-npx @tokencard/cli publish --api http://localhost:3000
+npx @tokenstats/cli login   --api http://localhost:3000
+npx @tokenstats/cli publish --api http://localhost:3000
 ```
 
 `.env.local` is gitignored; `apps/site/.env.example` documents the shape. Next reads
@@ -206,7 +206,7 @@ Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals
 ```
 apps/site/          Next.js marketing site + the board API
 packages/core/      adapters, aggregation, price table, SVG builder
-packages/cli/       the tokencard binary
+packages/cli/       the tokenstats binary
 docs/research.md    positioning, competitive landscape, infrastructure decisions
 ```
 

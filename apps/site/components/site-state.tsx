@@ -18,7 +18,7 @@ import { DEFAULT_HANDLE, sanitizeHandle } from "@/lib/sample-data";
  * local to their own components and deliberately not in here.
  *
  * Handle only. There was a `signedIn` flag here driving a header pill, but nothing ever
- * set it from a real session — identity is established by `tokencard login` in the terminal,
+ * set it from a real session — identity is established by `tokenstats login` in the terminal,
  * and the site has no per-user surface for a browser session to unlock.
  *
  * hosted endpoint and opts into the public board — wire this seam to a real GitHub

@@ -9,7 +9,7 @@ import { bold, dim, fail, green, say, warn } from "../ui.js";
  * to ship an OAuth client inside a CLI that anybody can read. Overridable so the flow can be
  * pointed at a throwaway app during development.
  */
-const CLIENT_ID = process.env["TOKENCARD_CLIENT_ID"] ?? "Ov23liSMxVycJS63ZqN5";
+const CLIENT_ID = process.env["TOKENSTATS_CLIENT_ID"] ?? "Ov23liSMxVycJS63ZqN5";
 
 const DEVICE_CODE_URL = "https://github.com/login/device/code";
 const TOKEN_URL = "https://github.com/login/oauth/access_token";
@@ -33,8 +33,8 @@ export async function login(argv: string[]): Promise<number> {
   if (existing && !argv.includes("--force")) {
     say();
     say(`Already signed in as ${bold(`@${existing.handle}`)} ${dim(`(${existing.api})`)}`);
-    say(dim("  tokencard login --force   sign in again"));
-    say(dim("  tokencard logout          forget this machine"));
+    say(dim("  tokenstats login --force   sign in again"));
+    say(dim("  tokenstats logout          forget this machine"));
     say();
     return 0;
   }
@@ -84,7 +84,7 @@ export async function login(argv: string[]): Promise<number> {
       continue;
     }
     if (error === "expired_token") {
-      fail("The code expired. Run `tokencard login` again.");
+      fail("The code expired. Run `tokenstats login` again.");
       return 1;
     }
     if (error === "access_denied") {
@@ -141,7 +141,7 @@ export async function login(argv: string[]): Promise<number> {
   }
 
   say();
-  say(`  Next: ${bold("tokencard publish")} ${dim("— your rows will be marked verified")}`);
+  say(`  Next: ${bold("tokenstats publish")} ${dim("— your rows will be marked verified")}`);
   say();
 
   return 0;
@@ -156,7 +156,7 @@ export async function logout(): Promise<number> {
 export async function whoami(): Promise<number> {
   const auth = await readAuth();
   if (!auth) {
-    say("Not signed in. Run `tokencard login`.");
+    say("Not signed in. Run `tokenstats login`.");
     return 1;
   }
   say(`@${auth.handle} ${dim(`· ${auth.api} · since ${auth.createdAt.slice(0, 10)}`)}`);
