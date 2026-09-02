@@ -9,10 +9,12 @@ upload, no server — the card is a file.
 ```bash
 npx @tokencard/cli init     # detect agents, write .tokencard.json
 npx @tokencard/cli sync     # render tokencard.svg
+npx @tokencard/cli recap    # render tokencard-recap.svg — the year in review
 ```
 
 ```markdown
 ![tokencard](./tokencard.svg)
+![tokencard recap](./tokencard-recap.svg)
 ```
 
 ## What it reads
@@ -58,7 +60,37 @@ tokencard sync
   --theme auto|light|dark
   --json                 print the aggregate instead of writing an SVG
   --dry-run              report what would be written, write nothing
+
+tokencard recap
+  --out <path>           default: tokencard-recap.svg
+  --year <yyyy>          label the recap with a different year
+  --theme auto|light|dark
+  --json                 print the recap model instead of writing an SVG
+  --dry-run
 ```
+
+## The recap
+
+`recap` renders a weekday-by-hour heatmap of when you actually work, alongside your totals,
+top model and streak — in the terminal and as a second committable SVG:
+
+```
+       00    06    12    18
+  MON  ▓▓     ░░▓▒░▓▓▒▒█▓▓▒░▒▓▒   71%
+  TUE  ▒▒░░  ░░ ░░█████▓▓█▓░      86%
+  WED  ░░        ░██▓░████▒░  ░   89%
+  SUN  ███▓░     █▓█▒▓█ ▒▒█▒▒▒▓  100%
+
+  peak 11:00-20:00  ·  37 active days
+```
+
+Cells are coloured by **rank across the distinct values**, the way GitHub's contribution
+graph works, not by magnitude. Token counts are violently skewed — one long session can hold
+more than a quiet week — so a linear scale paints a single square hot and leaves the rest
+indistinguishable.
+
+Codex only records a running total per session, so its hours land on the session's last
+turn. Claude Code and OpenCode are exact to the message.
 
 `sync` writes the SVG and stops — committing on your behalf is your call, not the tool's.
 
