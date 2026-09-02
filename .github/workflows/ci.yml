@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22 is the floor: the OpenCode adapter uses the built-in node:sqlite.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Builds core, then the CLI, then the site. The site build is what catches a Node
+      # built-in leaking into the client bundle through @tokencard/core.
+      - run: npm run build
+
+      - run: npm test
+
+      # The card is the product; a builder that renders nothing should fail the run.
+      - name: Card renders
+        run: |
+          node --input-type=module -e "
+            import { buildCardSvg } from './packages/core/dist/index.js';
+            const svg = buildCardSvg({
+              handle: 'octocat', tokens: '1.20B', spend: '\$412', streak: '17d',
+              mix: [{ agent: 'claude-code', pct: 100 }], syncedAt: 'SYNCED 1H AGO',
+            });
+            if (!svg.startsWith('<svg') || !svg.endsWith('</svg>')) throw new Error('malformed SVG');
+            console.log('card renders,', svg.length, 'bytes');
+          "
+
+      # Every adapter must survive a machine with no agent logs at all — the state a CI
+      # runner is in, and the state a new user's laptop may be in.
+      - name: Adapters degrade on a bare machine
+        run: |
+          node --input-type=module -e "
+            import { adapters } from './packages/core/dist/adapters/index.js';
+            for (const a of adapters) {
+              const state = await a.detect();
+              let n = 0;
+              for await (const _ of a.read()) n++;
+              console.log(a.id, state, n, 'events');
+            }
+          "
