@@ -1,3 +1,4 @@
+import { resolveApi } from "../api.js";
 import { flag } from "../args.js";
 import { readAuth, writeAuth, clearAuth, authFile } from "../auth.js";
 import { post, postForm } from "../net.js";
@@ -12,7 +13,6 @@ const CLIENT_ID = process.env["TOKENCARD_CLIENT_ID"] ?? "Ov23liSMxVycJS63ZqN5";
 
 const DEVICE_CODE_URL = "https://github.com/login/device/code";
 const TOKEN_URL = "https://github.com/login/oauth/access_token";
-const DEFAULT_API = "https://tokencard.dev";
 
 /**
  * Prove a GitHub handle is yours, using GitHub's device flow.
@@ -27,7 +27,7 @@ const DEFAULT_API = "https://tokencard.dev";
  * exchange for access we would then have to be trusted not to use.
  */
 export async function login(argv: string[]): Promise<number> {
-  const api = (flag(argv, "--api") ?? process.env["TOKENCARD_API"] ?? DEFAULT_API).replace(/\/$/, "");
+  const api = resolveApi(flag(argv, "--api"));
 
   const existing = await readAuth();
   if (existing && !argv.includes("--force")) {

@@ -27,7 +27,7 @@ ${bold("tokencard")} — turn your local AI coding agent logs into a stat card
 
   ${bold("tokencard publish")}           the only command that uploads anything
     --dry-run                  print the exact bytes and send nothing
-    --api <url>                default https://tokencard.dev
+    --api <url>                default https://tokencard-site.vercel.app
     --handle <name>
 
   ${bold("tokencard recap")}             year in review: heatmap, models, totals

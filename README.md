@@ -67,7 +67,7 @@ tokencard whoami         who this machine is signed in as
 
 tokencard publish        the only command that uploads anything
   --dry-run              print the exact bytes and send nothing
-  --api <url>            default https://tokencard.dev
+  --api <url>            default https://tokencard-site.vercel.app
   --handle <name>
 
 tokencard recap
