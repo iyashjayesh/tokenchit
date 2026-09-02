@@ -75,45 +75,6 @@
   transform: translate(4px, 4px);
 }
 
-.pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 6px 5px 10px;
-  background: var(--surface);
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--lime);
-}
 
-.who {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
-.check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  background: var(--lime);
-  border: 1.5px solid var(--ink);
-  font-size: 9px;
-}
 
-.out {
-  padding: 4px 7px;
-  background: var(--ink);
-  border: 0;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
