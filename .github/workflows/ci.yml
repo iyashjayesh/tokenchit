@@ -25,6 +25,14 @@ jobs:
 
       - run: npm test
 
+      # Vercel builds apps/site on its own, with no root build to create
+      # packages/core/dist first. That is exactly how the first deploy failed, so the
+      # site has to be buildable from its own directory in a clean tree.
+      - name: Site builds standalone, as Vercel builds it
+        run: |
+          rm -rf packages/core/dist
+          npm run build --workspace=tokencard-site
+
       # The card is the product; a builder that renders nothing should fail the run.
       - name: Card renders
         run: |

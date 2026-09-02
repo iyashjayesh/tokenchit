@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "tsc -p ../../packages/core/tsconfig.json",
+    "predev": "tsc -p ../../packages/core/tsconfig.json",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
