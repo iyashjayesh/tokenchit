@@ -155,6 +155,38 @@
   font-weight: 800;
 }
 
+/* Self-reported. Deliberately quieter than .verified — no lime, no tick — so the two are
+   never mistaken for each other at a glance, which is the one thing this board must not do. */
+.unverified {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  padding: 0 4px;
+  flex: none;
+  background: var(--surface-alt);
+  border: 1.5px solid var(--card-footer);
+  color: var(--text-dim);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.empty {
+  margin: 0 0 24px;
+  padding: 28px 24px;
+  border: 2px dashed var(--hairline);
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .bar {
   display: flex;
   height: 12px;

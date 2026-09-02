@@ -13,31 +13,6 @@ export const DEFAULT_HANDLE = "dlacey";
 export const RAMP = ["#F5F4EE", "#E7F5BE", "#C6FF3D", "#FFD23D", "#FF5C3D"] as const;
 
 /** Rank 1–3 medal fills. */
-export const MEDALS = ["#FFD23D", "#E4E2D8", "#F0B37E"] as const;
-
-export const WINDOWS = ["this year", "last 30d", "last 7d", "all time"] as const;
-export type Window = (typeof WINDOWS)[number];
-
-export type BoardRow = {
-  user: string;
-  tokens: string;
-  spend: string;
-  streak: string;
-  /** Agent-mix percentages, in claude-code / codex / opencode order. */
-  mix: [number, number, number];
-};
-
-export const BOARD_ROWS: BoardRow[] = [
-  { user: "mirak",    tokens: "8.91B", spend: "$2,740", streak: "211d", mix: [64, 18, 18] },
-  { user: "p-han",    tokens: "7.32B", spend: "$2,118", streak: "96d",  mix: [41, 34, 25] },
-  { user: "sunnyv",   tokens: "6.05B", spend: "$1,802", streak: "154d", mix: [72, 9, 19] },
-  { user: "dlacey",   tokens: "4.24B", spend: "$1,284", streak: "63d",  mix: [58, 21, 21] },
-  { user: "ottoline", tokens: "3.88B", spend: "$1,090", streak: "41d",  mix: [30, 44, 26] },
-  { user: "kmerrit",  tokens: "3.10B", spend: "$946",   streak: "88d",  mix: [55, 20, 25] },
-  { user: "bex_c",    tokens: "2.47B", spend: "$714",   streak: "129d", mix: [48, 12, 40] },
-  { user: "nlundq",   tokens: "1.96B", spend: "$538",   streak: "22d",  mix: [22, 51, 27] },
-];
-
 export const QUERY_OPTIONS = [
   { key: "layout", def: "default", note: "default (495px) or compact (340px)" },
   { key: "theme",  def: "auto",    note: "auto follows GitHub dark mode; force light or dark" },

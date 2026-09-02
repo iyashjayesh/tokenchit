@@ -75,7 +75,13 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
   const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
   const cutoffDay = cutoff.toISOString().slice(0, 10);
 
+  // Days arrive split by agent, so a day's ceiling has to be checked against the day as a
+  // whole. Comparing each agent row on its own would let three agents each sit just under
+  // the limit while the day together sits far above it.
+  const perDay = new Map<string, number>();
   let daySum = 0;
+  let dayCost = 0;
+
   for (const d of p.days) {
     if (!DATE.test(d.day)) {
       fail(`day "${d.day}" must be YYYY-MM-DD`);
@@ -83,16 +89,39 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
     }
     if (d.day > cutoffDay) fail(`day ${d.day} is in the future (past ${cutoffDay})`);
     if (!Number.isFinite(d.tokens) || d.tokens < 0) fail(`day ${d.day} has negative tokens`);
-    if (d.tokens > LIMITS.maxTokensPerDay) {
-      fail(`day ${d.day} reports ${d.tokens} tokens, over the ${LIMITS.maxTokensPerDay} daily ceiling`);
+    if (!Number.isFinite(d.equivCostUsd) || d.equivCostUsd < 0) {
+      fail(`day ${d.day} has negative cost`);
     }
+    if (!d.agent) fail(`day ${d.day} has no agent`);
+
+    perDay.set(d.day, (perDay.get(d.day) ?? 0) + d.tokens);
     daySum += d.tokens;
+    dayCost += d.equivCostUsd;
+  }
+
+  for (const [day, tokens] of perDay) {
+    if (tokens > LIMITS.maxTokensPerDay) {
+      fail(`day ${day} reports ${tokens} tokens, over the ${LIMITS.maxTokensPerDay} daily ceiling`);
+    }
   }
 
   // The daily series is what the board actually sums, so a headline that disagrees with it
   // would put one number on the card and a different one on the board.
   if (p.days.length > 0 && daySum !== p.tokens) {
     fail(`daily tokens sum to ${daySum} but the total says ${p.tokens}`);
+  }
+
+  // Cost is compared with a tolerance rather than exactly: rows carry four decimals and the
+  // headline two, so a long series accumulates cents of rounding that are not a discrepancy.
+  // The bound stays far tighter than any fabrication would be.
+  if (p.days.length > 0) {
+    const tolerance = 0.01 + p.days.length * 0.0001;
+    if (Math.abs(dayCost - p.equivCostUsd) > tolerance) {
+      fail(
+        `daily costs sum to ${dayCost.toFixed(4)} but the total says ${p.equivCostUsd} ` +
+          `(tolerance ${tolerance.toFixed(4)})`,
+      );
+    }
   }
 
   if (p.equivCostUsd > LIMITS.maxCostTotal) {

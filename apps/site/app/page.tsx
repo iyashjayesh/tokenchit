@@ -3,6 +3,8 @@ import { SiteHeader } from "@/components/site-header";
 import { Hero } from "@/components/hero";
 import { CardSection } from "@/components/card-section";
 import { Leaderboard } from "@/components/leaderboard";
+import { DEFAULT_WINDOW } from "@/lib/board";
+import { readBoard } from "@/lib/board-query";
 import { Verification } from "@/components/verification";
 import { Privacy } from "@/components/privacy";
 import { Recap } from "@/components/recap";
@@ -14,13 +16,23 @@ import { SiteFooter } from "@/components/site-footer";
  * remain RSC and ship no JavaScript. Only the header, hero, card section and board
  * are client components.
  */
-export default function Page() {
+/**
+ * Revalidated rather than rendered per request. The board is the only live part of the page
+ * and the copy promises a row goes stale "within the hour", so five minutes is comfortably
+ * inside what was advertised while keeping the marketing page effectively static.
+ */
+export const revalidate = 300;
+
+export default async function Page() {
+  // Failing to read the board should cost the reader the table, not the whole page.
+  const rows = await readBoard(DEFAULT_WINDOW).catch(() => []);
+
   return (
     <SiteStateProvider>
       <SiteHeader />
       <Hero />
       <CardSection />
-      <Leaderboard />
+      <Leaderboard initialRows={rows} initialWindow={DEFAULT_WINDOW} />
       <Verification />
       <Privacy />
       <Recap />
