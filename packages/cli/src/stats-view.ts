@@ -29,9 +29,11 @@ function headline(stats: Stats): string[] {
   ];
 
   const w = cells.map(([v, l]) => Math.max(width(v), width(l)) + 3);
+
+  // Uppercase, matching the labels on the card and the profile page.
   return [
     "  " + cells.map(([v], i) => pad(bold(v), w[i]!)).join(""),
-    "  " + cells.map(([, l], i) => pad(grey(l), w[i]!)).join(""),
+    "  " + cells.map(([, l], i) => pad(grey(l.toUpperCase()), w[i]!)).join(""),
   ];
 }
 
@@ -62,7 +64,7 @@ function agents(stats: Stats): string[] {
   const nameW = Math.max(...stats.mix.map((m) => m.agent.length));
   const cells = Math.max(12, Math.min(28, term() - nameW - 24));
 
-  const out = ["", "  " + grey("agents")];
+  const out = ["", "  " + grey("AGENTS")];
   for (const m of stats.mix) {
     const tokens = stats.byAgent.get(m.agent) ?? 0;
     out.push(
@@ -88,7 +90,7 @@ function models(stats: Stats, limit = 5): string[] {
   const top = stats.models.slice(0, limit);
   const nameW = Math.max(...top.map((m) => m.model.length));
 
-  const out = ["", "  " + grey("models")];
+  const out = ["", "  " + grey("MODELS")];
   for (const m of top) {
     out.push(
       "    " +
@@ -103,8 +105,13 @@ function models(stats: Stats, limit = 5): string[] {
   return out;
 }
 
-/** The full panel, as lines. Returned rather than printed so callers control placement. */
-export function renderStats(stats: Stats, handle: string): string[] {
+/**
+ * The full panel, as lines. Returned rather than printed so callers control placement.
+ *
+ * `framed` draws the panel's own bracket. Inside `generate` it is off: the step's gutter is
+ * already grouping these lines, and a frame within a frame reads as a mistake.
+ */
+export function renderStats(stats: Stats, handle: string, framed = true): string[] {
   const w = term();
   const title = ` @${handle} `;
   const rule = "─".repeat(Math.max(0, w - width(title) - 3));
@@ -112,9 +119,7 @@ export function renderStats(stats: Stats, handle: string): string[] {
   const range =
     stats.firstDay && stats.lastDay ? grey(`  ${stats.firstDay} → ${stats.lastDay}`) : "";
 
-  const lines = [
-    "",
-    `  ${dim("╭─")}${bold(title)}${dim(rule)}`,
+  const body = [
     "",
     ...headline(stats),
     "",
@@ -122,9 +127,11 @@ export function renderStats(stats: Stats, handle: string): string[] {
     ...agents(stats),
     ...models(stats),
     "",
-    `  ${dim("╰" + "─".repeat(Math.max(0, w - 2)))}`,
-    range,
   ];
+
+  const lines = framed
+    ? ["", `  ${dim("╭─")}${bold(title)}${dim(rule)}`, ...body, `  ${dim("╰" + "─".repeat(Math.max(0, w - 2)))}`, range]
+    : [...body, range];
 
   // Padding is how the columns line up; it has no business surviving to the end of a line,
   // where it only shows up as trailing whitespace in a copied terminal buffer.

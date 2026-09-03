@@ -137,3 +137,33 @@ test("every command in the help table can actually be run", async () => {
     );
   }
 });
+
+test("the banner degrades rather than wrapping or leaking into pipes", async () => {
+  // A wall of block letters is right in a terminal someone is watching and wrong in a CI
+  // log, a piped file, or a 60-column pane. All three fall back to the inline wordmark.
+  const { banner } = await import(join(HERE, "..", ".build", "banner.js"));
+
+  const withStdout = (isTTY, columns) => {
+    const tty = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+    const cols = Object.getOwnPropertyDescriptor(process.stdout, "columns");
+    Object.defineProperty(process.stdout, "isTTY", { value: isTTY, configurable: true });
+    Object.defineProperty(process.stdout, "columns", { value: columns, configurable: true });
+    try {
+      return banner("receipts for your robots", "v0.0.0");
+    } finally {
+      if (tty) Object.defineProperty(process.stdout, "isTTY", tty);
+      if (cols) Object.defineProperty(process.stdout, "columns", cols);
+    }
+  };
+
+  assert.equal(withStdout(false, 200).length, 0, "a pipe must not get the banner");
+  assert.equal(withStdout(true, 60).length, 0, "a narrow terminal must not get a wrapped banner");
+
+  const wide = withStdout(true, 100);
+  assert.ok(wide.length > 0, "a wide terminal should get the banner");
+  const ANSI = new RegExp(String.fromCharCode(27) + "\\[[0-9;]*m", "g");
+  for (const line of wide) {
+    const printable = line.replace(ANSI, "");
+    assert.ok(printable.length <= 100, `banner line exceeds the terminal: ${printable.length}`);
+  }
+});

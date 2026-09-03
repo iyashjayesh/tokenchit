@@ -6,7 +6,7 @@ import { adapters, unsupported } from "@tokenchit/core/adapters";
 
 import { flag } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig, writeConfig, type Config } from "../config.js";
-import { bold, dim, green, say, warn, yellow } from "../ui.js";
+import { bold, dim, green, say, under, warn, yellow } from "../ui.js";
 
 const run = promisify(execFile);
 
@@ -25,11 +25,19 @@ async function guessHandle(): Promise<string | null> {
   }
 }
 
-export async function init(argv: string[]): Promise<number> {
+/**
+ * `chained` is set when `generate` is driving: the step heading has already said what this
+ * is, and the rows belong inside that step's gutter rather than under a second header.
+ */
+export async function init(argv: string[], chained = false): Promise<number> {
   const handleFlag = flag(argv, "--handle");
 
-  say();
-  say(bold("Scanning for local agent logs"));
+  const row = (text: string) => (chained ? under(text) : `  ${text}`);
+
+  if (!chained) {
+    say();
+    say(bold("Scanning for local agent logs"));
+  }
   say();
 
   const found: AgentId[] = [];
@@ -40,11 +48,11 @@ export async function init(argv: string[]): Promise<number> {
 
     if (state === "ready") {
       found.push(adapter.id);
-      say(`  ${green("●")} ${label} ${dim(adapter.source)}`);
+      say(row(`${green("●")} ${label} ${dim(adapter.source)}`));
     } else if (state === "installed-no-data") {
-      say(`  ${yellow("○")} ${label} ${dim("installed, but no usage recorded yet")}`);
+      say(row(`${yellow("○")} ${label} ${dim("installed, but no usage recorded yet")}`));
     } else {
-      say(`  ${dim("○")} ${dim(`${label} not installed`)}`);
+      say(row(`${dim("○")} ${dim(`${label} not installed`)}`));
     }
   }
 
@@ -52,7 +60,7 @@ export async function init(argv: string[]): Promise<number> {
   // contributes nothing, instead of assuming detection is broken.
   for (const probe of unsupported) {
     if (!(await probe.installed())) continue;
-    say(`  ${yellow("○")} ${probe.name.padEnd(13)} ${dim(`unsupported — ${probe.reason}`)}`);
+    say(row(`${yellow("○")} ${probe.name.padEnd(13)} ${dim(`unsupported — ${probe.reason}`)}`));
   }
 
   say();
@@ -81,8 +89,10 @@ export async function init(argv: string[]): Promise<number> {
     warn(`No handle set. Add one to ${CONFIG_FILE}, or run: tokenchit init --handle <you>`);
   }
 
-  say();
-  say(`  Next: ${bold("tokenchit sync")}`);
+  if (!chained) {
+    say();
+    say(`  Next: ${bold("tokenchit sync")}`);
+  }
   say();
 
   return 0;

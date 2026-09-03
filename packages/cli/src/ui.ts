@@ -28,6 +28,10 @@ export const cyan = wrap("36");
 export const magenta = wrap("35");
 export const grey = wrap("90");
 
+/* The brand lime, as foreground. 256-colour index 154 rather than truecolor: it is what the
+   widest set of terminals actually render, and nobody could pick it from #C6FF3D. */
+export const lime = (s: string) => (colour ? `${ESC}[38;5;154m${s}${ESC}[0m` : s);
+
 export const say = (s = "") => process.stdout.write(`${s}\n`);
 export const note = (s = "") => process.stderr.write(`${s}\n`);
 export const warn = (s: string) => process.stderr.write(`${yellow("!")} ${s}\n`);
@@ -62,10 +66,45 @@ export function wordmark(): string {
   return `${ESC}[48;5;154m${ESC}[38;5;16m${ESC}[1m tokenchit ${ESC}[0m`;
 }
 
+/*
+ * The site's hero chips, in a terminal. They answer "what is this about to read, and does it
+ * leave my machine" before anyone has to ask, which is the same job they do on the page.
+ *
+ * Reverse video rather than a drawn border: it survives every terminal, needs no box-drawing
+ * characters, and keeps the row one line tall.
+ */
+const CHIP_STYLES = {
+  ink: "48;5;16;38;5;231",
+  lime: "48;5;154;38;5;16",
+  yellow: "48;5;220;38;5;16",
+} as const;
+
+export function chip(text: string, style: keyof typeof CHIP_STYLES = "ink"): string {
+  const label = text.toUpperCase();
+  if (!colour) return `[${label}]`;
+  return `${ESC}[${CHIP_STYLES[style]}m ${label} ${ESC}[0m`;
+}
+
+/**
+ * The left rule that groups a step's output under its heading.
+ *
+ * Lime while the step is running, grey once it is done, so a glance down the left edge says
+ * how far along the command is without reading a word of it.
+ */
+export const gutter = (done = false) => (done ? grey("┃") : lime("┃"));
+
 /** `[1/3] label` — the spine of a multi-step command, so progress is legible at a glance. */
 export function step(n: number, total: number, label: string): string {
-  return `  ${grey(`[${n}/${total}]`)} ${bold(label)}`;
+  // Uppercase, like the micro-labels on the card and the profile page. A CLI and its site
+  // sharing a typographic voice is most of what makes them feel like one product.
+  return `  ${gutter()} ${grey(`[${n}/${total}]`)}  ${bold(label.toUpperCase())}`;
 }
+
+/** Indent a line into a step's gutter. */
+export const under = (text: string, done = false) => `  ${gutter(done)}   ${text}`;
+
+/** The line that closes a step: a tick in the gutter, then what happened. */
+export const done = (text: string) => `  ${green("✓")} ${text}`;
 
 /** A full-width rule, clamped like the stats panel so the two agree. */
 export function rule(): string {
