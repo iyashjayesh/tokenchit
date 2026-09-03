@@ -94,3 +94,14 @@ async function walk(dir) {
   }
   return out;
 }
+
+test("the help text names the same API the CLI actually posts to", async () => {
+  // These drifted once: the default moved to tokenchit.vercel.app while --help still
+  // advertised tokenchit-site.vercel.app, a host that 404s. Anyone who copied the URL out
+  // of --help would have pointed publish at nothing.
+  const { DEFAULT_API } = await import(join(HERE, "..", ".build", "api.js"));
+  const help = await readFile(join(SRC, "index.ts"), "utf8");
+
+  const advertised = help.match(/--api <url>\s+default (\S+)/)?.[1];
+  assert.equal(advertised, DEFAULT_API, "--help advertises a different API than DEFAULT_API");
+});
