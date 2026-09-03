@@ -27,7 +27,7 @@ ${bold("tokenchit")} — turn your local AI coding agent logs into a stat card
 
   ${bold("tokenchit publish")}           the only command that uploads anything
     --dry-run                  print the exact bytes and send nothing
-    --api <url>                default https://tokenchit-site.vercel.app
+    --api <url>                default https://tokenchit.vercel.app
     --handle <name>
 
   ${bold("tokenchit recap")}             year in review: heatmap, models, totals
