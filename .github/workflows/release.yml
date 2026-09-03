@@ -28,29 +28,22 @@ jobs:
 
       # A tag that disagrees with package.json publishes something nobody asked for, and it
       # cannot be taken back. Checked before anything is built.
-      - name: Tag matches package versions
+      - name: Tag matches the package version
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          for pkg in packages/core packages/cli; do
-            version=$(node -p "require('./$pkg/package.json').version")
-            if [ "$version" != "$tag" ]; then
-              echo "::error::$pkg is $version but the tag says $tag — run scripts/version.mjs"
-              exit 1
-            fi
-          done
-          echo "all packages at $tag"
+          version=$(node -p "require('./packages/cli/package.json').version")
+          if [ "$version" != "$tag" ]; then
+            echo "::error::@tokenstats/cli is $version but the tag says $tag — run npm run version:set"
+            exit 1
+          fi
+          echo "@tokenstats/cli at $tag"
 
       - run: npm run build
       - run: npm test
       - run: npm run lint -w tokenstats-site
 
-      # Core first: the CLI depends on an exact core version, so publishing them the other
-      # way round leaves a CLI on the registry that installs nothing.
-      - name: Publish @tokenstats/core
-        run: npm publish -w @tokenstats/core --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
+      # One package. @tokenstats/core is private and bundled into this tarball by esbuild,
+      # so there is nothing to publish first and no ordering to get wrong.
       - name: Publish @tokenstats/cli
         run: npm publish -w @tokenstats/cli --provenance
         env:
@@ -66,5 +59,4 @@ jobs:
             echo '```'
             echo
             echo "- [@tokenstats/cli](https://www.npmjs.com/package/@tokenstats/cli)"
-            echo "- [@tokenstats/core](https://www.npmjs.com/package/@tokenstats/core)"
           } >> "$GITHUB_STEP_SUMMARY"

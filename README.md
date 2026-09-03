@@ -228,6 +228,12 @@ uses `node:sqlite`, experimental on 22 and stable on 24 — the place they are m
 disagree), plus lint, the standalone site build Vercel performs, and an install of the packed
 tarballs, because the tarball is a different artifact from the working tree.
 
+**One published package.** `@tokenstats/core` stays a workspace package — it is what keeps
+the site and the CLI rendering the same card — but it is `private` and esbuild inlines it
+into the CLI's single bundled file. Publishing a second package would mean maintaining a
+public API surface nobody has asked for, and every rename inside it would become a
+compatibility decision for strangers. Publishing core later is easy; unpublishing is not.
+
 Publishing is tag-driven, never merge-driven — an unpublished npm name can never be reused by
 anyone, so it should take a deliberate act:
 
@@ -239,9 +245,11 @@ git tag v0.2.0
 git push --follow-tags
 ```
 
-The workflow refuses to publish if the tag disagrees with `package.json`, publishes core
-before the CLI (which depends on an exact core version), and attaches npm provenance so the
-package carries a signed link back to the commit that produced it.
+The workflow refuses to publish if the tag disagrees with `package.json`, and attaches npm
+provenance so the package carries a signed link back to the commit that produced it. CI
+installs the packed tarball into an empty project on every pull request and asserts nothing
+but `@tokenstats/cli` lands, which is what stops the bundle silently regressing into a broken
+dependency on the private package.
 
 Requires an `NPM_TOKEN` repository secret with publish rights.
 

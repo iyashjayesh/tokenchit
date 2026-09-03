@@ -67,18 +67,15 @@ jobs:
       - name: Packed tarballs install and run
         run: |
           mkdir -p /tmp/packtest
-          # Packed from the repo, installed somewhere else. `npm pack <dir> --workspace`
-          # packs the root package instead of the workspace, which quietly tests nothing.
-          npm pack -w @tokenstats/core --pack-destination /tmp/packtest
-          npm pack -w @tokenstats/cli  --pack-destination /tmp/packtest
+          # Packed from the repo, installed somewhere else, with nothing else available.
+          # @tokenstats/core is private and bundled in, so this proves the tarball is
+          # genuinely self-contained rather than quietly resolving the workspace copy.
+          npm pack -w @tokenstats/cli --pack-destination /tmp/packtest
           cd /tmp/packtest && npm init -y >/dev/null
-          npm install ./tokenstats-core-*.tgz ./tokenstats-cli-*.tgz >/dev/null
+          npm install ./tokenstats-cli-*.tgz
           ./node_modules/.bin/tokenstats --version
-          node --input-type=module -e "
-            import { buildCardSvg } from '@tokenstats/core';
-            if (typeof buildCardSvg !== 'function') throw new Error('core entry point broken');
-            console.log('installed package resolves');
-          "
+          test "$(ls node_modules/@tokenstats)" = "cli" \
+            || { echo "::error::tarball is not self-contained"; exit 1; }
 
   site:
     name: site

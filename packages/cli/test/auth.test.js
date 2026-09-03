@@ -46,7 +46,7 @@ test("credentials live outside the repo, never in the committed config", async (
 
 test("the auth file is owner-only and lives under the config directory", async () => {
   const box = await sandbox();
-  const { writeAuth, authFile } = await import(join(HERE, "..", "dist", "auth.js"));
+  const { writeAuth, authFile } = await import(join(HERE, "..", ".build", "auth.js"));
 
   process.env["XDG_CONFIG_HOME"] = join(box.home, ".config");
   const path = await writeAuth({

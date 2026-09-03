@@ -45,6 +45,7 @@ next-env.d.ts
 
 # workspace build output
 packages/*/dist
+packages/*/.build
 
 # scratch space for local verification
 .scratch/
