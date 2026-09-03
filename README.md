@@ -33,15 +33,29 @@ different question from where all your usage lives.
 
 ### Why the total differs from Claude Code's Stats panel
 
-**Claude Code deletes old transcripts.** Its own Stats panel reads a cumulative
-`stats-cache.json` that survives the cleanup, so it reports a lifetime figure. tokenchit
-parses the transcripts themselves, so it can only report the retention window — on the
-machine this was measured on, the caches went back to June while the oldest surviving
-transcript was late July.
+Expect Claude Code's panel to read roughly twice as high. Two separate things cause that,
+and only one of them is a limitation on this side.
 
-That is a real limitation, not a bug: a number derived from logs cannot include logs that no
-longer exist. It also means the figure only ever shrinks toward the truth as history ages out,
-never inflates.
+**The Stats panel counts each API call once per streaming rewrite.** Claude Code rewrites an
+assistant message in the transcript as it streams, so one call leaves several `usage` records
+carrying the same growing figures. `stats-cache.json` sums them as written. On one machine,
+51,373 usage records represented 23,644 real API calls, and the cache matched the naive sum of
+all 51,373 to the exact token on 28 of 57 days — and matched the deduplicated total on none.
+
+tokenchit collapses those to one row per call. That is safe to do: every message id observed
+more than once carried exactly one `requestId`, without exception, and deduplicating by
+`message.id` and by `requestId` independently agreed to within 0.002%. Counting them again
+would invent tokens nobody was billed for.
+
+**Claude Code also deletes old transcripts.** The Stats panel keeps reading the cumulative
+cache after the underlying transcripts are gone, so it covers a longer period than any
+transcript parser can see. On the same machine the cache reached back to June while the
+oldest surviving transcript was early July.
+
+That second one is a real limitation, not a bug: a number derived from logs cannot include
+logs that no longer exist. The cache is not a usable substitute, because it carries the
+inflation described above and the factor varies day to day — between 1.15x and 2.18x on the
+days measured — so there is no constant to divide out.
 
 **Copilot CLI and Gemini CLI are detected but cannot be counted.** Copilot records only a
 live context-window gauge, never a cumulative total; Gemini's chat transcripts carry no token
