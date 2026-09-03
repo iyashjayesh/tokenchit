@@ -409,10 +409,14 @@ export function buildCardSvg(opts: CardOptions): string {
  * theme=auto. Light values are already on the elements as presentation attributes;
  * CSS outranks those, so this block flips them under a dark colour scheme.
  *
- * The handoff both asks for media-query theming and warns that GitHub strips
- * <style> from README SVGs. Attributes-first satisfies both: where the CSS
- * survives, auto works; where it is stripped, the card degrades to light rather
- * than to nothing.
+ * The handoff warned that GitHub strips <style> from README SVGs. Measured against a live
+ * public repository, it does not: a committed card is served byte-identical from
+ * raw.githubusercontent.com, <style> and prefers-color-scheme intact, and the README renders
+ * it in dark mode under a dark colour scheme.
+ *
+ * Attributes-first is kept anyway. It costs nothing, and it is what makes the card degrade to
+ * light rather than to nothing anywhere CSS is dropped — an email client, a Markdown viewer,
+ * a sanitiser stricter than GitHub's.
  */
 function autoThemeStyle(segmentCount: number): string {
   const segRules = Array.from({ length: segmentCount }, (_, i) =>
