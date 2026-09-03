@@ -1,6 +1,7 @@
 import { has } from "../args.js";
 import { CONFIG_FILE, readConfig } from "../config.js";
-import { bold, dim, grey, rule, say, step, wordmark } from "../ui.js";
+import { banner } from "../banner.js";
+import { bold, chip, dim, grey, rule, say, step, under, wordmark } from "../ui.js";
 import { init } from "./init.js";
 import { publish } from "./publish.js";
 import { sync } from "./sync.js";
@@ -21,10 +22,21 @@ export async function generate(argv: string[], version: string): Promise<number>
   const skipPublish = has(argv, "--no-publish");
   const total = skipPublish ? 2 : 3;
 
+  /* The banner when there is a person and a wide enough window to show it to, and the
+     inline wordmark otherwise — a wall of block letters in a CI log is noise. */
+  const art = banner("receipts for your robots", `v${version}`);
+  if (art.length > 0) {
+    for (const line of art) say(line);
+  } else {
+    say();
+    say(`  ${wordmark()}  ${dim(`v${version}`)}`);
+  }
+
   say();
-  say(`  ${wordmark()}  ${dim(`v${version}`)}`);
-  say();
-  say(`  ${grey("reads your local agent logs, writes a card, puts you on the board")}`);
+  say(
+    `  ${chip("parsed locally", "lime")} ${chip("no prompts sent", "yellow")} ` +
+      `${chip("card is a file you commit")}`,
+  );
   say(rule());
 
   /*
@@ -35,13 +47,17 @@ export async function generate(argv: string[], version: string): Promise<number>
   const existing = await readConfig();
 
   say();
-  say(step(1, total, existing ? `config ${grey(`(${CONFIG_FILE} already here)`)}` : "detect agents"));
+  say(
+    existing
+      ? `${step(1, total, "config")}  ${grey(`${CONFIG_FILE} already here`)}`
+      : step(1, total, "detect agents"),
+  );
 
   if (!existing) {
-    const code = await init(argv);
+    const code = await init(argv, true);
     if (code !== 0) return code;
   } else {
-    say(`  ${grey(`  ${existing.agents.join(", ")}`)}`);
+    say(under(grey(existing.agents.join(", "))));
   }
 
   say(rule());

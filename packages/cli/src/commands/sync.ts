@@ -15,7 +15,7 @@ import { readAll } from "@tokenchit/core/adapters";
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { renderStats } from "../stats-view.js";
-import { bold, dim, green, grey, say, spin, warn } from "../ui.js";
+import { bold, dim, green, grey, say, spin, under, warn } from "../ui.js";
 
 const LAYOUTS = ["default", "compact"] as const satisfies readonly Layout[];
 const THEMES = ["auto", "light", "dark"] as const satisfies readonly Theme[];
@@ -80,7 +80,9 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   const svg = buildCardSvg(toCardOptions(stats, { handle, layout, theme }));
   const target = resolve(process.cwd(), out);
 
-  for (const line of renderStats(stats, handle)) say(line);
+  for (const line of renderStats(stats, handle, !chained)) {
+    say(chained && line !== "" ? under(line.replace(/^ {2}/, "")) : line);
+  }
   say();
 
   // Never let the dollar figure imply more precision than it has. An unpriced model is not

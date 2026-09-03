@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 
 import { DEFAULT_API } from "./api.js";
+import { banner } from "./banner.js";
 import { generate } from "./commands/generate.js";
 import { init } from "./commands/init.js";
 import { login, logout, whoami } from "./commands/login.js";
@@ -114,14 +115,18 @@ function usage(): string {
   const names = Object.keys(COMMANDS);
   const w = Math.max(...names.map((n) => n.length)) + 10;
 
-  const out: string[] = [
-    "",
-    `  ${wordmark()}  ${grey("receipts for your robots")}`,
-    "",
+  // The banner where there is a person and room for it; the inline wordmark otherwise.
+  const art = banner("receipts for your robots", `v${cliVersion()}`);
+  const out: string[] =
+    art.length > 0
+      ? [...art, ""]
+      : ["", `  ${wordmark()}  ${grey("receipts for your robots")}`, ""];
+
+  out.push(
     `  ${bold("npx @tokenchit/cli@latest generate")}`,
     `  ${grey("finds your agents, writes the card, puts you on the board")}`,
     "",
-  ];
+  );
 
   for (const [group, members] of GROUPS) {
     out.push(`${grey(group)}`);
