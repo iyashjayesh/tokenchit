@@ -2,7 +2,28 @@
   "name": "@tokenstats/core",
   "version": "0.1.0",
   "description": "Local agent-log adapters, usage aggregation and the tokenstats SVG builder.",
+  "keywords": [
+    "tokens",
+    "usage",
+    "claude-code",
+    "codex",
+    "opencode",
+    "ai-agents",
+    "svg",
+    "readme-badge",
+    "cli"
+  ],
   "license": "MIT",
+  "author": "Yash Chauhan (https://github.com/iyashjayesh)",
+  "homepage": "https://github.com/iyashjayesh/tokenstats#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyashjayesh/tokenstats.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/iyashjayesh/tokenstats/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,15 +38,20 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "engines": {
     "node": ">=22"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

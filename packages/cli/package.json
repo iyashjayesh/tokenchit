@@ -2,24 +2,50 @@
   "name": "@tokenstats/cli",
   "version": "0.1.0",
   "description": "Read your local AI coding agent logs and render a stat card into your repo.",
+  "keywords": [
+    "tokens",
+    "usage",
+    "claude-code",
+    "codex",
+    "opencode",
+    "ai-agents",
+    "cli",
+    "readme-badge",
+    "leaderboard"
+  ],
   "license": "MIT",
+  "author": "Yash Chauhan (https://github.com/iyashjayesh)",
+  "homepage": "https://github.com/iyashjayesh/tokenstats#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyashjayesh/tokenstats.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/iyashjayesh/tokenstats/issues"
+  },
   "type": "module",
   "bin": {
     "tokenstats": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "engines": {
     "node": ">=22"
   },
-  "dependencies": {
-    "@tokenstats/core": "0.1.0"
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@tokenstats/core": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
