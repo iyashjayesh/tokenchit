@@ -6,11 +6,19 @@ import {
   type Layout,
   type Theme,
 } from "@tokenchit/core";
-import { OWN_STATS } from "@/lib/sample-data";
+import { DEFAULT_WINDOW } from "@/lib/board";
+import { cardFigures, EMPTY_FIGURES } from "@/lib/card-figures";
+import { readProfile } from "@/lib/profile";
 
 /** Cache window printed on the card. Clamped 4h–24h, same as the rest of the genre. */
 const MIN_CACHE = 4 * 3600;
 const MAX_CACHE = 24 * 3600;
+
+/* A handle with nothing published is not an error, so the card renders rather than 404s —
+   a broken image in someone's README is a worse answer than an honest empty one. It is
+   cached briefly instead of the usual four hours so the real card appears soon after a
+   first publish, rather than after GitHub's copy of an empty card expires. */
+const EMPTY_CACHE = 300;
 
 const HIDEABLE = new Set<HideKey>(["spend", "streak", "mix"]);
 
@@ -57,22 +65,37 @@ export async function GET(
 
   const maxAge = parseCache(searchParams.get("cache"));
 
+  /* null means the handle has never published; undefined means the lookup itself failed.
+     They are cached differently below, so the two cases stay distinct here. */
+  const profile = await readProfile(handle, DEFAULT_WINDOW).catch(() => undefined);
+
+  const figures = profile ? cardFigures(profile) : EMPTY_FIGURES;
+
   const svg = buildCardSvg({
     handle,
-    tokens: OWN_STATS.tokens,
-    spend: OWN_STATS.spend,
-    streak: OWN_STATS.streak,
-    mix: filterAgents(OWN_STATS.mix, allow),
-    syncedAt: OWN_STATS.syncedAt,
+    tokens: figures.tokens,
+    spend: figures.spend,
+    streak: figures.streak,
+    mix: filterAgents(figures.mix, allow),
+    syncedAt: figures.syncedAt,
     layout,
     theme,
     hide,
   });
 
+  /* A failed lookup must not be cached: the next request should try the database again
+     rather than serve an empty card for four hours because of one blip. */
+  const cache =
+    profile === undefined
+      ? "no-store"
+      : profile === null
+        ? `public, max-age=${EMPTY_CACHE}, s-maxage=${EMPTY_CACHE}`
+        : `public, max-age=${maxAge}, s-maxage=${maxAge}`;
+
   return new Response(svg, {
     headers: {
       "Content-Type": "image/svg+xml; charset=utf-8",
-      "Cache-Control": `public, max-age=${maxAge}, s-maxage=${maxAge}`,
+      "Cache-Control": cache,
       "X-Content-Type-Options": "nosniff",
     },
   });
