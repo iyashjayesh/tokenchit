@@ -296,8 +296,20 @@ Requires Node 22 or newer — OpenCode support uses the built-in `node:sqlite`.
 `apps/site` also serves `GET /api/card/<handle>.svg` with `layout`, `theme`, `agents`, `hide`
 and `cache` parameters. It renders sample data and exists to demonstrate the builder. The
 supported path is the committed SVG: it costs nothing to run, cannot be abused, and — unlike
-an external image — GitHub serves it straight from `raw.githubusercontent.com` rather than
-through its camo proxy.
+an external image — GitHub serves it directly rather than through its camo proxy.
+
+Measured on a live public repository rather than assumed:
+
+| in a README | rendered as | proxied |
+| --- | --- | --- |
+| committed SVG, relative `./card.svg` | `/owner/repo/raw/main/card.svg` | no |
+| committed SVG, absolute `raw.githubusercontent.com` | unchanged | no |
+| any external image | `camo.githubusercontent.com/…` | yes |
+| this project's own `/api/card/…` endpoint | `camo.githubusercontent.com/…` | yes |
+
+Both committed forms work, so `sync` printing a relative path costs nothing. The `<style>`
+block survives too — a committed `theme=auto` card really does follow GitHub's dark mode,
+which the original design brief assumed was impossible.
 
 ## Design and research
 
