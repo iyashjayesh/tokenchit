@@ -49,7 +49,7 @@ export type Recap = {
  * the bottom. Threshold bucketing put a lone active hour at the palest step, which reads as
  * "barely used" for what is in fact the only thing that happened.
  */
-function quantise(cells: number[], scale: number[]): number[] {
+export function quantise(cells: number[], scale: number[]): number[] {
   return cells.map((n) => {
     if (n <= 0) return 0;
     const i = scale.indexOf(n);
@@ -59,7 +59,7 @@ function quantise(cells: number[], scale: number[]): number[] {
 }
 
 /** The distinct non-zero cell values, ascending — the ranks the ramp is spread across. */
-function scaleOf(values: number[]): number[] {
+export function scaleOf(values: number[]): number[] {
   return [...new Set(values.filter((n) => n > 0))].sort((a, b) => a - b);
 }
 

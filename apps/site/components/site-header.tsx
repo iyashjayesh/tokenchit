@@ -7,12 +7,14 @@ import styles from "./site-header.module.css";
 
 const LOGIN = "npx @tokenstats/cli login";
 
+// Root-relative, not bare fragments: these render on /u/<handle> and /board too, where a
+// bare "#card" points at an anchor that does not exist on the page.
 const NAV = [
-  { href: "#card", label: "card" },
-  { href: "#board", label: "board" },
-  { href: "#verification", label: "verify" },
-  { href: "#privacy", label: "privacy" },
-  { href: "#recap", label: "recap" },
+  { href: "/#card", label: "card" },
+  { href: "/board", label: "board" },
+  { href: "/#verification", label: "verify" },
+  { href: "/#privacy", label: "privacy" },
+  { href: "/#recap", label: "recap" },
 ];
 
 /**

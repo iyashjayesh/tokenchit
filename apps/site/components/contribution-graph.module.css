@@ -1,0 +1,114 @@
+.wrap {
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--hairline);
+  padding: 18px;
+}
+
+/* A year of weeks does not fit a narrow screen, and squashing the cells would destroy the
+   one thing the graph is for. It scrolls inside its own box instead, like every wide table
+   on this site. */
+.scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.grid {
+  display: flex;
+  gap: 6px;
+  min-width: max-content;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 13px);
+  gap: 3px;
+  /* Clears the month row above the cells. */
+  padding-top: 17px;
+}
+
+.weekday {
+  font-size: 8px;
+  line-height: 13px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.columns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.months {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+}
+
+.month {
+  width: 13px;
+  flex: none;
+  font-size: 8px;
+  line-height: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.weeks {
+  display: flex;
+  gap: 3px;
+}
+
+.week {
+  display: grid;
+  grid-template-rows: repeat(7, 13px);
+  gap: 3px;
+}
+
+.cell,
+.future {
+  width: 13px;
+  height: 13px;
+  /* Radius is 0 everywhere on this site; the hairline is what separates adjacent cells of
+     the same colour. */
+  box-shadow: inset 0 0 0 1px rgb(16 16 16 / 6%);
+}
+
+/* Days that have not happened yet are absent, not empty — an outline says "nothing here
+   can be here", where a filled cell would say "you did nothing". */
+.future {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--grid);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.legendText {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+.scaleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swatch {
+  width: 11px;
+  height: 11px;
+  box-shadow: inset 0 0 0 1px rgb(16 16 16 / 6%);
+}

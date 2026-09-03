@@ -201,6 +201,26 @@ Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals
   tracked in a `_migrations` table. There is no local Postgres: a contributor who only needs
   the CLI or the card never touches a database, and `npm test` requires none.
 
+## The site
+
+| route | what it is |
+| --- | --- |
+| `/` | the pitch, with a live card preview and a board teaser |
+| `/board` | the full ranking, with headline totals, over any of four windows |
+| `/u/<handle>` | one developer: contribution graph, agent split, model breakdown, their card |
+| `/api/card/<handle>.svg` | the card endpoint |
+| `/api/submissions` | publish (POST) and read the board (GET) |
+
+Every column on the board and the profile is summed over the same window, which is why
+`user_days` carries an agent and a cost per day. Streak is the exception and is not windowed:
+it is a current-streak count, and "your streak, but only counting last week" is not a thing
+anyone means.
+
+Profile pages are shareable, so they carry a PNG `og:image` rendered from the same figures —
+`og:image` is deliberately **not** set in `generateMetadata`, because doing so overrides the
+file-based `opengraph-image` convention and the page would then advertise the SVG card, which
+Twitter, Slack and Facebook all decline to render.
+
 ## Repo layout
 
 ```

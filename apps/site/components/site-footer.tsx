@@ -1,9 +1,9 @@
 import styles from "./site-footer.module.css";
 
 const LINKS = [
-  { label: "github.com/tokenstats", href: "https://github.com/tokenstats" },
-  { label: "npm / tokenstats", href: "https://npmjs.com/package/tokenstats" },
-  { label: "self-host docs", href: "https://github.com/tokenstats#self-hosting" },
+  { label: "github.com/iyashjayesh/tokenstats", href: "https://github.com/iyashjayesh/tokenstats" },
+  { label: "npm / @tokenstats/cli", href: "https://npmjs.com/package/@tokenstats/cli" },
+  { label: "the board", href: "/board" },
 ];
 
 export function SiteFooter() {

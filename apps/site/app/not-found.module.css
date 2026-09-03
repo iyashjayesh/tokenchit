@@ -1,0 +1,87 @@
+.wrap {
+  max-width: 46em;
+  padding: clamp(20px, 5vw, 60px) 0;
+}
+
+.code {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(64px, 14vw, 132px);
+  font-weight: 800;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  color: var(--lime);
+  -webkit-text-stroke: 2px var(--ink);
+}
+
+.h1 {
+  margin: 18px 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.body {
+  margin: 16px 0 28px;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.primary,
+.secondary {
+  padding: 11px 16px;
+  border: 2px solid var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.primary {
+  background: var(--coral);
+  color: #fff;
+}
+
+.secondary {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.primary:hover,
+.secondary:hover {
+  box-shadow: 2px 2px 0 var(--ink);
+  transform: translate(2px, 2px);
+}
+
+.primary:hover { color: #fff; }
+.secondary:hover { color: var(--ink); }
+
+.primary:active,
+.secondary:active {
+  box-shadow: 0 0 0 var(--ink);
+  transform: translate(4px, 4px);
+}
+
+.install {
+  display: inline-block;
+  padding: 11px 14px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  font-size: 12px;
+}
+
+.strong {
+  color: var(--ink);
+  font-weight: 700;
+}

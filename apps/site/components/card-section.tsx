@@ -18,9 +18,11 @@ const COMPACT_SVG = buildCardSvg({ ...SAMPLE, layout: "compact", theme: "light" 
 export function CardSection() {
   const { handle } = useSiteState();
 
-  // A plain image, not a link. There is no per-user page to point at, and inventing one
-  // would mean hosting exactly the surface the committed-SVG design exists to avoid.
-  const markdown = `![tokenstats](${SITE_URL}/api/card/${handle}.svg)`;
+  // Linked to the profile: every embedded card is a door back to the site, which is the
+  // whole growth loop. The plain-image form is still what `tokenstats sync` prints, because
+  // a committed SVG has no hosted page to guarantee.
+  const markdown =
+    `[![tokenstats](${SITE_URL}/api/card/${handle}.svg)](${SITE_URL}/u/${handle})`;
 
   /* The panel shows the origin elided so the two tags fit without scrolling; the
      clipboard gets the full URLs, which is what a README actually needs. */

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+
+import { SITE_URL } from "@/lib/site";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import styles from "./layout.module.css";
@@ -19,9 +21,13 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Without this, relative metadata URLs resolve against the request origin, so a profile
+  // shared from production would advertise a localhost preview image whenever the page was
+  // rendered anywhere but the live host.
+  metadataBase: new URL(SITE_URL),
   title: "tokenstats — receipts for your robots",
   description:
-    "tokenstats reads your local Claude Code, Codex, Gemini CLI, Copilot CLI and OpenCode logs and prints one embeddable card.",
+    "tokenstats reads your local Claude Code, Codex and OpenCode logs and renders one embeddable card straight into your repo.",
 };
 
 export default function RootLayout({
