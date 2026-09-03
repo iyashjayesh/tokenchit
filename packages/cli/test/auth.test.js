@@ -119,6 +119,7 @@ test("every command in the help table can actually be run", async () => {
   const { stdout: usage } = await cli(["help"], box);
 
   for (const name of [
+    "generate",
     "init",
     "sync",
     "publish",

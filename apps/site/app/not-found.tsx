@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
 
 import styles from "./not-found.module.css";
-import { cmd, npx } from "@/lib/cli";
+import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
 
 /**
  * Profile URLs get shared, mistyped and outlive the handle they name, so this page is
@@ -32,7 +32,7 @@ export default function NotFound() {
           </Link>
         </div>
 
-        <code className={styles.install}>{npx("init")}</code>
+        <code className={styles.install}>{PRIMARY_COMMAND}</code>
       </div>
     </PageShell>
   );

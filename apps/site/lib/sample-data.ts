@@ -7,7 +7,7 @@
  * signed-in user's own totals, mix, sync timestamp and verification tier.
  */
 
-export const DEFAULT_HANDLE = "dlacey";
+export const DEFAULT_HANDLE = "iyashjayesh";
 
 /** Heatmap ramp, low to high. */
 export const RAMP = ["#F5F4EE", "#E7F5BE", "#C6FF3D", "#FFD23D", "#FF5C3D"] as const;

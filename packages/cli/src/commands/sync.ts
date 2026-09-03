@@ -20,7 +20,12 @@ import { bold, dim, green, grey, say, spin, warn } from "../ui.js";
 const LAYOUTS = ["default", "compact"] as const satisfies readonly Layout[];
 const THEMES = ["auto", "light", "dark"] as const satisfies readonly Theme[];
 
-export async function sync(argv: string[]): Promise<number> {
+/**
+ * `chained` is set when `generate` is driving. The closing hints assume the reader is done
+ * and choosing what to do next; inside the flow the next thing is about to happen on its
+ * own, and telling someone to run the command already running is noise.
+ */
+export async function sync(argv: string[], chained = false): Promise<number> {
   const config = (await readConfig()) ?? DEFAULT_CONFIG;
 
   // Checked before sanitising: `sanitizeHandle` falls back to "dev" on empty input, which
@@ -109,7 +114,9 @@ export async function sync(argv: string[]): Promise<number> {
   // Committing on the user's behalf is not ours to decide — a tool that reads your logs
   // should not also decide what lands in your history on its first run.
   say(`  ${grey("commit")}    git add ${rel} && git commit -m "chore: update tokenchit"`);
-  say(`  ${grey("share")}     ${bold("tokenchit publish")} ${dim("— put this on the board")}`);
+  if (!chained) {
+    say(`  ${grey("share")}     ${bold("tokenchit publish")} ${dim("— put this on the board")}`);
+  }
   say();
 
   return 0;

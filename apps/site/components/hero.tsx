@@ -4,11 +4,11 @@ import { CopyButton } from "./copy-button";
 import { StatCard } from "./stat-card";
 import { useSiteState } from "./site-state";
 import styles from "./hero.module.css";
-import { npx } from "@/lib/cli";
+import { PRIMARY_COMMAND } from "@/lib/cli";
 
 // Scoped, because the bare `tokenchit` name on npm is a 2018 tombstone: it was published
 // and unpublished within a fortnight, and npm never lets an unpublished name be reused.
-const INSTALL = npx("init");
+const INSTALL = PRIMARY_COMMAND;
 
 export function Hero() {
   const { handle, setHandle } = useSiteState();
@@ -37,8 +37,8 @@ export function Hero() {
         <div className={styles.install}>
           <code className={styles.command}>
             <span className={styles.prompt}>$ </span>
-            {INSTALL}
-            <span className={styles.cursor}>▌</span>
+            <span className={styles.typed}>{INSTALL}</span>
+            <span className={styles.cursor} aria-hidden="true" />
           </code>
           <CopyButton
             value={INSTALL}

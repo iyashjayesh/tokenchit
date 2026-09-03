@@ -82,9 +82,23 @@ a network request.
 
 ## Commands
 
-Three steps, in order. `sync` shows you everything before anything leaves the machine.
+One command does the lot:
+
+```bash
+npx @tokenchit/cli@latest generate
+```
+
+It detects your agents, shows your stats, writes the card, and puts you on the board — each
+step announced before it happens. `--no-publish` stops after the card.
+
+The steps are also commands in their own right, and `generate` is a composition of exactly
+those, so running them separately does identical work. `sync` shows you everything before
+anything leaves the machine.
 
 ```
+tokenchit generate       the whole flow, below, in order
+  --no-publish           stop after writing the card
+
 tokenchit init           say who you are
   --handle <name>        GitHub handle (default: guessed from your origin remote)
 

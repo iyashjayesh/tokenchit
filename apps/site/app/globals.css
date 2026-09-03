@@ -63,10 +63,18 @@ select {
   border-radius: 0;
 }
 
-/* The one animation on the entire site: the install-command cursor. */
-@keyframes blk {
-  0%, 49%   { opacity: 1; }
-  50%, 100% { opacity: 0; }
+/* The hero's two keyframes live in hero.module.css, not here. CSS Modules rewrites an
+   animation-name inside a module to a scoped identifier, so a module referencing a keyframe
+   declared in this file resolves to a name nothing defines and the animation silently never
+   runs — which is what had quietly disabled the cursor blink. */
+
+@media (prefers-reduced-motion: reduce) {
+  /* A cursor that blinks forever is exactly the kind of motion this setting is asking about. */
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 ::selection { background: var(--lime); }

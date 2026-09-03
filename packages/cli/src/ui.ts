@@ -51,6 +51,28 @@ export function link(url: string): string {
   return `${ESC}]8;;${url}${ESC}\\${cyan(url)}${ESC}]8;;${ESC}\\`;
 }
 
+/* The site's wordmark, in a terminal. Lime block, black text, the same mark someone saw on
+   the page they installed this from — a CLI and its site looking like two products is a
+   surprisingly cheap thing to get wrong.
+
+   256-colour rather than truecolor: it is what the widest set of terminals actually render,
+   and the brand lime is close enough at index 154 that nobody could pick the difference. */
+export function wordmark(): string {
+  if (!colour) return "tokenchit";
+  return `${ESC}[48;5;154m${ESC}[38;5;16m${ESC}[1m tokenchit ${ESC}[0m`;
+}
+
+/** `[1/3] label` — the spine of a multi-step command, so progress is legible at a glance. */
+export function step(n: number, total: number, label: string): string {
+  return `  ${grey(`[${n}/${total}]`)} ${bold(label)}`;
+}
+
+/** A full-width rule, clamped like the stats panel so the two agree. */
+export function rule(): string {
+  const w = Math.max(64, Math.min(84, (process.stdout.columns ?? 80) - 4));
+  return `  ${dim("─".repeat(w - 2))}`;
+}
+
 const BLOCKS = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"] as const;
 
 /** A sparkline scaled to its own maximum. A zero day stays a dot, so gaps read as gaps. */

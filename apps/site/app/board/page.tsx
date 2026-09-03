@@ -9,7 +9,7 @@ import { readBoard } from "@/lib/board-query";
 import { readBoardTotals } from "@/lib/board-totals";
 
 import styles from "./board.module.css";
-import { cmd, npx } from "@/lib/cli";
+import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
 
 export const revalidate = 300;
 
@@ -83,7 +83,7 @@ export default async function BoardPage({
       {rows.length === 0 ? (
         <p className={styles.empty}>
           Nobody has published in this window yet.{" "}
-          <span className={styles.strong}>{npx("publish")}</span> and the board is
+          <span className={styles.strong}>{PRIMARY_COMMAND}</span> and the board is
           yours.
         </p>
       ) : (
