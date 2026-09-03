@@ -8,7 +8,7 @@ import { clientIp, hit, limitHeaders, LIMITS } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 /**
- * Exchange a GitHub access token for a tokenstats API key.
+ * Exchange a GitHub access token for a tokenchit API key.
  *
  * The identity check happens **here**, not in the CLI. A client that simply posted
  * `{ handle: "octocat" }` would be trivially forgeable, so the server takes the GitHub token
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       headers: {
         authorization: `Bearer ${githubToken}`,
         accept: "application/vnd.github+json",
-        "user-agent": "tokenstats",
+        "user-agent": "tokenchit",
       },
       cache: "no-store",
     });

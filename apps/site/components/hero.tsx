@@ -5,9 +5,9 @@ import { StatCard } from "./stat-card";
 import { useSiteState } from "./site-state";
 import styles from "./hero.module.css";
 
-// Scoped, because the bare `tokenstats` name on npm is a 2018 tombstone: it was published
+// Scoped, because the bare `tokenchit` name on npm is a 2018 tombstone: it was published
 // and unpublished within a fortnight, and npm never lets an unpublished name be reused.
-const INSTALL = "npx @tokenstats/cli init";
+const INSTALL = "npx @tokenchit/cli init";
 
 export function Hero() {
   const { handle, setHandle } = useSiteState();
@@ -28,7 +28,7 @@ export function Hero() {
         </h1>
 
         <p className={styles.lede}>
-          tokenstats reads your local Claude Code, Codex and OpenCode logs and renders one
+          tokenchit reads your local Claude Code, Codex and OpenCode logs and renders one
           embeddable card straight into your repo. Nothing is uploaded — the card is a file
           you commit.
         </p>

@@ -16,8 +16,8 @@ const SRC = join(HERE, "..", "src");
 const FIXTURE_HOME = join(HERE, "fixtures", "home");
 
 async function sandbox() {
-  const home = await mkdtemp(join(tmpdir(), "tokenstats-home-"));
-  const cwd = await mkdtemp(join(tmpdir(), "tokenstats-cwd-"));
+  const home = await mkdtemp(join(tmpdir(), "tokenchit-home-"));
+  const cwd = await mkdtemp(join(tmpdir(), "tokenchit-cwd-"));
   return { home, cwd };
 }
 
@@ -32,7 +32,7 @@ test("credentials live outside the repo, never in the committed config", async (
 
   // init writes the file that gets committed. It must never gain a credential field.
   await cli(["init", "--handle", "octocat"], { ...box, home: FIXTURE_HOME });
-  const config = JSON.parse(await readFile(join(box.cwd, ".tokenstats.json"), "utf8"));
+  const config = JSON.parse(await readFile(join(box.cwd, ".tokenchit.json"), "utf8"));
 
   assert.deepEqual(
     Object.keys(config).sort(),
@@ -57,7 +57,7 @@ test("the auth file is owner-only and lives under the config directory", async (
   });
 
   assert.equal(path, authFile());
-  assert.ok(path.includes(join(".config", "tokenstats")), `unexpected location: ${path}`);
+  assert.ok(path.includes(join(".config", "tokenchit")), `unexpected location: ${path}`);
 
   // 0600. A world-readable credential on a shared machine is the same as no credential.
   const mode = (await stat(path)).mode & 0o777;

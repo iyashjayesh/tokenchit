@@ -1,4 +1,4 @@
-# @tokenstats/cli
+# @tokenchit/cli
 
 Turn your local AI coding agent logs into an embeddable stat card for your GitHub README.
 
@@ -7,12 +7,12 @@ totals them, and renders an SVG you commit to your own repo. No account, no uplo
 — the card is a file.
 
 ```bash
-npx @tokenstats/cli init     # detect agents, write .tokenstats.json
-npx @tokenstats/cli sync     # render tokenstats.svg
+npx @tokenchit/cli init     # detect agents, write .tokenchit.json
+npx @tokenchit/cli sync     # render tokenchit.svg
 ```
 
 ```markdown
-![tokenstats](./tokenstats.svg)
+![tokenchit](./tokenchit.svg)
 ```
 
 ## What it reads
@@ -33,25 +33,25 @@ file contents, and no paths — not hashed, not truncated, absent.
 ## Commands
 
 ```
-tokenstats init            detect agents, write .tokenstats.json
+tokenchit init            detect agents, write .tokenchit.json
   --handle <name>          GitHub handle (default: guessed from your origin remote)
 
-tokenstats sync            render the card
-  --out <path>             default: tokenstats.svg
+tokenchit sync            render the card
+  --out <path>             default: tokenchit.svg
   --layout default|compact
   --theme auto|light|dark
   --json                   print the aggregate instead of writing an SVG
   --dry-run
 
-tokenstats recap           year in review: heatmap, models, totals
-  --out <path>             default: tokenstats-recap.svg
+tokenchit recap           year in review: heatmap, models, totals
+  --out <path>             default: tokenchit-recap.svg
   --year <yyyy>
 
-tokenstats login           prove your GitHub handle (device flow, no password)
-tokenstats logout
-tokenstats whoami
+tokenchit login           prove your GitHub handle (device flow, no password)
+tokenchit logout
+tokenchit whoami
 
-tokenstats publish         the only command that uploads anything
+tokenchit publish         the only command that uploads anything
   --dry-run                print the exact bytes and send nothing
   --api <url>
 ```
@@ -66,7 +66,7 @@ tells you what share of tokens the figure covers.
 ## Publishing is opt-in
 
 `sync` and `recap` are local forever. `publish` is the only command that sends anything, and
-there is deliberately no config switch to change that: `.tokenstats.json` is a committed
+there is deliberately no config switch to change that: `.tokenchit.json` is a committed
 file, and a committed file must never be able to cause a network call on someone else's
 machine.
 
@@ -75,4 +75,4 @@ of it, which a test in this package enforces by comparing against what a real pu
 the wire.
 
 Requires Node 22 or newer. MIT licensed. Source, issues and the full documentation:
-[github.com/iyashjayesh/tokenstats](https://github.com/iyashjayesh/tokenstats).
+[github.com/iyashjayesh/tokenchit](https://github.com/iyashjayesh/tokenchit).

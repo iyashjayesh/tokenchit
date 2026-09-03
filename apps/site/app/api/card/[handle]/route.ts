@@ -5,7 +5,7 @@ import {
   type HideKey,
   type Layout,
   type Theme,
-} from "@tokenstats/core";
+} from "@tokenchit/core";
 import { OWN_STATS } from "@/lib/sample-data";
 
 /** Cache window printed on the card. Clamped 4h–24h, same as the rest of the genre. */

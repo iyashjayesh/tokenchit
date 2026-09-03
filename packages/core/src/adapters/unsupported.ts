@@ -5,7 +5,7 @@ import { join } from "node:path";
 /**
  * Agents we can detect but cannot total.
  *
- * These are reported by `tokenstats init` rather than quietly omitted. A user with Copilot
+ * These are reported by `tokenchit init` rather than quietly omitted. A user with Copilot
  * CLI installed will otherwise assume detection is broken, and the honest answer — the data
  * simply is not written to disk — is more useful than silence. If either tool starts
  * recording cumulative usage, these become real adapters.

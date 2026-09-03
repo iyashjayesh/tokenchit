@@ -68,13 +68,13 @@ jobs:
         run: |
           mkdir -p /tmp/packtest
           # Packed from the repo, installed somewhere else, with nothing else available.
-          # @tokenstats/core is private and bundled in, so this proves the tarball is
+          # @tokenchit/core is private and bundled in, so this proves the tarball is
           # genuinely self-contained rather than quietly resolving the workspace copy.
-          npm pack -w @tokenstats/cli --pack-destination /tmp/packtest
+          npm pack -w @tokenchit/cli --pack-destination /tmp/packtest
           cd /tmp/packtest && npm init -y >/dev/null
-          npm install ./tokenstats-cli-*.tgz
-          ./node_modules/.bin/tokenstats --version
-          test "$(ls node_modules/@tokenstats)" = "cli" \
+          npm install ./tokenchit-cli-*.tgz
+          ./node_modules/.bin/tokenchit --version
+          test "$(ls node_modules/@tokenchit)" = "cli" \
             || { echo "::error::tarball is not self-contained"; exit 1; }
 
   site:
@@ -93,7 +93,7 @@ jobs:
 
       - run: npm run build
 
-      - run: npm run lint -w tokenstats-site
+      - run: npm run lint -w tokenchit-site
 
       # Vercel builds apps/site on its own, with no root build to create
       # packages/core/dist first. That is exactly how the first deploy failed, so the site
@@ -101,4 +101,4 @@ jobs:
       - name: Site builds standalone, as Vercel builds it
         run: |
           rm -rf packages/core/dist
-          npm run build --workspace=tokenstats-site
+          npm run build --workspace=tokenchit-site

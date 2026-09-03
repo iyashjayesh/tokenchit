@@ -18,7 +18,7 @@ export default function NotFound() {
         <h1 className={styles.h1}>Nothing here.</h1>
         <p className={styles.body}>
           If you were looking for someone&apos;s stats, they may not have published yet — a
-          profile only exists once <span className={styles.strong}>tokenstats publish</span>{" "}
+          profile only exists once <span className={styles.strong}>tokenchit publish</span>{" "}
           has run at least once. Handles are case-insensitive, so that is not it.
         </p>
 
@@ -27,11 +27,11 @@ export default function NotFound() {
             see the board
           </Link>
           <Link href="/" className={styles.secondary}>
-            what is tokenstats?
+            what is tokenchit?
           </Link>
         </div>
 
-        <code className={styles.install}>npx @tokenstats/cli init</code>
+        <code className={styles.install}>npx @tokenchit/cli init</code>
       </div>
     </PageShell>
   );

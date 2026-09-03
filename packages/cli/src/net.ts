@@ -6,7 +6,7 @@
  * scanning the source for network calls outside this file. Keeping the surface to one small
  * module is what makes that claim checkable rather than aspirational.
  *
- * Nothing here is imported unless `tokenstats publish` runs.
+ * Nothing here is imported unless `tokenchit publish` runs.
  */
 
 export type PostResult = {
@@ -84,7 +84,7 @@ export async function postForm(
       headers: {
         "content-type": "application/x-www-form-urlencoded",
         accept: "application/json",
-        "user-agent": "tokenstats-cli",
+        "user-agent": "tokenchit-cli",
       },
       body: new URLSearchParams(fields).toString(),
       signal: controller.signal,

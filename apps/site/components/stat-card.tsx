@@ -52,7 +52,7 @@ export function StatCard() {
       </div>
 
       <div className={styles.footer}>
-        <span>TOKENSTATS.APP</span>
+        <span>TOKENCHIT.APP</span>
         <span>{OWN_STATS.syncedAt}</span>
       </div>
     </div>

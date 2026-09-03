@@ -3,14 +3,14 @@ import { join } from "node:path";
 
 import { ImageResponse } from "next/og";
 
-import { formatTokens, formatUsd, sanitizeHandle } from "@tokenstats/core";
+import { formatTokens, formatUsd, sanitizeHandle } from "@tokenchit/core";
 
 import { readProfile } from "@/lib/profile";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "tokenstats profile";
+export const alt = "tokenchit profile";
 
 /**
  * The link preview for a shared profile.
@@ -127,7 +127,7 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", fontSize: 26, color: INK, fontWeight: 700 }}>
-            tokenstats
+            tokenchit
           </div>
           <div style={{ display: "flex", fontSize: 22, color: DIM }}>
             {profile

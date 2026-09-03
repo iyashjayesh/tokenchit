@@ -1,4 +1,4 @@
-import { formatTokens, quantise, RAMP, scaleOf } from "@tokenstats/core";
+import { formatTokens, quantise, RAMP, scaleOf } from "@tokenchit/core";
 
 import styles from "./contribution-graph.module.css";
 

@@ -3,7 +3,7 @@
 import { CopyButton } from "@/components/copy-button";
 import { SectionHeading } from "@/components/section-heading";
 import { useSiteState } from "@/components/site-state";
-import { buildCardSvg } from "@tokenstats/core";
+import { buildCardSvg } from "@tokenchit/core";
 import { DEFAULT_HANDLE, OWN_STATS, QUERY_OPTIONS } from "@/lib/sample-data";
 import { SITE_URL } from "@/lib/site";
 import styles from "./card-section.module.css";
@@ -19,10 +19,10 @@ export function CardSection() {
   const { handle } = useSiteState();
 
   // Linked to the profile: every embedded card is a door back to the site, which is the
-  // whole growth loop. The plain-image form is still what `tokenstats sync` prints, because
+  // whole growth loop. The plain-image form is still what `tokenchit sync` prints, because
   // a committed SVG has no hosted page to guarantee.
   const markdown =
-    `[![tokenstats](${SITE_URL}/api/card/${handle}.svg)](${SITE_URL}/u/${handle})`;
+    `[![tokenchit](${SITE_URL}/api/card/${handle}.svg)](${SITE_URL}/u/${handle})`;
 
   /* The panel shows the origin elided so the two tags fit without scrolling; the
      clipboard gets the full URLs, which is what a README actually needs. */

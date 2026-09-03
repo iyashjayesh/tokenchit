@@ -6,20 +6,20 @@ import pg from "pg";
  * Next's dev server re-evaluates modules on every edit; without the global, each reload
  * would leak a pool and Postgres would run out of connections within a few saves.
  */
-const globalForDb = globalThis as unknown as { tokenstatsPool?: pg.Pool };
+const globalForDb = globalThis as unknown as { tokenchitPool?: pg.Pool };
 
 export const pool: pg.Pool =
-  globalForDb.tokenstatsPool ??
+  globalForDb.tokenchitPool ??
   new pg.Pool({
     connectionString:
-      process.env["DATABASE_URL"] ?? "postgres://tokenstats:tokenstats@localhost:5432/tokenstats",
+      process.env["DATABASE_URL"] ?? "postgres://tokenchit:tokenchit@localhost:5432/tokenchit",
     // A leaderboard write is short; a connection held open longer than this is a bug.
     connectionTimeoutMillis: 5_000,
     idleTimeoutMillis: 30_000,
     max: 5,
   });
 
-if (process.env.NODE_ENV !== "production") globalForDb.tokenstatsPool = pool;
+if (process.env.NODE_ENV !== "production") globalForDb.tokenchitPool = pool;
 
 /** Run `fn` inside a transaction, rolling back on any throw. */
 export async function transaction<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {

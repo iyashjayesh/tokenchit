@@ -1,5 +1,5 @@
 {
-  "name": "@tokenstats/cli",
+  "name": "@tokenchit/cli",
   "version": "0.1.0",
   "description": "Read your local AI coding agent logs and render a stat card into your repo.",
   "keywords": [
@@ -15,18 +15,18 @@
   ],
   "license": "MIT",
   "author": "Yash Chauhan (https://github.com/iyashjayesh)",
-  "homepage": "https://github.com/iyashjayesh/tokenstats#readme",
+  "homepage": "https://github.com/iyashjayesh/tokenchit#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iyashjayesh/tokenstats.git",
+    "url": "git+https://github.com/iyashjayesh/tokenchit.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/iyashjayesh/tokenstats/issues"
+    "url": "https://github.com/iyashjayesh/tokenchit/issues"
   },
   "type": "module",
   "bin": {
-    "tokenstats": "./dist/index.js"
+    "tokenchit": "./dist/index.js"
   },
   "files": [
     "dist"

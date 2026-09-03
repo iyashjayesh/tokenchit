@@ -21,7 +21,7 @@ export const fail = (s: string) => process.stderr.write(`${red("✗")} ${s}\n`);
 
 /**
  * Node 22 prints an ExperimentalWarning the first time `node:sqlite` loads. It is true but
- * not actionable by the person running `tokenstats sync`, and it lands in the middle of the
+ * not actionable by the person running `tokenchit sync`, and it lands in the middle of the
  * output. Every other warning is re-emitted so nothing real is swallowed.
  */
 export function muteSqliteWarning(): void {

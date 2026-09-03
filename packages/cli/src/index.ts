@@ -9,29 +9,29 @@ import { sync } from "./commands/sync.js";
 import { bold, dim, fail, muteSqliteWarning, say } from "./ui.js";
 
 const USAGE = `
-${bold("tokenstats")} — turn your local AI coding agent logs into a stat card
+${bold("tokenchit")} — turn your local AI coding agent logs into a stat card
 
-  ${bold("tokenstats init")}              detect agents, write .tokenstats.json
+  ${bold("tokenchit init")}              detect agents, write .tokenchit.json
     --handle <name>            GitHub handle (default: guessed from origin remote)
 
-  ${bold("tokenstats sync")}              render the card into your repo
-    --out <path>               where to write it (default: tokenstats.svg)
+  ${bold("tokenchit sync")}              render the card into your repo
+    --out <path>               where to write it (default: tokenchit.svg)
     --layout default|compact
     --theme auto|light|dark
     --json                     print the aggregate instead of writing an SVG
     --dry-run                  report what would be written, write nothing
 
-  ${bold("tokenstats login")}             prove your GitHub handle (device flow, no password)
-  ${bold("tokenstats logout")}            forget this machine
-  ${bold("tokenstats whoami")}            who this machine is signed in as
+  ${bold("tokenchit login")}             prove your GitHub handle (device flow, no password)
+  ${bold("tokenchit logout")}            forget this machine
+  ${bold("tokenchit whoami")}            who this machine is signed in as
 
-  ${bold("tokenstats publish")}           the only command that uploads anything
+  ${bold("tokenchit publish")}           the only command that uploads anything
     --dry-run                  print the exact bytes and send nothing
-    --api <url>                default https://tokenstats-site.vercel.app
+    --api <url>                default https://tokenchit-site.vercel.app
     --handle <name>
 
-  ${bold("tokenstats recap")}             year in review: heatmap, models, totals
-    --out <path>               default: tokenstats-recap.svg
+  ${bold("tokenchit recap")}             year in review: heatmap, models, totals
+    --out <path>               default: tokenchit-recap.svg
     --year <yyyy>              label the recap with a different year
     --theme auto|light|dark
     --json                     print the recap model instead of writing an SVG
