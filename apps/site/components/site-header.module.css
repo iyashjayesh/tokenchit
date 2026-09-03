@@ -15,12 +15,12 @@
 
 .wordmark {
   display: inline-block;
-  padding: 7px 11px;
+  padding: 10px 16px;
   background: var(--lime);
   border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
   font-family: var(--font-display), sans-serif;
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }

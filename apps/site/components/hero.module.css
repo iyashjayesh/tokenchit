@@ -106,10 +106,36 @@
   color: var(--text-faint);
 }
 
-/* The site's only animation; the blk keyframes live in globals.css. */
+/* Declared here rather than in globals.css: CSS Modules scopes both the @keyframes name and
+   the animation-name that references it, and the two only agree when they live in the same
+   file. Split across files, the reference is rewritten and the animation never runs. */
+@keyframes blk {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes type {
+  from { max-width: 0; }
+  to   { max-width: 100%; }
+}
+
+/* Typed once on load, at a speed that reads as typing rather than as a loading bar. Inline
+   so the cursor sits against the last character; the keyframes live in globals.css. */
+.typed {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  animation: type 1.15s steps(34, end) both;
+}
+
 .cursor {
   display: inline-block;
-  margin-left: 2px;
+  width: 0.58em;
+  height: 1.05em;
+  margin-left: 3px;
+  background: var(--ink);
+  vertical-align: text-bottom;
   animation: blk 1.06s step-end infinite;
 }
 

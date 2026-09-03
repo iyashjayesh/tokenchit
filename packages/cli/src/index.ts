@@ -2,13 +2,14 @@
 import { createRequire } from "node:module";
 
 import { DEFAULT_API } from "./api.js";
+import { generate } from "./commands/generate.js";
 import { init } from "./commands/init.js";
 import { login, logout, whoami } from "./commands/login.js";
 import { publish } from "./commands/publish.js";
 import { recap } from "./commands/recap.js";
 import { schedule } from "./commands/schedule.js";
 import { sync } from "./commands/sync.js";
-import { bold, cyan, dim, fail, grey, muteSqliteWarning, pad, say } from "./ui.js";
+import { bold, cyan, dim, fail, grey, muteSqliteWarning, pad, say, wordmark } from "./ui.js";
 
 type Command = {
   summary: string;
@@ -24,6 +25,21 @@ type Command = {
  * retyped — it was typed out once and drifted to a hostname that 404s.
  */
 const COMMANDS: Record<string, Command> = {
+  generate: {
+    summary: "the whole flow: detect, render the card, join the board",
+    flags: [
+      ["--no-publish", "stop after writing the card"],
+      ["--handle <name>", "GitHub handle (default: guessed from origin remote)"],
+      ["--out <path>", "where to write the card (default: tokenchit.svg)"],
+      ["--theme auto|light|dark", ""],
+    ],
+    detail:
+      "One command for the three steps most people want in order. It runs `init` only when\n" +
+      "there is no .tokenchit.json — re-running it would overwrite a committed file somebody\n" +
+      "may have edited — then `sync`, then `publish`.\n\n" +
+      "It is a composition, not a fourth implementation: each step is the command it is named\n" +
+      "after, so running them separately does exactly the same work.",
+  },
   init: {
     summary: "detect agents, write .tokenchit.json",
     flags: [["--handle <name>", "GitHub handle (default: guessed from origin remote)"]],
@@ -88,7 +104,8 @@ const COMMANDS: Record<string, Command> = {
 };
 
 const GROUPS: Array<[string, string[]]> = [
-  ["start here", ["init", "sync", "publish"]],
+  ["start here", ["generate"]],
+  ["or step by step", ["init", "sync", "publish"]],
   ["more", ["recap", "schedule"]],
   ["account", ["login", "logout", "whoami"]],
 ];
@@ -99,11 +116,10 @@ function usage(): string {
 
   const out: string[] = [
     "",
-    `${bold("tokenchit")} — turn your local AI coding agent logs into a stat card`,
+    `  ${wordmark()}  ${grey("receipts for your robots")}`,
     "",
-    `  ${grey("1")} ${bold("tokenchit init")}      ${grey("say who you are")}`,
-    `  ${grey("2")} ${bold("tokenchit sync")}      ${grey("see your stats, write the card")}`,
-    `  ${grey("3")} ${bold("tokenchit publish")}   ${grey("sign in and join the board")}`,
+    `  ${bold("npx @tokenchit/cli@latest generate")}`,
+    `  ${grey("finds your agents, writes the card, puts you on the board")}`,
     "",
   ];
 
@@ -172,6 +188,8 @@ async function main(): Promise<number> {
   }
 
   switch (command) {
+    case "generate":
+      return generate(argv, cliVersion());
     case "init":
       return init(argv);
     case "sync":

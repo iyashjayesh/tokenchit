@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { GithubMark } from "./github-mark";
 import styles from "./site-header.module.css";
-import { npx, VERSION_LABEL } from "@/lib/cli";
+import { PRIMARY_COMMAND, VERSION_LABEL } from "@/lib/cli";
 
-const LOGIN = npx("login");
+const LOGIN = PRIMARY_COMMAND;
 
 // Root-relative, not bare fragments: these render on /u/<handle> and /board too, where a
 // bare "#card" points at an anchor that does not exist on the page.
