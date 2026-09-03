@@ -10,4 +10,4 @@
  * It is a signature at 8px, not a link, and a vercel.app subdomain would neither fit the
  * design nor read as a brand.
  */
-export const SITE_URL = "https://tokencard-site.vercel.app";
+export const SITE_URL = "https://tokenstats-site.vercel.app";
