@@ -3,15 +3,18 @@ updates:
   # Monthly and grouped, because a solo project does not want a pull request per patch bump
   # and an unreviewed dependency PR left open is worse than a slightly older dependency.
   #
-  # Majors are split from the rest deliberately. Grouping everything put @types/node 20→26,
-  # eslint 9→10 and typescript 5→7 into one all-or-nothing pull request, and ESLint 10 breaks
-  # eslint-plugin-react through eslint-config-next:
+  # Majors are split from the rest so a breaking bump cannot hold up routine ones.
+  #
+  # That split is not sufficient on its own. @types/node 20→26, eslint 9→10 and typescript
+  # 5→7 are all majors, so they still arrived as one all-or-nothing pull request — and ESLint
+  # 10 breaks eslint-plugin-react through eslint-config-next:
   #
   #   TypeError: Error while loading rule 'react/display-name':
   #              contextOrFilename.getFilename is not a function
   #
-  # One incompatible major therefore blocked two safe upgrades. Split, the safe ones land and
-  # the breaking one waits for the ecosystem on its own.
+  # eslint-plugin-react@7.37.5 still peers on `^9.7`, so this is upstream and not ours to fix.
+  # ESLint majors are therefore held below until the plugin declares support; the other two
+  # majors went in without it. Drop the ignore once that peer range admits 10.
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -24,6 +27,11 @@ updates:
       major:
         patterns: ["*"]
         update-types: ["major"]
+    ignore:
+      # Blocked by eslint-plugin-react (peer `^9.7`) via eslint-config-next. Remove when it
+      # supports ESLint 10 — minor and patch bumps of eslint are unaffected by this.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
