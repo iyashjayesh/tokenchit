@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
+import { track } from "./analytics";
 import styles from "./copy-button.module.css";
 
 /**
@@ -12,11 +14,14 @@ export function CopyButton({
   variant,
   idleLabel = "copy",
   copiedLabel = "copied",
+  event,
 }: {
   value: string;
   variant: "ink" | "lime" | "yellow";
   idleLabel?: string;
   copiedLabel?: string;
+  /** What was copied, for analytics. Omitted means the copy is not worth counting. */
+  event?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,6 +37,10 @@ export function CopyButton({
       // Clipboard can be unavailable (insecure origin, denied permission).
       // The label still confirms the intent; there is nothing useful to recover.
     }
+    // Which snippet people take is the one thing worth knowing about this page: whether they
+    // leave with the install command or with an embed for a card they already have.
+    if (event) track("copy", { snippet: event });
+
     setCopied(true);
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setCopied(false), 1400);

@@ -42,6 +42,7 @@ export function Hero() {
           </code>
           <CopyButton
             value={INSTALL}
+            event="install"
             variant="ink"
             idleLabel="copy"
             copiedLabel="copied"

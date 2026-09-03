@@ -282,6 +282,16 @@ Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals
 | `/api/card/<handle>.svg` | the card endpoint |
 | `/api/submissions` | publish (POST) and read the board (GET) |
 
+**The site is measured; the CLI is not.** Page views and one copy event go to Firebase
+Analytics from tokenchit.vercel.app — not from previews, not from localhost. The privacy
+guarantees in `packages/cli/test/privacy.test.js` are about the CLI, which makes exactly one
+network call, to publish, and carries no analytics of any kind. Saying so here rather than
+leaving someone to find a Google request in devtools and wonder what else is unstated.
+
+The Firebase web config in `apps/site/lib/firebase.ts` is checked in on purpose: it is
+shipped to every browser that loads the page, and Google documents the API key as a project
+identifier rather than a credential.
+
 Every column on the board and the profile is summed over the same window, which is why
 `user_days` carries an agent and a cost per day. Streak is the exception and is not windowed:
 it is a current-streak count, and "your streak, but only counting last week" is not a thing

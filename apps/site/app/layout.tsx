@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+
+import { Analytics } from "@/components/analytics";
 
 import { SITE_URL } from "@/lib/site";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
@@ -39,6 +42,11 @@ export default function RootLayout({
         <div className={styles.grid}>
           <div className={styles.container}>{children}</div>
         </div>
+        {/* useSearchParams needs a boundary or the whole route opts out of static
+            rendering. Nothing is rendered here, so the fallback is empty. */}
+        <Suspense fallback={null}>
+          <Analytics />
+        </Suspense>
       </body>
     </html>
   );
