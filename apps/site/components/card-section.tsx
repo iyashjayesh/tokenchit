@@ -89,6 +89,7 @@ export function CardSection() {
             <span>markdown</span>
             <CopyButton
               value={markdown}
+              event="embed-markdown"
               variant="lime"
               idleLabel="copy"
               copiedLabel="copied ✓"
@@ -102,6 +103,7 @@ export function CardSection() {
             <span>html · two cards on one line</span>
             <CopyButton
               value={htmlCopied}
+              event="embed-html"
               variant="yellow"
               idleLabel="copy"
               copiedLabel="copied ✓"
