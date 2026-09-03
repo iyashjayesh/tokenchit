@@ -1,0 +1,385 @@
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 3px solid var(--ink);
+}
+
+.identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.handle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 5vw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.verified,
+.unverified {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 2px solid var(--ink);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.verified {
+  background: var(--lime);
+}
+
+/* Quieter than .verified by design: no lime, no tick. The two must never be mistaken. */
+.unverified {
+  background: var(--surface-alt);
+  border-color: var(--card-footer);
+  color: var(--text-dim);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rank {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 var(--lime);
+}
+
+.rank:hover {
+  color: var(--lime);
+  box-shadow: 2px 2px 0 var(--lime);
+  transform: translate(2px, 2px);
+}
+
+.rankOf {
+  color: var(--dark-dim);
+  font-weight: 400;
+}
+
+.since {
+  margin: 16px 0 24px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-muted);
+  max-width: 62em;
+}
+
+.windows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.window,
+.windowActive {
+  padding: 8px 13px;
+  border: 2px solid var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.window {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.window:hover {
+  background: var(--surface-alt);
+  color: var(--ink);
+}
+
+.windowActive {
+  background: var(--ink);
+  color: var(--lime);
+}
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 34px;
+}
+
+.tile {
+  flex: 1 1 150px;
+  min-width: min(100%, 150px);
+  padding: 14px 16px 16px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--hairline);
+}
+
+.tileLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.tileValue {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3.4vw, 32px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.block {
+  margin-bottom: 34px;
+}
+
+.h2 {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.h2Note {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Two columns where there is room, stacked where there is not — no media query, the basis
+   does the deciding. */
+.split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.split > .block {
+  flex: 1 1 340px;
+  min-width: min(100%, 340px);
+}
+
+.agents {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--hairline);
+}
+
+.agent {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.agent:last-child {
+  border-bottom: none;
+}
+
+.agentHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.agentName {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.agentFigures {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.agentPct {
+  min-width: 46px;
+  text-align: right;
+  color: var(--text-faint);
+}
+
+.agentTrack {
+  height: 8px;
+  background: var(--surface-alt);
+}
+
+.agentFill0 {
+  display: block;
+  height: 100%;
+  background: var(--lime);
+}
+
+.agentFill1 {
+  display: block;
+  height: 100%;
+  background: var(--coral);
+}
+
+.agentFill2 {
+  display: block;
+  height: 100%;
+  background: var(--yellow);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--hairline);
+}
+
+.table {
+  width: 100%;
+  min-width: 340px;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.table th {
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.model {
+  font-weight: 700;
+}
+
+.unpriced {
+  color: var(--text-faint);
+}
+
+.cardRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: flex-start;
+}
+
+.card {
+  flex: 0 1 495px;
+  min-width: min(100%, 340px);
+  line-height: 0;
+}
+
+.card svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.embed {
+  flex: 1 1 320px;
+  min-width: min(100%, 300px);
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--lime);
+}
+
+.embedStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--surface-alt);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.embedCode {
+  display: block;
+  padding: 14px 12px;
+  font-size: 10.5px;
+  line-height: 1.7;
+  word-break: break-all;
+  color: var(--text-muted);
+}
+
+.embedNote {
+  margin: 0;
+  padding: 0 12px 14px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+.empty {
+  margin: 0;
+  padding: 24px;
+  border: 2px dashed var(--hairline);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.foot {
+  margin: 8px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--hairline);
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  max-width: 66em;
+}
+
+.strong {
+  color: var(--ink);
+  font-weight: 700;
+}

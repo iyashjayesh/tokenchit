@@ -1,0 +1,34 @@
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.crumbGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crumb {
+  color: var(--text-dim);
+  border-bottom: 1px solid transparent;
+}
+
+.crumb:hover {
+  color: var(--coral);
+  border-bottom-color: var(--coral);
+}
+
+.sep {
+  color: var(--hairline);
+}
+
+.main {
+  padding: clamp(30px, 4vw, 56px) 0 clamp(40px, 6vw, 80px);
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { SectionHeading } from "@/components/section-heading";
@@ -118,7 +119,7 @@ export function Leaderboard({ initialRows, initialWindow }: {
                       </span>
                     </td>
                     <td>
-                      <div className={styles.dev}>
+                      <Link href={`/u/${r.handle}`} className={styles.dev}>
                         <span className={styles.handle}>@{r.handle}</span>
                         {/* Tier-driven. Marking an unverified row with the same tick as a
                             verified one is the single thing this board must never do. */}
@@ -131,7 +132,7 @@ export function Leaderboard({ initialRows, initialWindow }: {
                             cli
                           </span>
                         )}
-                      </div>
+                      </Link>
                     </td>
                     <td>
                       <div className={styles.bar}>
@@ -159,6 +160,9 @@ export function Leaderboard({ initialRows, initialWindow }: {
       )}
 
       <p className={styles.foot}>
+        <Link href="/board" className={styles.moreLink}>
+          See the full board →
+        </Link>{" "}
         Rank is total tokens over the selected window; cost and agent mix cover the same
         window. Streak is the current run of active days, which is not a windowed figure. A{" "}
         <span className={styles.strong}>cli</span> badge means the numbers were self-reported
