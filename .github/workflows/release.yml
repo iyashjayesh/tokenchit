@@ -1,22 +1,36 @@
 name: release
 
-# Tag-driven rather than push-driven: publishing is irreversible on npm — an unpublished
-# name can never be reused by anyone — so it should take a deliberate act, not a merge.
+# Version-driven. The workflow runs on every push to main but publishes only when
+# packages/cli/package.json carries a version npm does not already have — so bumping the
+# version *is* the release, and a docs or site merge publishes nothing.
+#
+# Publishing stays a deliberate act, which is what the previous tag-only trigger was
+# protecting: it now takes an explicit edit to a version field rather than an explicit tag.
+# Merging anything else cannot reach npm, and the guard below is what enforces that.
+#
+# Tags are still honoured so a release can be forced by hand, and the same check makes that
+# safe: a tag for a version already on npm publishes nothing rather than failing.
 on:
   push:
+    branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # write, because this workflow creates the release tag itself now.
+      contents: write
       # Required for npm provenance: the published package carries a signed attestation
       # linking it to this repository, this workflow and this commit.
       id-token: write
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Tags are needed to know whether this version was already released.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -26,22 +40,28 @@ jobs:
 
       - run: npm ci
 
-      # A tag that disagrees with package.json publishes something nobody asked for, and it
-      # cannot be taken back. Checked before anything is built.
-      - name: Tag matches the package version
+      # The whole gate. `npm view` answers for the registry rather than for this checkout,
+      # so a re-run, a revert or a second trigger for the same version all stop here instead
+      # of failing loudly over work that is already done.
+      - name: Is this version unpublished?
+        id: check
         run: |
-          tag="${GITHUB_REF_NAME#v}"
           version=$(node -p "require('./packages/cli/package.json').version")
-          if [ "$version" != "$tag" ]; then
-            echo "::error::@tokenchit/cli is $version but the tag says $tag — run npm run version:set"
-            exit 1
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if npm view "@tokenchit/cli@$version" version >/dev/null 2>&1; then
+            echo "@tokenchit/cli@$version is already on npm — nothing to release."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "@tokenchit/cli@$version is not on npm — releasing."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
-          echo "@tokenchit/cli at $tag"
 
       # npm provenance attaches a signed attestation pointing at the source commit, which
       # requires a public repository. Publishing --provenance from a private repo fails with
       # a message that does not obviously say so, and by then the tag already exists.
       - name: Repository is public (required for provenance)
+        if: steps.check.outputs.publish == 'true'
         run: |
           private=$(gh api "repos/$GITHUB_REPOSITORY" -q .private)
           if [ "$private" = "true" ]; then
@@ -52,25 +72,54 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - run: npm run build
-      - run: npm test
-      - run: npm run lint -w tokenchit-site
+      # Everything below only runs for a real release, but the checks run before the tag is
+      # created: a tag pointing at a commit that does not build is worse than no tag.
+      - name: Build, test and lint
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          npm run build
+          npm test
+          npm run lint -w tokenchit-site
+
+      - name: Tag the release
+        if: steps.check.outputs.publish == 'true'
+        run: |
+          tag="v${{ steps.check.outputs.version }}"
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "$tag already exists — leaving it alone."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "$tag"
+          git push origin "$tag"
 
       # One package. @tokenchit/core is private and bundled into this tarball by esbuild,
       # so there is nothing to publish first and no ordering to get wrong.
       - name: Publish @tokenchit/cli
+        if: steps.check.outputs.publish == 'true'
         run: npm publish -w @tokenchit/cli --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Release notes
+        if: steps.check.outputs.publish == 'true'
         run: |
           {
             echo "## Published"
             echo
             echo '```'
-            echo "npx @tokenchit/cli@${GITHUB_REF_NAME#v} init"
+            echo "npx @tokenchit/cli@${{ steps.check.outputs.version }} init"
             echo '```'
             echo
             echo "- [@tokenchit/cli](https://www.npmjs.com/package/@tokenchit/cli)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Nothing to release
+        if: steps.check.outputs.publish == 'false'
+        run: |
+          {
+            echo "No release: @tokenchit/cli@${{ steps.check.outputs.version }} is already on npm."
+            echo
+            echo "Bump the version to publish — \`node scripts/version.mjs <x.y.z>\`."
           } >> "$GITHUB_STEP_SUMMARY"

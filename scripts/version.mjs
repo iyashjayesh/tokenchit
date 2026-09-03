@@ -29,6 +29,11 @@ for (const file of ["packages/core/package.json", "packages/cli/package.json"]) 
 }
 
 // The site reads this version straight from packages/cli/package.json, so nothing here
-// writes to apps/site. Push the tag in the same command as the branch: the site deploys from
-// main and would otherwise advertise a version npm does not have yet.
-console.log(`\nnext:\n  npm install\n  git commit -am "Release v${version}"\n  git tag -a v${version} -m v${version}\n  git push origin main v${version}\n\nThe site picks up ${version} from that deploy; no separate edit.`);
+// writes to apps/site. Nothing here tags either: the release workflow watches main and
+// publishes whenever this field names a version npm does not have, so the bump is the
+// release. Merging anything that leaves this field alone publishes nothing.
+console.log(
+  `\nnext:\n  npm install\n  git commit -am "Release v${version}"\n  git push` +
+    `\n\nCI tags v${version} and publishes once the checks pass.` +
+    `\nThe site badge follows from the same push.`,
+);
