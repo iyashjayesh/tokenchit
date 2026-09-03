@@ -9,7 +9,7 @@
  * Defined once because it was previously duplicated across login and publish, which is how
  * two defaults end up disagreeing.
  */
-export const DEFAULT_API = "https://tokencard-site.vercel.app";
+export const DEFAULT_API = "https://tokenstats-site.vercel.app";
 
 /** Resolve the API base: explicit flag, then environment, then the default. */
 export const resolveApi = (flagValue: string | undefined): string =>
