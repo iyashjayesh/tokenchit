@@ -133,6 +133,51 @@ test("the legend marks an agent it knows, and claims nothing about one it does n
   assert.match(unknown, /<path[^>]*d="M4 6l6 6-6 6V6z/, "an unknown agent should get the generic mark");
 });
 
+test("legend marks wear their own brand colour, not the chart's", () => {
+  const card = (theme) =>
+    buildCardSvg({
+      handle: "dev",
+      tokens: "1B",
+      spend: "$1",
+      streak: "1d",
+      mix: [
+        { agent: "claude-code", pct: 60 },
+        { agent: "opencode", pct: 40 },
+      ],
+      syncedAt: "SYNCED 0M AGO",
+      theme,
+    });
+
+  // Tinting marks to the bar segment made each one look like part of the chart rather than
+  // like the thing it identifies, which is the whole reason for using real marks.
+  assert.match(card("light"), /fill="#D97757"/, "claude-code should be its own orange");
+  assert.match(card("dark"), /fill="#D97757"/, "and the same orange on a dark card");
+
+  // A mark whose brand colour is black would disappear on a black card.
+  assert.match(card("light"), /fill="#000000"/, "opencode is black on a light card");
+  assert.match(card("dark"), /fill="#FFFFFF"/, "and inverted on a dark card");
+});
+
+test("theme=auto emits a dark rule only for marks that actually change", () => {
+  const svg = buildCardSvg({
+    handle: "dev",
+    tokens: "1B",
+    spend: "$1",
+    streak: "1d",
+    mix: [
+      { agent: "claude-code", pct: 60 },
+      { agent: "opencode", pct: 40 },
+    ],
+    syncedAt: "SYNCED 0M AGO",
+    theme: "auto",
+  });
+
+  // opencode flips black to white and needs a rule; claude's orange reads on either ground
+  // and emitting one for it would be bytes that change nothing, in a file people commit.
+  assert.match(svg, /\.ic1\{fill:#FFFFFF\}/, "opencode needs a dark-mode rule");
+  assert.doesNotMatch(svg, /\.ic0\{/, "claude-code should need no rule");
+});
+
 test("a legend mark keeps the vertical centre the old square had", () => {
   // The square was 6px drawn from y=157, so its centre sat at 160. The mark is 8px; drawn
   // from the same top edge it would hang 2px below the text baseline. This is the arithmetic

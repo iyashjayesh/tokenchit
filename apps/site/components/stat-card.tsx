@@ -1,5 +1,7 @@
 "use client";
 
+import { agentMark, ICON_VIEWBOX } from "@tokenchit/core";
+
 import { OWN_STATS } from "@/lib/sample-data";
 import { useSiteState } from "./site-state";
 import styles from "./stat-card.module.css";
@@ -10,6 +12,10 @@ import styles from "./stat-card.module.css";
  * not lay out. The static cards in section 01 stay SVG (see lib/card-svg.ts).
  *
  * Geometry mirrors the SVG card exactly. Note the streak is not coloured here.
+ *
+ * The agent marks come from the same table the SVG card uses, so the preview cannot show a
+ * different legend from the thing it is previewing — which it did, silently, when the marks
+ * were added to the builder and this hand-written copy was missed.
  */
 const MIX_FILLS = ["var(--lime)", "var(--ink)", "var(--seg-2)", "var(--seg-3)"];
 
@@ -43,9 +49,16 @@ export function StatCard() {
       </div>
 
       <div className={styles.legend}>
-        {OWN_STATS.mix.map((m, i) => (
+        {OWN_STATS.mix.map((m) => (
           <span key={m.agent} className={styles.legendItem}>
-            <span className={styles.swatch} style={{ background: MIX_FILLS[i] }} />
+            <svg
+              className={styles.mark}
+              viewBox={`0 0 ${ICON_VIEWBOX} ${ICON_VIEWBOX}`}
+              aria-hidden="true"
+            >
+              {/* The card sits on a light ground, so the light colour is always the right one. */}
+              <path d={agentMark(m.agent).path} fill={agentMark(m.agent).light} />
+            </svg>
             {m.agent} {m.pct}%
           </span>
         ))}
