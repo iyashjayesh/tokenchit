@@ -109,6 +109,51 @@ test("the legend rounds percentages so they cannot overrun their slot", () => {
   assert.doesNotMatch(svg, /98\.67/);
 });
 
+test("the legend marks an agent it knows, and claims nothing about one it does not", () => {
+  const known = buildCardSvg({
+    handle: "dev",
+    tokens: "1B",
+    spend: "$1",
+    streak: "1d",
+    mix: [{ agent: "claude-code", pct: 100 }],
+    syncedAt: "SYNCED 0M AGO",
+  });
+  assert.match(known, /<path[^>]*d="m4\.7144/, "claude-code should carry its own mark");
+
+  // No OpenAI mark exists under a licence we can use, and inventing one would be worse than
+  // saying nothing. Anything unrecognised gets the neutral chevron.
+  const unknown = buildCardSvg({
+    handle: "dev",
+    tokens: "1B",
+    spend: "$1",
+    streak: "1d",
+    mix: [{ agent: "some-new-agent", pct: 100 }],
+    syncedAt: "SYNCED 0M AGO",
+  });
+  assert.match(unknown, /<path[^>]*d="M4 6l6 6-6 6V6z/, "an unknown agent should get the generic mark");
+});
+
+test("a legend mark keeps the vertical centre the old square had", () => {
+  // The square was 6px drawn from y=157, so its centre sat at 160. The mark is 8px; drawn
+  // from the same top edge it would hang 2px below the text baseline. This is the arithmetic
+  // that keeps the row optically level, and it is not visible in any screenshot.
+  const svg = buildCardSvg({
+    handle: "dev",
+    tokens: "1B",
+    spend: "$1",
+    streak: "1d",
+    mix: [{ agent: "claude-code", pct: 100 }],
+    syncedAt: "SYNCED 0M AGO",
+  });
+
+  const move = /translate\(\d+ (\d+(?:\.\d+)?)\) scale\(([\d.]+)\)/.exec(svg);
+  assert.ok(move, "expected a translated, scaled legend mark");
+
+  const top = Number(move[1]);
+  const size = Number(move[2]) * 24;
+  assert.ok(Math.abs(top + size / 2 - 160) < 0.05, `mark centre is ${top + size / 2}, want 160`);
+});
+
 test("token formatting keeps three significant figures", () => {
   assert.equal(formatTokens(4_232_281_798), "4.23B");
   assert.equal(formatTokens(890_000_000), "890M");
