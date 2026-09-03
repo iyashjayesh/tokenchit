@@ -8,6 +8,7 @@ import { ContributionGraph } from "@/components/contribution-graph";
 import { CopyButton } from "@/components/copy-button";
 import { PageShell } from "@/components/page-shell";
 import { isWindow, WINDOW_DAYS, WINDOWS, type BoardWindow } from "@/lib/board";
+import { cardFigures } from "@/lib/card-figures";
 import { readProfile } from "@/lib/profile";
 import { SITE_URL } from "@/lib/site";
 
@@ -54,18 +55,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const mix = Object.entries(profile.mix).sort((a, b) => b[1] - a[1]);
   const mixTotal = mix.reduce((a, [, n]) => a + n, 0);
 
-  const card = buildCardSvg({
-    handle: profile.handle,
-    tokens: formatTokens(profile.tokens),
-    spend: profile.equivCostUsd > 0 ? formatUsd(profile.equivCostUsd) : "—",
-    streak: `${profile.streakDays}d`,
-    mix: mix.map(([agent, tokens]) => ({
-      agent,
-      pct: mixTotal > 0 ? (tokens / mixTotal) * 100 : 0,
-    })),
-    syncedAt: profile.lastPublished ? new Date(profile.lastPublished) : new Date(),
-    theme: "light",
-  });
+  const card = buildCardSvg({ handle: profile.handle, ...cardFigures(profile), theme: "light" });
 
   const embed =
     `[![tokenchit](${SITE_URL}/api/card/${profile.handle}.svg)]` +
