@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { validatePayload, type Payload } from "@tokenchit/core";
+import { reviewReason, validatePayload, type Payload } from "@tokenchit/core";
 
 import { userFromRequest } from "@/lib/auth";
 import { DEFAULT_WINDOW, isWindow } from "@/lib/board";
@@ -100,11 +100,16 @@ export async function POST(req: Request) {
       );
       const user = userRows[0]!;
 
+      /* Held back from the board, not refused. The column has existed since the first
+         migration and until now nothing ever wrote to it, so the hide path the board query
+         already implements could never fire. */
+      const review = reviewReason(payload);
+
       const { rows: subRows } = await client.query<{ id: string; received_at: Date }>(
         `INSERT INTO submissions
            (user_id, tokens, equiv_cost_usd, priced_share, streak_days, active_days,
-            first_day, last_day, agents, models, client_version)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+            first_day, last_day, agents, models, client_version, flagged)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          RETURNING id, received_at`,
         [
           user.id,
@@ -118,6 +123,7 @@ export async function POST(req: Request) {
           JSON.stringify(payload.agents),
           JSON.stringify(payload.models),
           payload.clientVersion,
+          review !== null,
         ],
       );
 
@@ -145,7 +151,7 @@ export async function POST(req: Request) {
         );
       }
 
-      return { submissionId: subRows[0]!.id, tier: user.tier };
+      return { submissionId: subRows[0]!.id, tier: user.tier, review };
     });
 
     return NextResponse.json(
@@ -156,6 +162,10 @@ export async function POST(req: Request) {
         submissionId: result.submissionId,
         tokens: payload.tokens,
         days: payload.days.length,
+        // Said out loud rather than hidden. A row quietly missing from the board looks like a
+        // bug to its owner, and someone whose real usage tripped the threshold deserves to
+        // know why and to be able to say so.
+        review: result.review,
       },
       { status: 201, headers: tightest ? limitHeaders(tightest) : undefined },
     );

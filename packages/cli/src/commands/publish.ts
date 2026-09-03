@@ -119,6 +119,16 @@ export async function publish(argv: string[], version: string): Promise<number> 
   );
   say();
 
+  /* A row held for review still has a profile, so the links below stand — but saying nothing
+     would leave someone refreshing a board they are never going to appear on. */
+  const review = res.body?.review;
+  if (typeof review === "string" && review) {
+    warn("This submission is held for review and will not appear on the board yet.");
+    say(dim(`  ${review}`));
+    say(dim("  Nothing was rejected — open an issue if this looks wrong."));
+    say();
+  }
+
   // The point of publishing. Printed last, because this is what someone actually wants out
   // of the command, and printed as full URLs so they survive a copy out of scrollback.
   say(`  ${grey("your profile")}   ${link(`${api}/u/${payload.handle}`)}`);

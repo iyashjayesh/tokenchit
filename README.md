@@ -186,6 +186,26 @@ of it, which `dryrun.exact` in the test suite enforces by comparing against what
 publish puts on the wire. The payload is aggregates only: totals, per-day token counts, agent
 and model ids. No prompts, no replies, no branch names, no paths.
 
+
+### How the board ranks
+
+Verified rows first, then tokens over the selected window.
+
+Signing in is the only thing that ties a row to a GitHub account, so it is the only thing that
+can carry a position. An unverified row still appears and still shows its figures; it simply
+cannot outrank a verified one. A `tier` that is displayed but never affects the ordering is
+decoration — it told you nothing about the ranking you were reading.
+
+Submissions far outside the range of real usage are **held for review**: stored, returned to
+their owner, and kept off the board until a person looks. The threshold is half the hard
+rejection limit — about 1.6x the busiest day in the corpus these figures were measured
+against — and `publish` says so out loud rather than leaving someone refreshing a board they
+will never appear on.
+
+The `flagged` column has existed since the first migration and, until this was added, nothing
+ever wrote to it. The board query already refused to show flagged rows; there was simply no
+code path that could set one.
+
 ## Signing in
 
 ```

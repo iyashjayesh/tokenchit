@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "tokenchit — receipts for your robots",
   description:
-    "tokenchit reads your local Claude Code, Codex and OpenCode logs and renders one embeddable card straight into your repo.",
+    "tokenchit reads your local Claude Code, Codex and OpenCode logs and renders one embeddable card straight into your repo. A file you commit, not a URL you depend on.",
 };
 
 export default function RootLayout({

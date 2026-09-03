@@ -4,6 +4,8 @@ import { test } from "node:test";
 import {
   aggregate,
   buildCardSvg,
+  reviewReason,
+  REVIEW,
   formatTokens,
   formatUsd,
   handleSize,
@@ -250,4 +252,32 @@ test("a long handle is shrunk to fit rather than cut short", () => {
   const shrunk = handleSize(long, 20, 439);
   assert.ok(shrunk < 20 && shrunk > 10, `expected a smaller readable size, got ${shrunk}`);
   assert.ok((long.length + 1) * 0.6 * shrunk <= 439, "must fit the 439px track");
+});
+
+
+test("a plausible-but-extreme day is held for review, not rejected", () => {
+  // The hard limits reject the arithmetically impossible. Between "normal" and "impossible"
+  // sits a range a heavy real user might reach and a fabricator certainly would; rejecting
+  // that outright turns a false positive into a locked-out user, so it is kept and held.
+  const day = (tokens, cost) => ({ day: "2026-09-01", agent: "claude-code", tokens, equivCostUsd: cost });
+
+  assert.equal(reviewReason({ days: [day(600_000_000, 400)] }), null, "a busy real day publishes");
+
+  const held = reviewReason({ days: [day(REVIEW.tokensPerDay + 1, 400)] });
+  assert.match(held ?? "", /2026-09-01/, "an extreme day names itself in the reason");
+});
+
+test("review looks at a whole day, not one agent at a time", () => {
+  // Three agents each sitting just under the bar is one day far over it. Checking rows
+  // individually is exactly how a split submission would walk past the threshold.
+  const third = Math.ceil(REVIEW.tokensPerDay / 3) + 1;
+  const days = ["claude-code", "codex", "opencode"].map((agent) => ({
+    day: "2026-09-01",
+    agent,
+    tokens: third,
+    equivCostUsd: 1,
+  }));
+
+  assert.ok(reviewReason({ days }), "summed across agents this day is over the threshold");
+  assert.equal(reviewReason({ days: [days[0]] }), null, "any one of them alone is not");
 });

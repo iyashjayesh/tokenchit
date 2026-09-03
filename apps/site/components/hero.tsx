@@ -17,7 +17,7 @@ export function Hero() {
     <section className={styles.hero}>
       <div className={styles.left}>
         <div className={styles.chips}>
-          <span className={styles.chipInk}>3 agents</span>
+          <span className={styles.chipInk}>no hosted endpoint</span>
           <span className={styles.chipYellow}>parsed locally</span>
           <span className={styles.chipWhite}>no prompts sent</span>
         </div>
@@ -30,8 +30,9 @@ export function Hero() {
 
         <p className={styles.lede}>
           tokenchit reads your local Claude Code, Codex and OpenCode logs and renders one
-          embeddable card straight into your repo. Nothing is uploaded — the card is a file
-          you commit.
+          embeddable card straight into your repo. The card is a file you commit, not a URL
+          you depend on — nothing to rate-limit, nothing to go down, and it keeps working if
+          this site does not.
         </p>
 
         <div className={styles.install}>
