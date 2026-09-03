@@ -28,4 +28,7 @@ for (const file of ["packages/core/package.json", "packages/cli/package.json"]) 
   console.log(`${pkg.name} -> ${version}`);
 }
 
-console.log(`\nnext:\n  npm install\n  git commit -am "Release v${version}"\n  git tag -a v${version} -m v${version}\n  git push origin main v${version}`);
+// The site reads this version straight from packages/cli/package.json, so nothing here
+// writes to apps/site. Push the tag in the same command as the branch: the site deploys from
+// main and would otherwise advertise a version npm does not have yet.
+console.log(`\nnext:\n  npm install\n  git commit -am "Release v${version}"\n  git tag -a v${version} -m v${version}\n  git push origin main v${version}\n\nThe site picks up ${version} from that deploy; no separate edit.`);
