@@ -291,19 +291,33 @@ into the CLI's single bundled file. Publishing a second package would mean maint
 public API surface nobody has asked for, and every rename inside it would become a
 compatibility decision for strangers. Publishing core later is easy; unpublishing is not.
 
-Publishing is tag-driven, never merge-driven — an unpublished npm name can never be reused by
-anyone, so it should take a deliberate act:
+**Publishing is version-driven.** The release workflow runs on every push to `main` but
+publishes only when `packages/cli/package.json` names a version npm does not already have.
+Bumping the version is the release:
 
 ```bash
 npm run version:set 0.2.0   # both packages, and the dependency between them
 npm install
 git commit -am "Release v0.2.0"
-git tag -a v0.2.0 -m v0.2.0
-git push origin main v0.2.0
+git push
 ```
 
-The workflow refuses to publish if the tag disagrees with `package.json`, and attaches npm
-provenance so the package carries a signed link back to the commit that produced it. CI
+CI then builds, tests, lints, creates the `v0.2.0` tag and publishes. Merging anything that
+leaves the version field alone publishes nothing, which is most merges — docs, the site, a
+dependency bump.
+
+This keeps what a tag-only trigger was protecting. An unpublished npm name can never be
+reused by anyone, so releasing has to be deliberate; it is now an explicit edit to a version
+field rather than an explicit tag. What it removes is the failure mode where the bump lands
+and the tag never gets pushed, so a fix sits on `main` for a week believing it shipped.
+
+The registry, not the tag, is the source of truth: the workflow asks npm whether that exact
+version exists, so a re-run, a revert, or a manually pushed tag all stop quietly instead of
+failing over work already done. Tests run before the tag is created, because a tag pointing
+at a commit that does not build is worse than no tag.
+
+It attaches npm provenance so the package carries a signed link back to the commit that
+produced it. CI
 installs the packed tarball into an empty project on every pull request and asserts nothing
 but `@tokenchit/cli` lands, which is what stops the bundle silently regressing into a broken
 dependency on the private package.
