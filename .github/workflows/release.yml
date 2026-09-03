@@ -1,0 +1,70 @@
+name: release
+
+# Tag-driven rather than push-driven: publishing is irreversible on npm — an unpublished
+# name can never be reused by anyone — so it should take a deliberate act, not a merge.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for npm provenance: the published package carries a signed attestation
+      # linking it to this repository, this workflow and this commit.
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      # A tag that disagrees with package.json publishes something nobody asked for, and it
+      # cannot be taken back. Checked before anything is built.
+      - name: Tag matches package versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for pkg in packages/core packages/cli; do
+            version=$(node -p "require('./$pkg/package.json').version")
+            if [ "$version" != "$tag" ]; then
+              echo "::error::$pkg is $version but the tag says $tag — run scripts/version.mjs"
+              exit 1
+            fi
+          done
+          echo "all packages at $tag"
+
+      - run: npm run build
+      - run: npm test
+      - run: npm run lint -w tokenstats-site
+
+      # Core first: the CLI depends on an exact core version, so publishing them the other
+      # way round leaves a CLI on the registry that installs nothing.
+      - name: Publish @tokenstats/core
+        run: npm publish -w @tokenstats/core --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @tokenstats/cli
+        run: npm publish -w @tokenstats/cli --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Release notes
+        run: |
+          {
+            echo "## Published"
+            echo
+            echo '```'
+            echo "npx @tokenstats/cli@${GITHUB_REF_NAME#v} init"
+            echo '```'
+            echo
+            echo "- [@tokenstats/cli](https://www.npmjs.com/package/@tokenstats/cli)"
+            echo "- [@tokenstats/core](https://www.npmjs.com/package/@tokenstats/core)"
+          } >> "$GITHUB_STEP_SUMMARY"

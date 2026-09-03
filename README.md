@@ -221,6 +221,30 @@ Profile pages are shareable, so they carry a PNG `og:image` rendered from the sa
 file-based `opengraph-image` convention and the page would then advertise the SVG card, which
 Twitter, Slack and Facebook all decline to render.
 
+## Releasing
+
+CI runs on every pull request: build and tests on Node 22 **and** 24 (the OpenCode adapter
+uses `node:sqlite`, experimental on 22 and stable on 24 — the place they are most likely to
+disagree), plus lint, the standalone site build Vercel performs, and an install of the packed
+tarballs, because the tarball is a different artifact from the working tree.
+
+Publishing is tag-driven, never merge-driven — an unpublished npm name can never be reused by
+anyone, so it should take a deliberate act:
+
+```bash
+npm run version:set 0.2.0   # both packages, and the dependency between them
+npm install
+git commit -am "Release v0.2.0"
+git tag v0.2.0
+git push --follow-tags
+```
+
+The workflow refuses to publish if the tag disagrees with `package.json`, publishes core
+before the CLI (which depends on an exact core version), and attaches npm provenance so the
+package carries a signed link back to the commit that produced it.
+
+Requires an `NPM_TOKEN` repository secret with publish rights.
+
 ## Repo layout
 
 ```

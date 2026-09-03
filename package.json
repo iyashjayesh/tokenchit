@@ -17,6 +17,7 @@
     "dev": "npm run dev -w tokenstats-site",
     "test": "npm run build:core && npm run build -w @tokenstats/cli && npm run test -w @tokenstats/core && npm run test -w @tokenstats/cli",
     "cli": "node packages/cli/dist/index.js",
-    "db:migrate": "node apps/site/db/migrate.mjs"
+    "db:migrate": "node apps/site/db/migrate.mjs",
+    "version:set": "node scripts/version.mjs"
   }
 }

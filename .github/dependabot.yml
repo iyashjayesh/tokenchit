@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Grouped and monthly on purpose: a solo open-source project does not want a pull request
+  # per patch bump, and an unreviewed dependency PR sitting open is worse than a slightly
+  # older dependency.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      all:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
