@@ -18,12 +18,16 @@
  */
 
 import { DARK, esc, FONT, LIGHT, render, type Palette } from "./svg.js";
+import { agentIcon, ICON_VIEWBOX } from "./agent-icons.js";
 
 export type Layout = "default" | "compact";
 export type Theme = "light" | "dark" | "auto";
 export type HideKey = "spend" | "streak" | "mix";
 
 export type MixEntry = { agent: string; pct: number };
+
+/** Legend mark size. Bigger than the 6px square it replaced, because a mark needs the room. */
+const ICON_SIZE = 8;
 
 export type CardOptions = {
   handle: string;
@@ -333,15 +337,23 @@ export function buildCardSvg(opts: CardOptions): string {
     const dg = GEO.default;
     mix.slice(0, dg.legend.pairs.length).forEach((m, i) => {
       const [sx, tx] = dg.legend.pairs[i];
+      /* The agent's own mark, in the colour of its bar segment. Tinted rather than drawn in
+         each brand's own colour: the mark says which tool, the colour says which piece of
+         the bar above it, and the two would fight if both carried meaning.
+
+         The class stays on this element so theme=auto still recolours it in dark mode,
+         exactly as it did when this was a plain square. */
+      const scale = (ICON_SIZE / ICON_VIEWBOX).toFixed(4);
       parts.push(
         render({
-          tag: "rect",
+          tag: "path",
           attrs: {
             ...cls(`s${i}`),
-            x: sx,
-            y: dg.legend.swatchY,
-            width: 6,
-            height: 6,
+            // Centred on the same point the 6px square used, so the legend's vertical
+            // rhythm is unchanged by the mark being larger: a bigger box drawn from the same
+            // top edge would hang below the text baseline.
+            transform: `translate(${sx} ${dg.legend.swatchY - (ICON_SIZE - 6) / 2}) scale(${scale})`,
+            d: agentIcon(m.agent),
             fill: pal.segments[Math.min(i, pal.segments.length - 1)],
           },
         }),
