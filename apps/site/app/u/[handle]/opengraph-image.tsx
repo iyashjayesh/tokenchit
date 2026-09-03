@@ -26,8 +26,6 @@ export const alt = "tokenstats profile";
 const INK = "#101010";
 const PAPER = "#FFFDF9";
 const LIME = "#C6FF3D";
-const CORAL = "#FF5C3D";
-const YELLOW = "#FFD23D";
 const DIM = "#8A8A82";
 
 const SEGMENT_COLOURS = [LIME, INK, "#8A8A82", "#D8D6CE"];

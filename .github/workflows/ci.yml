@@ -5,33 +5,35 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  test:
+    name: test (node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22 is the floor the packages declare. 24 is here because the OpenCode adapter uses
+        # node:sqlite, which is experimental on 22 and stable on 24 — the exact place the two
+        # are most likely to disagree, and a disagreement would be silent without this.
+        node: [22, 24]
+
     steps:
       - uses: actions/checkout@v4
 
-      # Node 22 is the floor: the OpenCode adapter uses the built-in node:sqlite.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: npm
 
       - run: npm ci
 
-      # Builds core, then the CLI, then the site. The site build is what catches a Node
-      # built-in leaking into the client bundle through @tokenstats/core.
+      # Builds core, then the CLI, then the site.
       - run: npm run build
 
       - run: npm test
-
-      # Vercel builds apps/site on its own, with no root build to create
-      # packages/core/dist first. That is exactly how the first deploy failed, so the
-      # site has to be buildable from its own directory in a clean tree.
-      - name: Site builds standalone, as Vercel builds it
-        run: |
-          rm -rf packages/core/dist
-          npm run build --workspace=tokenstats-site
 
       # The card is the product; a builder that renders nothing should fail the run.
       - name: Card renders
@@ -46,8 +48,8 @@ jobs:
             console.log('card renders,', svg.length, 'bytes');
           "
 
-      # Every adapter must survive a machine with no agent logs at all — the state a CI
-      # runner is in, and the state a new user's laptop may be in.
+      # Every adapter must survive a machine with no agent logs at all — the state a runner
+      # is in, and the state a new user's laptop may be in.
       - name: Adapters degrade on a bare machine
         run: |
           node --input-type=module -e "
@@ -59,3 +61,47 @@ jobs:
               console.log(a.id, state, n, 'events');
             }
           "
+
+      # The tarball is what people actually install, and it is a different artifact from the
+      # working tree: a wrong `files`, `exports` or `bin` only shows up here.
+      - name: Packed tarballs install and run
+        run: |
+          mkdir -p /tmp/packtest
+          # Packed from the repo, installed somewhere else. `npm pack <dir> --workspace`
+          # packs the root package instead of the workspace, which quietly tests nothing.
+          npm pack -w @tokenstats/core --pack-destination /tmp/packtest
+          npm pack -w @tokenstats/cli  --pack-destination /tmp/packtest
+          cd /tmp/packtest && npm init -y >/dev/null
+          npm install ./tokenstats-core-*.tgz ./tokenstats-cli-*.tgz >/dev/null
+          ./node_modules/.bin/tokenstats --version
+          node --input-type=module -e "
+            import { buildCardSvg } from '@tokenstats/core';
+            if (typeof buildCardSvg !== 'function') throw new Error('core entry point broken');
+            console.log('installed package resolves');
+          "
+
+  site:
+    name: site
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - run: npm run lint -w tokenstats-site
+
+      # Vercel builds apps/site on its own, with no root build to create
+      # packages/core/dist first. That is exactly how the first deploy failed, so the site
+      # has to be buildable from its own directory in a clean tree.
+      - name: Site builds standalone, as Vercel builds it
+        run: |
+          rm -rf packages/core/dist
+          npm run build --workspace=tokenstats-site

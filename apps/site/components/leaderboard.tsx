@@ -34,30 +34,35 @@ export function Leaderboard({ initialRows, initialWindow }: {
   const { handle } = useSiteState();
   const [activeWindow, setActiveWindow] = useState<BoardWindow>(initialWindow);
   const [rows, setRows] = useState<BoardRow[]>(initialRows);
-  const [stale, setStale] = useState(false);
+  // Which window the rows on screen actually belong to. `stale` is derived from it rather
+  // than kept as its own state: setting state synchronously inside an effect triggers a
+  // second render pass before the browser paints.
+  const [loadedWindow, setLoadedWindow] = useState<BoardWindow>(initialWindow);
+  const stale = loadedWindow !== activeWindow;
 
   useEffect(() => {
-    if (activeWindow === initialWindow) return;
+    if (activeWindow === loadedWindow) return;
 
     let cancelled = false;
-    setStale(true);
 
     fetch(`/api/submissions?window=${activeWindow}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
       .then((data: { rows: BoardRow[] }) => {
-        if (!cancelled) setRows(data.rows);
+        if (cancelled) return;
+        setRows(data.rows);
+        setLoadedWindow(activeWindow);
       })
       // A board that fails to load should leave the previous window on screen rather than
-      // replace real figures with an error. The dimming stops, so it stops looking pending.
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setStale(false);
+      // replace real figures with an error. Marking it loaded stops the dimming, so it stops
+      // looking pending.
+      .catch(() => {
+        if (!cancelled) setLoadedWindow(activeWindow);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [activeWindow, initialWindow]);
+  }, [activeWindow, loadedWindow]);
 
   return (
     <section id="board" className={styles.section}>
