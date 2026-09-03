@@ -67,9 +67,13 @@
   gap: 6px;
 }
 
-.swatch {
-  width: 6px;
-  height: 6px;
+/* 8px to match the SVG card's mark, which is 8px where the old square was 6px. `block`
+   because an inline SVG otherwise sits on the text baseline and drags the row down. */
+.mark {
+  width: 8px;
+  height: 8px;
+  display: block;
+  flex: none;
 }
 
 .footer {
