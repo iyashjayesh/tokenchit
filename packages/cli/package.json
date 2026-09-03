@@ -45,8 +45,8 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^26.4.0",
     "esbuild": "^0.28.2",
-    "typescript": "^5.7.0"
+    "typescript": "^7.0.2"
   }
 }
