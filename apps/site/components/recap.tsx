@@ -8,6 +8,7 @@ import {
   RECAP_TILES,
 } from "@/lib/sample-data";
 import styles from "./recap.module.css";
+import { cmd } from "@/lib/cli";
 
 /**
  * Section 05 — the standalone recap page preview. Server component: every figure
@@ -21,7 +22,7 @@ export function Recap() {
     <section id="recap" className={styles.section}>
       <SectionHeading n={5} title="Year in review" tone="coral" />
       <p className={styles.intro}>
-        <code>tokenchit recap</code> renders this as a second committable SVG. Same
+        <code>{cmd("recap")}</code> renders this as a second committable SVG. Same
         data, no card constraints.
       </p>
 

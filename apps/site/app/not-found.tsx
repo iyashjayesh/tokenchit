@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
 
 import styles from "./not-found.module.css";
+import { cmd, npx } from "@/lib/cli";
 
 /**
  * Profile URLs get shared, mistyped and outlive the handle they name, so this page is
@@ -18,7 +19,7 @@ export default function NotFound() {
         <h1 className={styles.h1}>Nothing here.</h1>
         <p className={styles.body}>
           If you were looking for someone&apos;s stats, they may not have published yet — a
-          profile only exists once <span className={styles.strong}>tokenchit publish</span>{" "}
+          profile only exists once <span className={styles.strong}>{cmd("publish")}</span>{" "}
           has run at least once. Handles are case-insensitive, so that is not it.
         </p>
 
@@ -31,7 +32,7 @@ export default function NotFound() {
           </Link>
         </div>
 
-        <code className={styles.install}>npx @tokenchit/cli init</code>
+        <code className={styles.install}>{npx("init")}</code>
       </div>
     </PageShell>
   );

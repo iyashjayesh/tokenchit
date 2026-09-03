@@ -13,6 +13,7 @@ import { readProfile } from "@/lib/profile";
 import { SITE_URL } from "@/lib/site";
 
 import styles from "./profile.module.css";
+import { cmd } from "@/lib/cli";
 
 export const revalidate = 300;
 
@@ -209,7 +210,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <code className={styles.embedCode}>{embed}</code>
             <p className={styles.embedNote}>
               This renders live from the endpoint. To commit the file instead — no request to
-              us at all — run <span className={styles.strong}>tokenchit sync</span> and add the
+              us at all — run <span className={styles.strong}>{cmd("sync")}</span> and add the
               SVG to your repo.
             </p>
           </div>
