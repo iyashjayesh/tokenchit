@@ -2,7 +2,7 @@ import { resolveApi } from "../api.js";
 import { flag } from "../args.js";
 import { readAuth, writeAuth, clearAuth, authFile } from "../auth.js";
 import { post, postForm } from "../net.js";
-import { bold, dim, fail, green, say, warn } from "../ui.js";
+import { bold, cyan, dim, fail, green, grey, say, spin, warn } from "../ui.js";
 
 /**
  * Public by design. Device flow uses no client secret — that is the whole reason it is safe
@@ -13,6 +13,8 @@ const CLIENT_ID = process.env["TOKENCHIT_CLIENT_ID"] ?? "Ov23liSMxVycJS63ZqN5";
 
 const DEVICE_CODE_URL = "https://github.com/login/device/code";
 const TOKEN_URL = "https://github.com/login/oauth/access_token";
+
+export type SignInResult = { ok: boolean; handle?: string };
 
 /**
  * Prove a GitHub handle is yours, using GitHub's device flow.
@@ -25,7 +27,126 @@ const TOKEN_URL = "https://github.com/login/oauth/access_token";
  * No scopes are requested. GitHub answers `GET /user` for an unscoped token, and the login
  * and numeric id are all we need. Asking for more would show a scarier consent screen in
  * exchange for access we would then have to be trusted not to use.
+ *
+ * Split out from the `login` command so `publish` can call it mid-flow: signing in is a step
+ * on the way to publishing, not a separate errand to be sent away on.
  */
+export async function signIn(api: string): Promise<SignInResult> {
+  const start = await postForm(DEVICE_CODE_URL, { client_id: CLIENT_ID, scope: "" });
+  if (!start.ok) {
+    fail(`GitHub refused the device request: ${String(start.body["error"] ?? start.status)}`);
+    if (start.body["error"] === "device_flow_disabled") {
+      say(dim("  The OAuth App does not have Device Flow enabled."));
+    }
+    return { ok: false };
+  }
+
+  const deviceCode = String(start.body["device_code"] ?? "");
+  const userCode = String(start.body["user_code"] ?? "");
+  const verifyUrl = String(start.body["verification_uri"] ?? "https://github.com/login/device");
+  const expiresIn = Number(start.body["expires_in"] ?? 900);
+  let interval = Number(start.body["interval"] ?? 5);
+
+  // The code is the one thing the reader has to act on, so it gets its own line and the
+  // only strong colour on screen.
+  say();
+  say(`  Open  ${bold(verifyUrl)}`);
+  say(`  Code  ${bold(cyan(userCode))}`);
+  say();
+
+  const spinner = spin(
+    `waiting for authorisation… ${grey(`expires in ${Math.round(expiresIn / 60)}m, Ctrl-C to stop`)}`,
+  );
+
+  const deadline = Date.now() + expiresIn * 1000;
+  let githubToken = "";
+
+  try {
+    while (Date.now() < deadline) {
+      await sleep(interval * 1000);
+
+      const poll = await postForm(TOKEN_URL, {
+        client_id: CLIENT_ID,
+        device_code: deviceCode,
+        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      });
+
+      const error = poll.body["error"];
+      if (!error) {
+        githubToken = String(poll.body["access_token"] ?? "");
+        break;
+      }
+      // Documented, expected states rather than failures: the user simply has not finished yet.
+      if (error === "authorization_pending") continue;
+      if (error === "slow_down") {
+        interval = Number(poll.body["interval"] ?? interval + 5);
+        continue;
+      }
+      if (error === "expired_token") {
+        fail("The code expired. Run `tokenchit login` again.");
+        return { ok: false };
+      }
+      if (error === "access_denied") {
+        fail("Authorisation was declined.");
+        return { ok: false };
+      }
+      fail(`GitHub returned: ${String(error)}`);
+      return { ok: false };
+    }
+  } finally {
+    // Whatever happened — success, refusal, Ctrl-C — the animation must not be left running
+    // over the top of the next thing printed.
+    spinner.stop();
+  }
+
+  if (!githubToken) {
+    fail("Timed out waiting for authorisation.");
+    return { ok: false };
+  }
+
+  // The GitHub token is handed to our server exactly once, so that the server — not the
+  // client — is what asks GitHub who this is. A client that simply asserted "I am octocat"
+  // would be trivially forgeable. It is never written to disk on this machine.
+  const verifying = spin("verifying with GitHub…");
+  const res = await post(`${api}/api/auth/github`, JSON.stringify({ githubToken }));
+  verifying.stop();
+
+  if (res.status === 429) {
+    fail(String(res.body?.["error"] ?? "too many sign-in attempts — try again shortly"));
+    return { ok: false };
+  }
+
+  if (!res.ok) {
+    fail(`${api} rejected the sign-in (${res.status})`);
+    if (res.body?.["error"]) say(dim(`  ${String(res.body["error"])}`));
+    return { ok: false };
+  }
+
+  const handle = String(res.body?.["handle"] ?? "");
+  const token = String(res.body?.["token"] ?? "");
+  if (!handle || !token) {
+    fail("The server did not return a usable session.");
+    return { ok: false };
+  }
+
+  const path = await writeAuth({
+    token,
+    handle,
+    api,
+    createdAt: new Date().toISOString(),
+  });
+
+  say(`${green("✓")} signed in as ${bold(`@${handle}`)}`);
+  say(dim(`  key stored in ${path} (0600)`));
+  say(dim("  the GitHub token was used once to identify you and never written to disk"));
+
+  if (res.body?.["takenOver"]) {
+    warn(`@${handle} had an unverified row; it now belongs to this account.`);
+  }
+
+  return { ok: true, handle };
+}
+
 export async function login(argv: string[]): Promise<number> {
   const api = resolveApi(flag(argv, "--api"));
 
@@ -39,111 +160,12 @@ export async function login(argv: string[]): Promise<number> {
     return 0;
   }
 
-  const start = await postForm(DEVICE_CODE_URL, { client_id: CLIENT_ID, scope: "" });
-  if (!start.ok) {
-    fail(`GitHub refused the device request: ${String(start.body["error"] ?? start.status)}`);
-    if (start.body["error"] === "device_flow_disabled") {
-      say(dim("  The OAuth App does not have Device Flow enabled."));
-    }
-    return 1;
-  }
-
-  const deviceCode = String(start.body["device_code"] ?? "");
-  const userCode = String(start.body["user_code"] ?? "");
-  const verifyUrl = String(start.body["verification_uri"] ?? "https://github.com/login/device");
-  const expiresIn = Number(start.body["expires_in"] ?? 900);
-  let interval = Number(start.body["interval"] ?? 5);
-
-  say();
-  say(`  Open ${bold(verifyUrl)}`);
-  say(`  and enter  ${bold(userCode)}`);
-  say();
-  say(dim(`  waiting… (expires in ${Math.round(expiresIn / 60)} minutes, Ctrl-C to stop)`));
-
-  const deadline = Date.now() + expiresIn * 1000;
-  let githubToken = "";
-
-  while (Date.now() < deadline) {
-    await sleep(interval * 1000);
-
-    const poll = await postForm(TOKEN_URL, {
-      client_id: CLIENT_ID,
-      device_code: deviceCode,
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-    });
-
-    const error = poll.body["error"];
-    if (!error) {
-      githubToken = String(poll.body["access_token"] ?? "");
-      break;
-    }
-    // Documented, expected states rather than failures: the user simply has not finished yet.
-    if (error === "authorization_pending") continue;
-    if (error === "slow_down") {
-      interval = Number(poll.body["interval"] ?? interval + 5);
-      continue;
-    }
-    if (error === "expired_token") {
-      fail("The code expired. Run `tokenchit login` again.");
-      return 1;
-    }
-    if (error === "access_denied") {
-      fail("Authorisation was declined.");
-      return 1;
-    }
-    fail(`GitHub returned: ${String(error)}`);
-    return 1;
-  }
-
-  if (!githubToken) {
-    fail("Timed out waiting for authorisation.");
-    return 1;
-  }
-
-  // The GitHub token is handed to our server exactly once, so that the server — not the
-  // client — is what asks GitHub who this is. A client that simply asserted "I am octocat"
-  // would be trivially forgeable. It is never written to disk on this machine.
-  const res = await post(`${api}/api/auth/github`, JSON.stringify({ githubToken }));
-
-  if (res.status === 429) {
-    fail(String(res.body?.["error"] ?? "too many sign-in attempts — try again shortly"));
-    return 1;
-  }
-
-  if (!res.ok) {
-    fail(`${api} rejected the sign-in (${res.status})`);
-    if (res.body?.["error"]) say(dim(`  ${String(res.body["error"])}`));
-    return 1;
-  }
-
-  const handle = String(res.body?.["handle"] ?? "");
-  const token = String(res.body?.["token"] ?? "");
-  if (!handle || !token) {
-    fail("The server did not return a usable session.");
-    return 1;
-  }
-
-  const path = await writeAuth({
-    token,
-    handle,
-    api,
-    createdAt: new Date().toISOString(),
-  });
-
-  say();
-  say(`${green("✓")} signed in as ${bold(`@${handle}`)}`);
-  say(dim(`  key stored in ${path} (0600)`));
-  say(dim("  the GitHub token was used once to identify you and never written to disk"));
-
-  const takenOver = res.body?.["takenOver"];
-  if (takenOver) {
-    warn(`@${handle} had an unverified row; it now belongs to this account.`);
-  }
+  const result = await signIn(api);
+  if (!result.ok) return 1;
 
   say();
   say(`  Next: ${bold("tokenchit publish")} ${dim("— your rows will be marked verified")}`);
   say();
-
   return 0;
 }
 

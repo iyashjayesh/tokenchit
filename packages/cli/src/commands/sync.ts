@@ -4,8 +4,6 @@ import { dirname, relative, resolve } from "node:path";
 import {
   aggregate,
   buildCardSvg,
-  formatTokens,
-  formatUsd,
   PRICES_GENERATED,
   sanitizeHandle,
   toCardOptions,
@@ -16,7 +14,8 @@ import { readAll } from "@tokenchit/core/adapters";
 
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
-import { bold, dim, green, say, warn } from "../ui.js";
+import { renderStats } from "../stats-view.js";
+import { bold, dim, green, grey, say, spin, warn } from "../ui.js";
 
 const LAYOUTS = ["default", "compact"] as const satisfies readonly Layout[];
 const THEMES = ["auto", "light", "dark"] as const satisfies readonly Theme[];
@@ -35,7 +34,11 @@ export async function sync(argv: string[]): Promise<number> {
   const json = has(argv, "--json");
   const dryRun = has(argv, "--dry-run");
 
+  // Thousands of transcripts take a few seconds to walk. Silence over that long reads as a
+  // hang, and the spinner writes to stderr so `--json` stays pipeable.
+  const reading = spin("reading local agent logs…");
   const stats = await aggregate(readAll(config.agents));
+  reading.stop();
 
   if (stats.tokens === 0) {
     warn("No usage found. Run `tokenchit init` to see which agents were detected.");
@@ -72,16 +75,7 @@ export async function sync(argv: string[]): Promise<number> {
   const svg = buildCardSvg(toCardOptions(stats, { handle, layout, theme }));
   const target = resolve(process.cwd(), out);
 
-  say();
-  say(
-    `  ${bold(formatTokens(stats.tokens))} tokens  ${dim("·")}  ` +
-      `${bold(formatUsd(stats.equivCostUsd))} equiv. API cost  ${dim("·")}  ` +
-      `${bold(`${stats.streakDays}d`)} streak  ${dim("·")}  ` +
-      `${bold(String(stats.activeDays))} active days`,
-  );
-  say(
-    `  ${dim(stats.mix.map((m) => `${m.agent} ${m.pct.toFixed(0)}%`).join("  ·  "))}`,
-  );
+  for (const line of renderStats(stats, handle)) say(line);
   say();
 
   // Never let the dollar figure imply more precision than it has. An unpriced model is not
@@ -111,12 +105,11 @@ export async function sync(argv: string[]): Promise<number> {
   say(`${green("✓")} wrote ${bold(rel)} ${dim(`(${svg.length} bytes)`)}`);
 
   say();
-  say(dim("  Embed it:"));
-  say(`  ![tokenchit](./${rel})`);
-  say();
+  say(`  ${grey("embed")}     ![tokenchit](./${rel})`);
   // Committing on the user's behalf is not ours to decide — a tool that reads your logs
   // should not also decide what lands in your history on its first run.
-  say(dim(`  Then: git add ${rel} && git commit -m "chore: update tokenchit"`));
+  say(`  ${grey("commit")}    git add ${rel} && git commit -m "chore: update tokenchit"`);
+  say(`  ${grey("share")}     ${bold("tokenchit publish")} ${dim("— put this on the board")}`);
   say();
 
   return 0;

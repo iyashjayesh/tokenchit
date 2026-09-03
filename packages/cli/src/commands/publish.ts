@@ -1,6 +1,7 @@
 import {
   aggregate,
   buildPayload,
+  formatTokens,
   sanitizeHandle,
   serializePayload,
   validatePayload,
@@ -11,9 +12,9 @@ import { resolveApi } from "../api.js";
 import { flag, has } from "../args.js";
 import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
-import { bold, dim, fail, green, say, warn, yellow } from "../ui.js";
+import { bold, dim, fail, green, grey, link, say, spin, warn, yellow } from "../ui.js";
 import { post } from "../net.js";
-
+import { signIn } from "./login.js";
 
 /**
  * The only command that sends anything anywhere.
@@ -25,20 +26,44 @@ import { post } from "../net.js";
 export async function publish(argv: string[], version: string): Promise<number> {
   const config = (await readConfig()) ?? DEFAULT_CONFIG;
 
-  // Signing in settles the handle: publishing under a different name would be rejected by
-  // the server anyway, so the local default follows the account.
-  const auth = await readAuth();
-  const rawHandle = flag(argv, "--handle") ?? auth?.handle ?? config.handle;
-  const handle = sanitizeHandle(rawHandle);
   const api = resolveApi(flag(argv, "--api"));
   const dryRun = has(argv, "--dry-run");
+  const anonymous = has(argv, "--anonymous");
+
+  let auth = await readAuth();
+
+  /*
+   * Signing in is part of publishing, not an errand to be sent away on: an unverified row is
+   * something almost nobody wants, and telling someone to go and run another command first is
+   * how they end up with one.
+   *
+   * Gated on a TTY. Without one — CI, a cron entry, a pipe — there is nobody to read a device
+   * code, so the old behaviour stands and the row publishes unverified. `--anonymous` is the
+   * same choice made deliberately at a terminal.
+   */
+  if (!auth && !dryRun && !anonymous && process.stdout.isTTY) {
+    say();
+    say(`  ${bold("Sign in to publish a verified row.")}`);
+    say(grey("  Skip with --anonymous; the row is then marked unverified."));
+    const result = await signIn(api);
+    if (!result.ok) return 1;
+    auth = await readAuth();
+  }
+
+  // Signing in settles the handle: publishing under a different name would be rejected by
+  // the server anyway, so the local default follows the account.
+  const rawHandle = flag(argv, "--handle") ?? auth?.handle ?? config.handle;
+  const handle = sanitizeHandle(rawHandle);
 
   if (!rawHandle) {
     fail(`No handle set. Add one to ${CONFIG_FILE}, or pass --handle <you>.`);
     return 1;
   }
 
+  const reading = spin("reading local agent logs…");
   const stats = await aggregate(readAll(config.agents));
+  reading.stop();
+
   if (stats.tokens === 0) {
     warn("No usage found. Run `tokenchit init` to see which agents were detected.");
     return 1;
@@ -57,7 +82,8 @@ export async function publish(argv: string[], version: string): Promise<number> 
   }
 
   if (dryRun) {
-    // Exactly the bytes that would be POSTed — same string, not a re-rendering of it.
+    // Exactly the bytes that would be POSTed — same string, not a re-rendering of it. Nothing
+    // decorative may join it on stdout, which is what the dryrun.exact test pins down.
     process.stdout.write(`${body}\n`);
     say();
     say(dim(`  ${body.length} bytes would be sent to ${api}/api/submissions`));
@@ -65,10 +91,11 @@ export async function publish(argv: string[], version: string): Promise<number> 
     return 0;
   }
 
-  say();
-  say(dim(`  publishing ${payload.days.length} days to ${api}`));
-
+  const sending = spin(
+    `publishing ${payload.days.length} days · ${formatTokens(stats.tokens)} tokens…`,
+  );
   const res = await post(`${api}/api/submissions`, body, auth?.token);
+  sending.stop();
 
   if (res.status === 429) {
     // The server names the wait; repeating it beats a bare "rejected (429)".
@@ -83,14 +110,26 @@ export async function publish(argv: string[], version: string): Promise<number> 
     return 1;
   }
 
-  say(`${green("✓")} published as ${bold(`@${payload.handle}`)} ${dim(`(tier: ${res.body?.tier ?? "cli"})`)}`);
+  const tier = res.body?.tier ?? "cli";
 
-  if ((res.body?.tier ?? "cli") === "cli" && !auth) {
-    say();
-    say(dim("  This row is marked unverified on the board — nothing has proved the handle"));
-    say(dim("  is yours. Run `tokenchit login` to upgrade it."));
-  }
   say();
+  say(
+    `${green("✓")} published as ${bold(`@${payload.handle}`)} ` +
+      `${dim(`· ${payload.days.length} days · ${formatTokens(stats.tokens)} tokens · tier: ${tier}`)}`,
+  );
+  say();
+
+  // The point of publishing. Printed last, because this is what someone actually wants out
+  // of the command, and printed as full URLs so they survive a copy out of scrollback.
+  say(`  ${grey("your profile")}   ${link(`${api}/u/${payload.handle}`)}`);
+  say(`  ${grey("leaderboard")}    ${link(`${api}/board`)}`);
+  say();
+
+  if (tier === "cli" && !auth) {
+    say(dim("  This row is marked unverified — nothing has proved the handle is yours."));
+    say(dim("  Run `tokenchit login` to upgrade it."));
+    say();
+  }
 
   return 0;
 }

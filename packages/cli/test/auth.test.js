@@ -97,11 +97,42 @@ async function walk(dir) {
 
 test("the help text names the same API the CLI actually posts to", async () => {
   // These drifted once: the default moved to tokenchit.vercel.app while --help still
-  // advertised tokenchit-site.vercel.app, a host that 404s. Anyone who copied the URL out
-  // of --help would have pointed publish at nothing.
+  // advertised tokenchit-site.vercel.app, a host that 404s. Anyone who copied the URL out of
+  // --help would have pointed publish at nothing.
+  //
+  // Asserted against rendered output rather than the source string, so the help stays free to
+  // interpolate the constant instead of repeating it.
   const { DEFAULT_API } = await import(join(HERE, "..", ".build", "api.js"));
-  const help = await readFile(join(SRC, "index.ts"), "utf8");
+  const box = await sandbox();
 
-  const advertised = help.match(/--api <url>\s+default (\S+)/)?.[1];
-  assert.equal(advertised, DEFAULT_API, "--help advertises a different API than DEFAULT_API");
+  const { stdout } = await cli(["help", "publish"], box);
+  assert.ok(
+    stdout.includes(DEFAULT_API),
+    `\`tokenchit help publish\` does not advertise DEFAULT_API (${DEFAULT_API}):\n${stdout}`,
+  );
+});
+
+test("every command in the help table can actually be run", async () => {
+  // A command listed but not dispatched, or dispatched but not listed, is a help page that
+  // lies. Neither direction is obvious by reading and both are cheap to check.
+  const box = await sandbox();
+  const { stdout: usage } = await cli(["help"], box);
+
+  for (const name of [
+    "init",
+    "sync",
+    "publish",
+    "recap",
+    "schedule",
+    "login",
+    "logout",
+    "whoami",
+  ]) {
+    assert.ok(usage.includes(name), `${name} is missing from the summary help`);
+    const { stdout } = await cli(["help", name], box);
+    assert.ok(
+      stdout.includes(`tokenchit ${name}`),
+      `\`tokenchit help ${name}\` printed no page for it`,
+    );
+  }
 });

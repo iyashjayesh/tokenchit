@@ -82,24 +82,23 @@ a network request.
 
 ## Commands
 
+Three steps, in order. `sync` shows you everything before anything leaves the machine.
+
 ```
-tokenchit init
+tokenchit init           say who you are
   --handle <name>        GitHub handle (default: guessed from your origin remote)
 
-tokenchit sync
+tokenchit sync           read your logs, show your stats, write the card
   --out <path>           where to write it (default: tokenchit.svg)
   --layout default|compact
   --theme auto|light|dark
   --json                 print the aggregate instead of writing an SVG
   --dry-run              report what would be written, write nothing
 
-tokenchit login          prove your GitHub handle (device flow, no password)
-tokenchit logout         forget this machine
-tokenchit whoami         who this machine is signed in as
-
-tokenchit publish        the only command that uploads anything
+tokenchit publish        put your row on the public board
+  --anonymous            publish without signing in; the row is marked unverified
   --dry-run              print the exact bytes and send nothing
-  --api <url>            default https://tokenchit-site.vercel.app
+  --api <url>            default https://tokenchit.vercel.app
   --handle <name>
 
 tokenchit recap
@@ -108,7 +107,33 @@ tokenchit recap
   --theme auto|light|dark
   --json                 print the recap model instead of writing an SVG
   --dry-run
+
+tokenchit schedule       print a cron or launchd entry; installs nothing
+  --every daily|hourly   how often to publish (default: daily)
+  --cron                 force a crontab line even on macOS
+
+tokenchit login          prove your GitHub handle (device flow, no password)
+tokenchit logout         forget this machine
+tokenchit whoami         who this machine is signed in as
 ```
+
+`tokenchit help <command>` explains one command on its own. `NO_COLOR=1` drops colour and
+animation.
+
+`publish` signs you in on the way through, so `login` is rarely needed on its own — an
+unverified row is seldom what anyone wants, and being told to go and run another command
+first is how people end up with one. That only happens at a terminal: in CI or a cron job
+nobody can read a device code, so it publishes unverified rather than hanging. `--anonymous`
+is the same choice made deliberately.
+
+### Keeping a row current
+
+Publishing is not automatic, and it cannot be made automatic anywhere but this machine: the
+logs are local and exist nowhere else, so a GitHub Action has nothing to read. `tokenchit
+schedule` prints a launchd or cron entry that runs `publish` on a timer.
+
+It prints and stops. Installing a background job that survives reboots and keeps sending data
+is not something to do on someone's behalf because they typed a word that sounded convenient.
 
 ## The recap
 

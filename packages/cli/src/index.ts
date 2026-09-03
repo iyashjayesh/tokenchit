@@ -1,44 +1,149 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module";
 
+import { DEFAULT_API } from "./api.js";
 import { init } from "./commands/init.js";
 import { login, logout, whoami } from "./commands/login.js";
 import { publish } from "./commands/publish.js";
 import { recap } from "./commands/recap.js";
+import { schedule } from "./commands/schedule.js";
 import { sync } from "./commands/sync.js";
-import { bold, dim, fail, muteSqliteWarning, say } from "./ui.js";
+import { bold, cyan, dim, fail, grey, muteSqliteWarning, pad, say } from "./ui.js";
 
-const USAGE = `
-${bold("tokenchit")} — turn your local AI coding agent logs into a stat card
+type Command = {
+  summary: string;
+  /** `[flag, explanation]`, rendered as an aligned block under the command. */
+  flags?: Array<[string, string]>;
+  /** Shown only by `tokenchit help <command>`, where there is room to explain. */
+  detail?: string;
+};
 
-  ${bold("tokenchit init")}              detect agents, write .tokenchit.json
-    --handle <name>            GitHub handle (default: guessed from origin remote)
+/*
+ * One table drives both the summary help and the per-command help, so a flag cannot be
+ * documented in one and missing from the other. The API host is interpolated rather than
+ * retyped — it was typed out once and drifted to a hostname that 404s.
+ */
+const COMMANDS: Record<string, Command> = {
+  init: {
+    summary: "detect agents, write .tokenchit.json",
+    flags: [["--handle <name>", "GitHub handle (default: guessed from origin remote)"]],
+    detail:
+      "Looks for Claude Code, Codex and OpenCode logs and records which of them to read.\n" +
+      "The file it writes is meant to be committed; it never contains a credential.",
+  },
+  sync: {
+    summary: "read your logs, show your stats, write the card",
+    flags: [
+      ["--out <path>", "where to write it (default: tokenchit.svg)"],
+      ["--layout default|compact", ""],
+      ["--theme auto|light|dark", ""],
+      ["--json", "print the aggregate instead of writing an SVG"],
+      ["--dry-run", "report what would be written, write nothing"],
+    ],
+    detail:
+      "Reads only local files and makes no network request, so it is safe to run before you\n" +
+      "have decided whether to publish anything. The card it writes is a plain SVG: commit it\n" +
+      "and GitHub serves it directly, without going through the camo proxy.",
+  },
+  publish: {
+    summary: "put your row on the public board",
+    flags: [
+      ["--anonymous", "publish without signing in; the row is marked unverified"],
+      ["--dry-run", "print the exact bytes and send nothing"],
+      ["--api <url>", `default ${DEFAULT_API}`],
+      ["--handle <name>", ""],
+    ],
+    detail:
+      "The only command that uploads anything. At a terminal it signs you in first, because an\n" +
+      "unverified row is rarely what anyone wants; in CI or a cron job, where nobody can read a\n" +
+      "device code, it publishes unverified instead of hanging.\n\n" +
+      "Daily totals and model names are sent. No prompt, no reply, no file path, no branch\n" +
+      "name — `--dry-run` prints the exact bytes so you can check that yourself.",
+  },
+  recap: {
+    summary: "year in review: heatmap, models, totals",
+    flags: [
+      ["--out <path>", "default: tokenchit-recap.svg"],
+      ["--year <yyyy>", "label the recap with a different year"],
+      ["--theme auto|light|dark", ""],
+      ["--json", "print the recap model instead of writing an SVG"],
+      ["--dry-run", ""],
+    ],
+  },
+  schedule: {
+    summary: "print a cron or launchd entry to keep your row current",
+    flags: [
+      ["--every daily|hourly", "how often to publish (default: daily)"],
+      ["--cron", "force a crontab line even on macOS"],
+    ],
+    detail:
+      "Prints a scheduler entry and installs nothing — changing how your machine is configured\n" +
+      "is yours to do, not a CLI's to do quietly.\n\n" +
+      "Scheduling has to run locally. The logs live on this machine and nowhere else, so a\n" +
+      "GitHub Action cannot do this for you: there is nothing for it to read.",
+  },
+  login: { summary: "prove your GitHub handle (device flow, no password)" },
+  logout: { summary: "forget this machine" },
+  whoami: { summary: "who this machine is signed in as" },
+};
 
-  ${bold("tokenchit sync")}              render the card into your repo
-    --out <path>               where to write it (default: tokenchit.svg)
-    --layout default|compact
-    --theme auto|light|dark
-    --json                     print the aggregate instead of writing an SVG
-    --dry-run                  report what would be written, write nothing
+const GROUPS: Array<[string, string[]]> = [
+  ["start here", ["init", "sync", "publish"]],
+  ["more", ["recap", "schedule"]],
+  ["account", ["login", "logout", "whoami"]],
+];
 
-  ${bold("tokenchit login")}             prove your GitHub handle (device flow, no password)
-  ${bold("tokenchit logout")}            forget this machine
-  ${bold("tokenchit whoami")}            who this machine is signed in as
+function usage(): string {
+  const names = Object.keys(COMMANDS);
+  const w = Math.max(...names.map((n) => n.length)) + 10;
 
-  ${bold("tokenchit publish")}           the only command that uploads anything
-    --dry-run                  print the exact bytes and send nothing
-    --api <url>                default https://tokenchit.vercel.app
-    --handle <name>
+  const out: string[] = [
+    "",
+    `${bold("tokenchit")} — turn your local AI coding agent logs into a stat card`,
+    "",
+    `  ${grey("1")} ${bold("tokenchit init")}      ${grey("say who you are")}`,
+    `  ${grey("2")} ${bold("tokenchit sync")}      ${grey("see your stats, write the card")}`,
+    `  ${grey("3")} ${bold("tokenchit publish")}   ${grey("sign in and join the board")}`,
+    "",
+  ];
 
-  ${bold("tokenchit recap")}             year in review: heatmap, models, totals
-    --out <path>               default: tokenchit-recap.svg
-    --year <yyyy>              label the recap with a different year
-    --theme auto|light|dark
-    --json                     print the recap model instead of writing an SVG
-    --dry-run
+  for (const [group, members] of GROUPS) {
+    out.push(`${grey(group)}`);
+    for (const name of members) {
+      const cmd = COMMANDS[name]!;
+      out.push(`  ${pad(bold(name), w)}${cmd.summary}`);
+    }
+    out.push("");
+  }
 
-${dim("Reads only local files. Makes no network requests.")}
-`;
+  out.push(
+    `${grey("flags")}`,
+    `  ${pad("--help, -h", w)}this text, or ${bold("tokenchit help <command>")} for one command`,
+    `  ${pad("--version, -v", w)}print the version`,
+    `  ${pad("NO_COLOR=1", w)}disable colour and animation`,
+    "",
+    dim("sync and recap read only local files and make no network request."),
+    dim("publish is the only command that uploads anything."),
+    "",
+  );
+  return out.join("\n");
+}
+
+function commandHelp(name: string): string {
+  const cmd = COMMANDS[name];
+  if (!cmd) return usage();
+
+  const out = ["", `${bold(`tokenchit ${name}`)} — ${cmd.summary}`, ""];
+  if (cmd.flags?.length) {
+    const w = Math.max(...cmd.flags.map(([f]) => f.length)) + 4;
+    for (const [f, help] of cmd.flags) {
+      out.push(help ? `  ${pad(cyan(f), w)}${grey(help)}` : `  ${cyan(f)}`);
+    }
+    out.push("");
+  }
+  if (cmd.detail) out.push(...cmd.detail.split("\n").map((l) => (l ? `  ${l}` : "")), "");
+  return out.join("\n");
+}
 
 /** The version reported to the server, so a bad submission can be traced to a release. */
 const cliVersion = (): string =>
@@ -50,12 +155,19 @@ async function main(): Promise<number> {
   const [command, ...argv] = process.argv.slice(2);
 
   if (!command || command === "help" || command === "--help" || command === "-h") {
-    say(USAGE);
+    // `help sync` and `sync --help` reach the same page from either direction.
+    const topic = argv[0];
+    say(topic ? commandHelp(topic) : usage());
     return command ? 0 : 1;
   }
 
   if (command === "--version" || command === "-v") {
     say(cliVersion());
+    return 0;
+  }
+
+  if (argv.includes("--help") || argv.includes("-h")) {
+    say(commandHelp(command));
     return 0;
   }
 
@@ -68,6 +180,8 @@ async function main(): Promise<number> {
       return recap(argv);
     case "publish":
       return publish(argv, cliVersion());
+    case "schedule":
+      return schedule(argv);
     case "login":
       return login(argv);
     case "logout":
@@ -76,7 +190,7 @@ async function main(): Promise<number> {
       return whoami();
     default:
       fail(`unknown command: ${command}`);
-      say(USAGE);
+      say(usage());
       return 1;
   }
 }

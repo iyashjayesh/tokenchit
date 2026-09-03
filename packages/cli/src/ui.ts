@@ -4,20 +4,127 @@
  * Colour is dropped whenever stdout is not a TTY or `NO_COLOR` is set, because `sync` is
  * meant to run in CI as readily as in a shell, and escape codes in an Actions log help
  * nobody.
+ *
+ * Anything decorative — spinners, rules, panels — goes to stderr. stdout carries only what a
+ * caller might parse: the JSON from `--json`, the payload bytes from `--dry-run`. That split
+ * is what lets `tokenchit sync --json | jq` stay usable while the same command draws a
+ * progress line for a human.
  */
-const enabled = Boolean(process.stdout.isTTY) && !process.env["NO_COLOR"];
+const ESC = "\u001b";
 
-const wrap = (code: string) => (s: string) => (enabled ? `\u001b[${code}m${s}\u001b[0m` : s);
+const colour = Boolean(process.stdout.isTTY) && !process.env["NO_COLOR"];
+
+/** Animation needs a TTY to erase what it drew; a pipe or a CI log gets static text. */
+export const animated = Boolean(process.stderr.isTTY) && !process.env["NO_COLOR"];
+
+const wrap = (code: string) => (s: string) => (colour ? `${ESC}[${code}m${s}${ESC}[0m` : s);
 
 export const bold = wrap("1");
 export const dim = wrap("2");
 export const green = wrap("32");
 export const yellow = wrap("33");
 export const red = wrap("31");
+export const cyan = wrap("36");
+export const magenta = wrap("35");
+export const grey = wrap("90");
 
 export const say = (s = "") => process.stdout.write(`${s}\n`);
+export const note = (s = "") => process.stderr.write(`${s}\n`);
 export const warn = (s: string) => process.stderr.write(`${yellow("!")} ${s}\n`);
 export const fail = (s: string) => process.stderr.write(`${red("✗")} ${s}\n`);
+
+const ANSI = new RegExp(`${ESC}\\[[0-9;]*m|${ESC}\\]8;;[^${ESC}]*${ESC}\\\\`, "g");
+
+/** Printable width, ignoring colour codes and hyperlink wrappers, so columns line up. */
+export const width = (s: string) => [...s.replace(ANSI, "")].length;
+
+export const pad = (s: string, n: number) => s + " ".repeat(Math.max(0, n - width(s)));
+export const padStart = (s: string, n: number) => " ".repeat(Math.max(0, n - width(s))) + s;
+
+/**
+ * A real terminal hyperlink where the terminal supports OSC 8, and a plain URL everywhere
+ * else. The URL is never hidden behind a label alone — someone reading this in a terminal
+ * without OSC 8, or scrolling back through a log, still gets something they can copy.
+ */
+export function link(url: string): string {
+  if (!colour) return url;
+  return `${ESC}]8;;${url}${ESC}\\${cyan(url)}${ESC}]8;;${ESC}\\`;
+}
+
+const BLOCKS = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"] as const;
+
+/** A sparkline scaled to its own maximum. A zero day stays a dot, so gaps read as gaps. */
+export function sparkline(values: number[]): string {
+  const max = Math.max(...values, 0);
+  if (max <= 0) return grey("·".repeat(values.length));
+  return values
+    .map((v) => {
+      if (v <= 0) return grey("·");
+      const i = Math.min(BLOCKS.length - 1, Math.floor((v / max) * BLOCKS.length));
+      return BLOCKS[i]!;
+    })
+    .join("");
+}
+
+/** A proportional bar. Eighth-blocks so a small share still shows something. */
+export function bar(fraction: number, cells: number): string {
+  const filled = Math.max(0, Math.min(1, fraction)) * cells;
+  const whole = Math.floor(filled);
+  const rest = filled - whole;
+  const partial = rest > 0.05 ? BLOCKS[Math.min(7, Math.floor(rest * 8))]! : "";
+  const drawn = "█".repeat(whole) + partial;
+  // A share that rounds below one eighth of a cell still happened. Rendering it as nothing
+  // puts a labelled 0.2% row beside a blank bar, which reads as a bug rather than as small.
+  return drawn === "" && fraction > 0 ? "▏" : drawn;
+}
+
+const FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
+
+export type Spinner = {
+  update: (label: string) => void;
+  done: (label?: string) => void;
+  stop: () => void;
+};
+
+/**
+ * A spinner that degrades to a single static line.
+ *
+ * Reading a few thousand transcripts takes long enough that silence reads as a hang, which
+ * is the actual problem this solves. Without a TTY it prints the label once and nothing
+ * after, so a CI log gets one line rather than a thousand frames.
+ */
+export function spin(label: string): Spinner {
+  if (!animated) {
+    process.stderr.write(`  ${label}\n`);
+    return { update: () => {}, done: () => {}, stop: () => {} };
+  }
+
+  let text = label;
+  let i = 0;
+  const draw = () => {
+    process.stderr.write(`\r${ESC}[2K  ${cyan(FRAMES[i++ % FRAMES.length]!)} ${text}`);
+  };
+  draw();
+  const timer = setInterval(draw, 80);
+  // Unref'd so a spinner can never be the reason a process stays alive.
+  timer.unref?.();
+
+  const clear = () => {
+    clearInterval(timer);
+    process.stderr.write(`\r${ESC}[2K`);
+  };
+
+  return {
+    update: (next: string) => {
+      text = next;
+    },
+    done: (final?: string) => {
+      clear();
+      if (final) process.stderr.write(`  ${green("✓")} ${final}\n`);
+    },
+    stop: clear,
+  };
+}
 
 /**
  * Node 22 prints an ExperimentalWarning the first time `node:sqlite` loads. It is true but
