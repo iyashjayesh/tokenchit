@@ -9,6 +9,7 @@ import { formatTokens, formatUsd } from "@tokenchit/core";
 import type { BoardRow } from "@/lib/board";
 import { WINDOWS, type BoardWindow } from "@/lib/board";
 import styles from "./leaderboard.module.css";
+import { cmd, npx } from "@/lib/cli";
 
 /** Gold, silver, bronze. Only the top three; everyone else takes the default fill. */
 const MEDALS = ["#FFD23D", "#E4E2D8", "#F0B37E"] as const;
@@ -72,7 +73,7 @@ export function Leaderboard({ initialRows, initialWindow }: {
 
       <p className={styles.intro}>
         Public ranking of developers who chose to publish. Run{" "}
-        <span className={styles.strong}>tokenchit publish</span> and you are on it. Stop
+        <span className={styles.strong}>{cmd("publish")}</span> and you are on it. Stop
         publishing and your row goes stale, then falls out of the window on its own.
       </p>
 
@@ -92,7 +93,7 @@ export function Leaderboard({ initialRows, initialWindow }: {
       {rows.length === 0 ? (
         <p className={styles.empty}>
           Nobody has published in this window yet.{" "}
-          <span className={styles.strong}>npx @tokenchit/cli publish</span> and the board is
+          <span className={styles.strong}>{npx("publish")}</span> and the board is
           yours.
         </p>
       ) : (

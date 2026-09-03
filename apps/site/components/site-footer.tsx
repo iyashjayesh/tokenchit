@@ -1,8 +1,9 @@
 import styles from "./site-footer.module.css";
+import { CLI_PACKAGE, NPM_URL } from "@/lib/cli";
 
 const LINKS = [
   { label: "github.com/iyashjayesh/tokenchit", href: "https://github.com/iyashjayesh/tokenchit" },
-  { label: "npm / @tokenchit/cli", href: "https://npmjs.com/package/@tokenchit/cli" },
+  { label: `npm / ${CLI_PACKAGE}`, href: NPM_URL },
   { label: "the board", href: "/board" },
 ];
 

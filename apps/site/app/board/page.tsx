@@ -9,6 +9,7 @@ import { readBoard } from "@/lib/board-query";
 import { readBoardTotals } from "@/lib/board-totals";
 
 import styles from "./board.module.css";
+import { cmd, npx } from "@/lib/cli";
 
 export const revalidate = 300;
 
@@ -51,7 +52,7 @@ export default async function BoardPage({
       </header>
 
       <p className={styles.intro}>
-        Everyone who ran <span className={styles.strong}>tokenchit publish</span>. Rank is
+        Everyone who ran <span className={styles.strong}>{cmd("publish")}</span>. Rank is
         total tokens over the selected window, and every column — cost, agent mix — covers
         that same window. It is a usage count, not a skill score.
       </p>
@@ -82,7 +83,7 @@ export default async function BoardPage({
       {rows.length === 0 ? (
         <p className={styles.empty}>
           Nobody has published in this window yet.{" "}
-          <span className={styles.strong}>npx @tokenchit/cli publish</span> and the board is
+          <span className={styles.strong}>{npx("publish")}</span> and the board is
           yours.
         </p>
       ) : (

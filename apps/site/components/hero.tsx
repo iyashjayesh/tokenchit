@@ -4,10 +4,11 @@ import { CopyButton } from "./copy-button";
 import { StatCard } from "./stat-card";
 import { useSiteState } from "./site-state";
 import styles from "./hero.module.css";
+import { npx } from "@/lib/cli";
 
 // Scoped, because the bare `tokenchit` name on npm is a 2018 tombstone: it was published
 // and unpublished within a fortnight, and npm never lets an unpublished name be reused.
-const INSTALL = "npx @tokenchit/cli init";
+const INSTALL = npx("init");
 
 export function Hero() {
   const { handle, setHandle } = useSiteState();

@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { GithubMark } from "./github-mark";
-import { VERSION_LABEL } from "@/lib/version";
 import styles from "./site-header.module.css";
+import { npx, VERSION_LABEL } from "@/lib/cli";
 
-const LOGIN = "npx @tokenchit/cli login";
+const LOGIN = npx("login");
 
 // Root-relative, not bare fragments: these render on /u/<handle> and /board too, where a
 // bare "#card" points at an anchor that does not exist on the page.
