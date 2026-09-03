@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { GithubMark } from "./github-mark";
+import { VERSION_LABEL } from "@/lib/version";
 import styles from "./site-header.module.css";
 
 const LOGIN = "npx @tokenchit/cli login";
@@ -49,7 +50,7 @@ export function SiteHeader() {
     <header className={styles.header}>
       <div className={styles.brand}>
         <span className={styles.wordmark}>tokenchit</span>
-        <span className={styles.version}>v0.4.1 · MIT</span>
+        <span className={styles.version}>{VERSION_LABEL}</span>
       </div>
 
       <div className={styles.right}>
