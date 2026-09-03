@@ -1,16 +1,29 @@
 version: 2
 updates:
-  # Grouped and monthly on purpose: a solo open-source project does not want a pull request
-  # per patch bump, and an unreviewed dependency PR sitting open is worse than a slightly
-  # older dependency.
+  # Monthly and grouped, because a solo project does not want a pull request per patch bump
+  # and an unreviewed dependency PR left open is worse than a slightly older dependency.
+  #
+  # Majors are split from the rest deliberately. Grouping everything put @types/node 20→26,
+  # eslint 9→10 and typescript 5→7 into one all-or-nothing pull request, and ESLint 10 breaks
+  # eslint-plugin-react through eslint-config-next:
+  #
+  #   TypeError: Error while loading rule 'react/display-name':
+  #              contextOrFilename.getFilename is not a function
+  #
+  # One incompatible major therefore blocked two safe upgrades. Split, the safe ones land and
+  # the breaking one waits for the ecosystem on its own.
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 5
     groups:
-      all:
+      minor-and-patch:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+      major:
+        patterns: ["*"]
+        update-types: ["major"]
 
   - package-ecosystem: github-actions
     directory: /
