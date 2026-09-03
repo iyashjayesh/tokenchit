@@ -4,9 +4,9 @@
  *
  *   node scripts/version.mjs 0.2.0
  *
- * The CLI depends on an exact core version, so bumping them separately is how you publish a
- * CLI that resolves a core which does not exist yet. Doing both here means they cannot
- * disagree, and the release workflow refuses to publish when the tag does not match.
+ * Only @tokenstats/cli is published; core is private and bundled into it. Both are bumped
+ * anyway so the repo does not carry two versions that quietly diverge, and the release
+ * workflow refuses to publish when the tag disagrees with the CLI.
  */
 import { readFile, writeFile } from "node:fs/promises";
 

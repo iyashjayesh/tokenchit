@@ -29,8 +29,7 @@
     "tokenstats": "./dist/index.js"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "engines": {
     "node": ">=22"
@@ -39,16 +38,15 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && npm run bundle",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/index.js --packages=bundle",
     "dev": "tsc -p tsconfig.json --watch",
     "test": "node --test test/*.test.js",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {
-    "@tokenstats/core": "0.1.0"
-  },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.7.0"
   }
 }
