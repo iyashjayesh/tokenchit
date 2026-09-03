@@ -11,7 +11,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@tokenchit/core": "0.1.0",
+    "@tokenchit/core": "*",
     "next": "16.3.4",
     "pg": "^8.23.0",
     "react": "19.2.8",

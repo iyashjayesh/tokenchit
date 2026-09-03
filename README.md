@@ -259,8 +259,8 @@ anyone, so it should take a deliberate act:
 npm run version:set 0.2.0   # both packages, and the dependency between them
 npm install
 git commit -am "Release v0.2.0"
-git tag v0.2.0
-git push --follow-tags
+git tag -a v0.2.0 -m v0.2.0
+git push origin main v0.2.0
 ```
 
 The workflow refuses to publish if the tag disagrees with `package.json`, and attaches npm

@@ -16,6 +16,8 @@ if (!version || !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
   process.exit(1);
 }
 
+// apps/site depends on the private core package with "*" precisely so it never needs
+// bumping here; pinning it is what broke `npm ci` on the first release.
 for (const file of ["packages/core/package.json", "packages/cli/package.json"]) {
   const pkg = JSON.parse(await readFile(file, "utf8"));
   pkg.version = version;
@@ -26,4 +28,4 @@ for (const file of ["packages/core/package.json", "packages/cli/package.json"]) 
   console.log(`${pkg.name} -> ${version}`);
 }
 
-console.log(`\nnext:\n  npm install\n  git commit -am "Release v${version}"\n  git tag v${version}\n  git push --follow-tags`);
+console.log(`\nnext:\n  npm install\n  git commit -am "Release v${version}"\n  git tag -a v${version} -m v${version}\n  git push origin main v${version}`);
