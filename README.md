@@ -1,20 +1,20 @@
-# tokenstats
+# tokenchit
 
 Turn your local AI coding agent logs into an embeddable stat card for your GitHub README.
 
-tokenstats reads the transcripts **Claude Code**, **Codex** and **OpenCode** already write to
+tokenchit reads the transcripts **Claude Code**, **Codex** and **OpenCode** already write to
 your disk, totals them, and renders an SVG you commit to your own repo. No account, no
 upload, no server — the card is a file.
 
 ```bash
-npx @tokenstats/cli init     # detect agents, write .tokenstats.json
-npx @tokenstats/cli sync     # render tokenstats.svg
-npx @tokenstats/cli recap    # render tokenstats-recap.svg — the year in review
+npx @tokenchit/cli init     # detect agents, write .tokenchit.json
+npx @tokenchit/cli sync     # render tokenchit.svg
+npx @tokenchit/cli recap    # render tokenchit-recap.svg — the year in review
 ```
 
 ```markdown
-![tokenstats](./tokenstats.svg)
-![tokenstats recap](./tokenstats-recap.svg)
+![tokenchit](./tokenchit.svg)
+![tokenchit recap](./tokenchit-recap.svg)
 ```
 
 ## What it reads
@@ -24,6 +24,24 @@ npx @tokenstats/cli recap    # render tokenstats-recap.svg — the year in revie
 | Claude Code | `~/.claude/projects/**/*.jsonl` |
 | Codex | `~/.codex/sessions/**/rollout-*.jsonl` |
 | OpenCode | `~/.local/share/opencode/opencode.db` |
+
+All Claude Code configuration directories are read, not just `~/.claude`. Anyone with more
+than one account has several — `~/.claude-work`, `~/.claude-personal` and so on — and reading
+only the first silently omitted most of the usage. `CLAUDE_CONFIG_DIR` is added to that scan
+rather than replacing it: it names the directory the *current* session uses, which is a
+different question from where all your usage lives.
+
+### Why the total differs from Claude Code's Stats panel
+
+**Claude Code deletes old transcripts.** Its own Stats panel reads a cumulative
+`stats-cache.json` that survives the cleanup, so it reports a lifetime figure. tokenchit
+parses the transcripts themselves, so it can only report the retention window — on the
+machine this was measured on, the caches went back to June while the oldest surviving
+transcript was late July.
+
+That is a real limitation, not a bug: a number derived from logs cannot include logs that no
+longer exist. It also means the figure only ever shrinks toward the truth as history ages out,
+never inflates.
 
 **Copilot CLI and Gemini CLI are detected but cannot be counted.** Copilot records only a
 live context-window gauge, never a cumulative total; Gemini's chat transcripts carry no token
@@ -51,27 +69,27 @@ a network request.
 ## Commands
 
 ```
-tokenstats init
+tokenchit init
   --handle <name>        GitHub handle (default: guessed from your origin remote)
 
-tokenstats sync
-  --out <path>           where to write it (default: tokenstats.svg)
+tokenchit sync
+  --out <path>           where to write it (default: tokenchit.svg)
   --layout default|compact
   --theme auto|light|dark
   --json                 print the aggregate instead of writing an SVG
   --dry-run              report what would be written, write nothing
 
-tokenstats login          prove your GitHub handle (device flow, no password)
-tokenstats logout         forget this machine
-tokenstats whoami         who this machine is signed in as
+tokenchit login          prove your GitHub handle (device flow, no password)
+tokenchit logout         forget this machine
+tokenchit whoami         who this machine is signed in as
 
-tokenstats publish        the only command that uploads anything
+tokenchit publish        the only command that uploads anything
   --dry-run              print the exact bytes and send nothing
-  --api <url>            default https://tokenstats-site.vercel.app
+  --api <url>            default https://tokenchit-site.vercel.app
   --handle <name>
 
-tokenstats recap
-  --out <path>           default: tokenstats-recap.svg
+tokenchit recap
+  --out <path>           default: tokenchit-recap.svg
   --year <yyyy>          label the recap with a different year
   --theme auto|light|dark
   --json                 print the recap model instead of writing an SVG
@@ -106,7 +124,7 @@ turn. Claude Code and OpenCode are exact to the message.
 ## Publishing to the board
 
 `publish` is the **only** command that sends anything anywhere. `sync` and `recap` are local
-forever, and there is deliberately no config switch to change that: `.tokenstats.json` is a
+forever, and there is deliberately no config switch to change that: `.tokenchit.json` is a
 committed file, and a committed file must never be able to cause a network call on somebody
 else's machine.
 
@@ -118,7 +136,7 @@ and model ids. No prompts, no replies, no branch names, no paths.
 ## Signing in
 
 ```
-$ tokenstats login
+$ tokenchit login
   Open https://github.com/login/device
   and enter  WDJB-MJHT
 ✓ signed in as @octocat
@@ -134,8 +152,8 @@ and numeric id are all we need.
 The GitHub token is handed to the server **once**, so that the server — not the client — is
 what asks GitHub who you are; a client that simply asserted `{"handle": "octocat"}` would be
 forgeable. It is then discarded, never written to disk on either side. What you keep is a
-tokenstats API key in `~/.config/tokenstats/auth.json`, mode `0600`, stored server-side only as
-a SHA-256 hash. Never in `.tokenstats.json`, which is committed.
+tokenchit API key in `~/.config/tokenchit/auth.json`, mode `0600`, stored server-side only as
+a SHA-256 hash. Never in `.tokenchit.json`, which is committed.
 
 Without signing in, submissions land as the unverified `cli` tier. Those rows appear on the
 board with a badge rather than being hidden — a transparency signal, not a gate. Signing in
@@ -151,8 +169,8 @@ cp apps/site/.env.example apps/site/.env.local   # then fill in the password
 npm run db:migrate                               # idempotent; safe to re-run
 npm run dev
 
-npx @tokenstats/cli login   --api http://localhost:3000
-npx @tokenstats/cli publish --api http://localhost:3000
+npx @tokenchit/cli login   --api http://localhost:3000
+npx @tokenchit/cli publish --api http://localhost:3000
 ```
 
 `.env.local` is gitignored; `apps/site/.env.example` documents the shape. Next reads
@@ -228,7 +246,7 @@ uses `node:sqlite`, experimental on 22 and stable on 24 — the place they are m
 disagree), plus lint, the standalone site build Vercel performs, and an install of the packed
 tarballs, because the tarball is a different artifact from the working tree.
 
-**One published package.** `@tokenstats/core` stays a workspace package — it is what keeps
+**One published package.** `@tokenchit/core` stays a workspace package — it is what keeps
 the site and the CLI rendering the same card — but it is `private` and esbuild inlines it
 into the CLI's single bundled file. Publishing a second package would mean maintaining a
 public API surface nobody has asked for, and every rename inside it would become a
@@ -248,7 +266,7 @@ git push --follow-tags
 The workflow refuses to publish if the tag disagrees with `package.json`, and attaches npm
 provenance so the package carries a signed link back to the commit that produced it. CI
 installs the packed tarball into an empty project on every pull request and asserts nothing
-but `@tokenstats/cli` lands, which is what stops the bundle silently regressing into a broken
+but `@tokenchit/cli` lands, which is what stops the bundle silently regressing into a broken
 dependency on the private package.
 
 Requires an `NPM_TOKEN` repository secret with publish rights.
@@ -258,7 +276,7 @@ Requires an `NPM_TOKEN` repository secret with publish rights.
 ```
 apps/site/          Next.js marketing site + the board API
 packages/core/      adapters, aggregation, price table, SVG builder
-packages/cli/       the tokenstats binary
+packages/cli/       the tokenchit binary
 docs/research.md    positioning, competitive landscape, infrastructure decisions
 ```
 

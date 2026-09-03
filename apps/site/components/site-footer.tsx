@@ -1,8 +1,8 @@
 import styles from "./site-footer.module.css";
 
 const LINKS = [
-  { label: "github.com/iyashjayesh/tokenstats", href: "https://github.com/iyashjayesh/tokenstats" },
-  { label: "npm / @tokenstats/cli", href: "https://npmjs.com/package/@tokenstats/cli" },
+  { label: "github.com/iyashjayesh/tokenchit", href: "https://github.com/iyashjayesh/tokenchit" },
+  { label: "npm / @tokenchit/cli", href: "https://npmjs.com/package/@tokenchit/cli" },
   { label: "the board", href: "/board" },
 ];
 
@@ -17,7 +17,7 @@ export function SiteFooter() {
             </a>
           ))}
         </div>
-        <div className={styles.legal}>MIT License · © 2026 tokenstats contributors</div>
+        <div className={styles.legal}>MIT License · © 2026 tokenchit contributors</div>
       </div>
     </footer>
   );

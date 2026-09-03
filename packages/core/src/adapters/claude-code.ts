@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -7,7 +7,46 @@ import { createInterface } from "node:readline";
 import type { Adapter, Detection, UsageEvent } from "../types.js";
 import { walkFiles } from "./walk.js";
 
-const defaultRoot = () => join(homedir(), ".claude", "projects");
+/**
+ * Every Claude Code configuration directory on this machine.
+ *
+ * Reading only `~/.claude` was wrong: anyone with more than one account has several. On the
+ * machine this was fixed on there were four — `.claude`, `.claude-personal`, `.claude-spark`
+ * and `.claude-work` — and three of them were invisible to the card, which is most of why the
+ * reported total looked nothing like the figure Claude Code shows.
+ *
+ * `CLAUDE_CONFIG_DIR` is added to the scan rather than replacing it. It names the directory
+ * the *current* session uses, which is not the same question as "where is all my usage" —
+ * on a machine with several accounts the other three still hold real tokens, and a card
+ * claiming to total your usage should not omit them because of one environment variable.
+ */
+async function defaultRoots(): Promise<string[]> {
+  const roots = new Set<string>();
+
+  const configured = process.env["CLAUDE_CONFIG_DIR"];
+  if (configured) roots.add(join(configured, "projects"));
+
+  const home = homedir();
+  let entries: string[];
+  try {
+    entries = await readdir(home);
+  } catch {
+    roots.add(join(home, ".claude", "projects"));
+    return [...roots];
+  }
+
+  for (const name of entries.sort()) {
+    // `.claude` and `.claude-<profile>`, but never `.claude.json` or a `.bak` beside it.
+    if (name !== ".claude" && !name.startsWith(".claude-")) continue;
+    roots.add(join(home, name, "projects"));
+  }
+
+  const usable: string[] = [];
+  for (const root of roots) {
+    if ((await stat(root).catch(() => null))?.isDirectory()) usable.push(root);
+  }
+  return usable;
+}
 
 /**
  * Models that appear in the logs but never correspond to a billable request. `<synthetic>`
@@ -16,6 +55,8 @@ const defaultRoot = () => join(homedir(), ".claude", "projects");
  * would pollute the model breakdown with rows that can never be priced.
  */
 const NON_MODELS = new Set(["<synthetic>", "default", "unknown"]);
+
+const total = (e: UsageEvent): number => e.input + e.output + e.cacheWrite + e.cacheRead;
 
 type ClaudeLine = {
   timestamp?: string;
@@ -43,66 +84,90 @@ type ClaudeLine = {
  * Sidechain entries are *kept*. Subagent tokens are tokens the user really spent; the
  * `(message.id, requestId)` key already removes the duplication that sidechains introduce.
  */
-export function createClaudeCode(root = defaultRoot()): Adapter {
+export function createClaudeCode(roots?: string[] | string): Adapter {
+  const resolve = async (): Promise<string[]> =>
+    roots === undefined ? defaultRoots() : Array.isArray(roots) ? roots : [roots];
+
   return {
     id: "claude-code",
     name: "Claude Code",
-    source: "~/.claude/projects/**/*.jsonl",
+    source: "~/.claude*/projects/**/*.jsonl",
 
     async detect(): Promise<Detection> {
-      const dir = await stat(root).catch(() => null);
-      if (!dir?.isDirectory()) return "absent";
-      for await (const _ of walkFiles(root, ".jsonl")) return "ready";
-      return "installed-no-data";
+      const found = await resolve();
+      if (found.length === 0) return "absent";
+
+      let anyDir = false;
+      for (const root of found) {
+        if (!(await stat(root).catch(() => null))?.isDirectory()) continue;
+        anyDir = true;
+        for await (const _ of walkFiles(root, ".jsonl")) return "ready";
+      }
+      return anyDir ? "installed-no-data" : "absent";
     },
 
     async *read(): AsyncIterable<UsageEvent> {
-      const seen = new Set<string>();
+      // Keyed rather than a Set, because a duplicate is not always a replay. Claude Code
+      // writes an assistant message repeatedly as it streams, with output_tokens growing
+      // each time and the other three buckets already final:
+      //
+      //   2/1/13364/4780   then   2/305/13364/4780
+      //
+      // Keeping the first occurrence therefore kept a partial output count and discarded the
+      // finished one — 2,826 messages were undercounted this way in a single directory. The
+      // largest total per key is the completed write.
+      const best = new Map<string, UsageEvent>();
 
-      for await (const file of walkFiles(root, ".jsonl")) {
-        const lines = createInterface({
-          input: createReadStream(file, { encoding: "utf8" }),
-          crlfDelay: Infinity,
-        });
+      for (const root of await resolve()) {
+        for await (const file of walkFiles(root, ".jsonl")) {
+          const lines = createInterface({
+            input: createReadStream(file, { encoding: "utf8" }),
+            crlfDelay: Infinity,
+          });
 
-        for await (const line of lines) {
-          // Cheap prefilter. Most lines in a transcript are prompts, tool calls and tool
-          // results; only assistant replies carry usage, and parsing the rest of a 298 MB
-          // corpus to discover that costs seconds.
-          if (!line.includes('"usage"')) continue;
+          for await (const line of lines) {
+            // Cheap prefilter. Most lines in a transcript are prompts, tool calls and tool
+            // results; only assistant replies carry usage, and parsing the rest of a corpus
+            // this size to discover that costs seconds.
+            if (!line.includes('"usage"')) continue;
 
-          let row: ClaudeLine;
-          try {
-            row = JSON.parse(line) as ClaudeLine;
-          } catch {
-            continue; // A partially flushed final line is normal in a live session.
+            let row: ClaudeLine;
+            try {
+              row = JSON.parse(line) as ClaudeLine;
+            } catch {
+              continue; // A partially flushed final line is normal in a live session.
+            }
+
+            const msg = row.message;
+            const usage = msg?.usage;
+            if (!usage || msg?.role !== "assistant") continue;
+
+            const key = `${msg.id ?? ""}:${row.requestId ?? ""}`;
+            if (key === ":") continue;
+
+            const model = msg.model ?? "unknown";
+            if (NON_MODELS.has(model)) continue;
+
+            const ts = row.timestamp ? new Date(row.timestamp) : null;
+            if (!ts || Number.isNaN(ts.getTime())) continue;
+
+            const event: UsageEvent = {
+              agent: "claude-code",
+              ts,
+              model,
+              input: usage.input_tokens ?? 0,
+              output: usage.output_tokens ?? 0,
+              cacheWrite: usage.cache_creation_input_tokens ?? 0,
+              cacheRead: usage.cache_read_input_tokens ?? 0,
+            };
+
+            const previous = best.get(key);
+            if (!previous || total(event) > total(previous)) best.set(key, event);
           }
-
-          const msg = row.message;
-          const usage = msg?.usage;
-          if (!usage || msg?.role !== "assistant") continue;
-
-          const key = `${msg.id ?? ""}:${row.requestId ?? ""}`;
-          if (key === ":" || seen.has(key)) continue;
-          seen.add(key);
-
-          const model = msg.model ?? "unknown";
-          if (NON_MODELS.has(model)) continue;
-
-          const ts = row.timestamp ? new Date(row.timestamp) : null;
-          if (!ts || Number.isNaN(ts.getTime())) continue;
-
-          yield {
-            agent: "claude-code",
-            ts,
-            model,
-            input: usage.input_tokens ?? 0,
-            output: usage.output_tokens ?? 0,
-            cacheWrite: usage.cache_creation_input_tokens ?? 0,
-            cacheRead: usage.cache_read_input_tokens ?? 0,
-          };
         }
       }
+
+      yield* best.values();
     },
   };
 }

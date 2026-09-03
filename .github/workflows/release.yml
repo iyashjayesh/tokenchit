@@ -33,19 +33,33 @@ jobs:
           tag="${GITHUB_REF_NAME#v}"
           version=$(node -p "require('./packages/cli/package.json').version")
           if [ "$version" != "$tag" ]; then
-            echo "::error::@tokenstats/cli is $version but the tag says $tag — run npm run version:set"
+            echo "::error::@tokenchit/cli is $version but the tag says $tag — run npm run version:set"
             exit 1
           fi
-          echo "@tokenstats/cli at $tag"
+          echo "@tokenchit/cli at $tag"
+
+      # npm provenance attaches a signed attestation pointing at the source commit, which
+      # requires a public repository. Publishing --provenance from a private repo fails with
+      # a message that does not obviously say so, and by then the tag already exists.
+      - name: Repository is public (required for provenance)
+        run: |
+          private=$(gh api "repos/$GITHUB_REPOSITORY" -q .private)
+          if [ "$private" = "true" ]; then
+            echo "::error::$GITHUB_REPOSITORY is private; npm provenance requires a public repo."
+            echo "::error::Make it public, or drop --provenance from this workflow."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - run: npm run build
       - run: npm test
-      - run: npm run lint -w tokenstats-site
+      - run: npm run lint -w tokenchit-site
 
-      # One package. @tokenstats/core is private and bundled into this tarball by esbuild,
+      # One package. @tokenchit/core is private and bundled into this tarball by esbuild,
       # so there is nothing to publish first and no ordering to get wrong.
-      - name: Publish @tokenstats/cli
-        run: npm publish -w @tokenstats/cli --provenance
+      - name: Publish @tokenchit/cli
+        run: npm publish -w @tokenchit/cli --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -55,8 +69,8 @@ jobs:
             echo "## Published"
             echo
             echo '```'
-            echo "npx @tokenstats/cli@${GITHUB_REF_NAME#v} init"
+            echo "npx @tokenchit/cli@${GITHUB_REF_NAME#v} init"
             echo '```'
             echo
-            echo "- [@tokenstats/cli](https://www.npmjs.com/package/@tokenstats/cli)"
+            echo "- [@tokenchit/cli](https://www.npmjs.com/package/@tokenchit/cli)"
           } >> "$GITHUB_STEP_SUMMARY"

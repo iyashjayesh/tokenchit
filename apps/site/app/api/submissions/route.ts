@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { validatePayload, type Payload } from "@tokenstats/core";
+import { validatePayload, type Payload } from "@tokenchit/core";
 
 import { userFromRequest } from "@/lib/auth";
 import { DEFAULT_WINDOW, isWindow } from "@/lib/board";

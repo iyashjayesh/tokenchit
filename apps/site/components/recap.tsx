@@ -21,7 +21,7 @@ export function Recap() {
     <section id="recap" className={styles.section}>
       <SectionHeading n={5} title="Year in review" tone="coral" />
       <p className={styles.intro}>
-        <code>tokenstats recap</code> renders this as a second committable SVG. Same
+        <code>tokenchit recap</code> renders this as a second committable SVG. Same
         data, no card constraints.
       </p>
 

@@ -1,18 +1,18 @@
 {
-  "name": "@tokenstats/core",
+  "name": "@tokenchit/core",
   "version": "0.1.0",
   "private": true,
-  "description": "Internal engine for @tokenstats/cli: agent-log adapters, aggregation and the SVG builders. Not published; bundled into the CLI.",
+  "description": "Internal engine for @tokenchit/cli: agent-log adapters, aggregation and the SVG builders. Not published; bundled into the CLI.",
   "license": "MIT",
   "author": "Yash Chauhan (https://github.com/iyashjayesh)",
-  "homepage": "https://github.com/iyashjayesh/tokenstats#readme",
+  "homepage": "https://github.com/iyashjayesh/tokenchit#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iyashjayesh/tokenstats.git",
+    "url": "git+https://github.com/iyashjayesh/tokenchit.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/iyashjayesh/tokenstats/issues"
+    "url": "https://github.com/iyashjayesh/tokenchit/issues"
   },
   "type": "module",
   "main": "./dist/index.js",

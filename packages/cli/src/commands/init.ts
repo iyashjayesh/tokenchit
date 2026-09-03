@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import { type AgentId } from "@tokenstats/core";
-import { adapters, unsupported } from "@tokenstats/core/adapters";
+import { type AgentId } from "@tokenchit/core";
+import { adapters, unsupported } from "@tokenchit/core/adapters";
 
 import { flag } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig, writeConfig, type Config } from "../config.js";
@@ -78,11 +78,11 @@ export async function init(argv: string[]): Promise<number> {
 
   if (!handle) {
     say();
-    warn(`No handle set. Add one to ${CONFIG_FILE}, or run: tokenstats init --handle <you>`);
+    warn(`No handle set. Add one to ${CONFIG_FILE}, or run: tokenchit init --handle <you>`);
   }
 
   say();
-  say(`  Next: ${bold("tokenstats sync")}`);
+  say(`  Next: ${bold("tokenchit sync")}`);
   say();
 
   return 0;

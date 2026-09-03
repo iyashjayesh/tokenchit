@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { GithubMark } from "./github-mark";
 import styles from "./site-header.module.css";
 
-const LOGIN = "npx @tokenstats/cli login";
+const LOGIN = "npx @tokenchit/cli login";
 
 // Root-relative, not bare fragments: these render on /u/<handle> and /board too, where a
 // bare "#card" points at an anchor that does not exist on the page.
@@ -48,7 +48,7 @@ export function SiteHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
-        <span className={styles.wordmark}>tokenstats</span>
+        <span className={styles.wordmark}>tokenchit</span>
         <span className={styles.version}>v0.4.1 · MIT</span>
       </div>
 

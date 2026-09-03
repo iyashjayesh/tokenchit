@@ -7,8 +7,8 @@ import {
   buildRecapSvg,
   sanitizeHandle,
   type Theme,
-} from "@tokenstats/core";
-import { readAll } from "@tokenstats/core/adapters";
+} from "@tokenchit/core";
+import { readAll } from "@tokenchit/core/adapters";
 
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
@@ -25,7 +25,7 @@ export async function recap(argv: string[]): Promise<number> {
   const rawHandle = flag(argv, "--handle") ?? config.handle;
   const handle = sanitizeHandle(rawHandle);
   const theme = oneOf(flag(argv, "--theme"), THEMES, "theme") ?? config.theme;
-  const out = flag(argv, "--out") ?? "tokenstats-recap.svg";
+  const out = flag(argv, "--out") ?? "tokenchit-recap.svg";
   const json = has(argv, "--json");
   const dryRun = has(argv, "--dry-run");
   const yearFlag = flag(argv, "--year");
@@ -37,7 +37,7 @@ export async function recap(argv: string[]): Promise<number> {
 
   const stats = await aggregate(readAll(config.agents));
   if (stats.tokens === 0) {
-    warn("No usage found. Run `tokenstats init` to see which agents were detected.");
+    warn("No usage found. Run `tokenchit init` to see which agents were detected.");
     return 1;
   }
 
@@ -108,7 +108,7 @@ export async function recap(argv: string[]): Promise<number> {
   await writeFile(target, svg, "utf8");
   say(`${green("✓")} wrote ${bold(rel)} ${dim(`(${svg.length} bytes)`)}`);
   say();
-  say(`  ![tokenstats recap](./${rel})`);
+  say(`  ![tokenchit recap](./${rel})`);
   say();
 
   return 0;

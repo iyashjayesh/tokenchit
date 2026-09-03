@@ -4,7 +4,7 @@
  *
  *   node scripts/version.mjs 0.2.0
  *
- * Only @tokenstats/cli is published; core is private and bundled into it. Both are bumped
+ * Only @tokenchit/cli is published; core is private and bundled into it. Both are bumped
  * anyway so the repo does not carry two versions that quietly diverge, and the release
  * workflow refuses to publish when the tag disagrees with the CLI.
  */
@@ -19,8 +19,8 @@ if (!version || !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
 for (const file of ["packages/core/package.json", "packages/cli/package.json"]) {
   const pkg = JSON.parse(await readFile(file, "utf8"));
   pkg.version = version;
-  if (pkg.dependencies?.["@tokenstats/core"]) {
-    pkg.dependencies["@tokenstats/core"] = version;
+  if (pkg.dependencies?.["@tokenchit/core"]) {
+    pkg.dependencies["@tokenchit/core"] = version;
   }
   await writeFile(file, `${JSON.stringify(pkg, null, 2)}\n`);
   console.log(`${pkg.name} -> ${version}`);

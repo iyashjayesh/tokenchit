@@ -7,7 +7,7 @@ CREATE TABLE api_tokens (
   user_id      bigint      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   -- SHA-256 of the token. A database leak must not hand out working credentials.
   token_hash   text        NOT NULL UNIQUE,
-  -- Shown in `tokenstats whoami` so a user can tell two machines apart before revoking one.
+  -- Shown in `tokenchit whoami` so a user can tell two machines apart before revoking one.
   label        text        NOT NULL DEFAULT 'cli',
   created_at   timestamptz NOT NULL DEFAULT now(),
   last_used_at timestamptz

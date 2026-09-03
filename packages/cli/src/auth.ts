@@ -3,15 +3,15 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 /**
- * Where the tokenstats API key lives.
+ * Where the tokenchit API key lives.
  *
- * Deliberately not `.tokenstats.json` — that file is committed. Credentials belong in the
+ * Deliberately not `.tokenchit.json` — that file is committed. Credentials belong in the
  * user's config directory, on their machine, and nowhere a `git add -A` can reach.
  */
 const authPath = (): string =>
   join(
     process.env["XDG_CONFIG_HOME"] ?? join(homedir(), ".config"),
-    "tokenstats",
+    "tokenchit",
     "auth.json",
   );
 

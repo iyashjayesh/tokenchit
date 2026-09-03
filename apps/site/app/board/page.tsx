@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { formatTokens, formatUsd } from "@tokenstats/core";
+import { formatTokens, formatUsd } from "@tokenchit/core";
 
 import { PageShell } from "@/components/page-shell";
 import { isWindow, WINDOWS, type BoardWindow } from "@/lib/board";
@@ -13,7 +13,7 @@ import styles from "./board.module.css";
 export const revalidate = 300;
 
 export const metadata: Metadata = {
-  title: "The board · tokenstats",
+  title: "The board · tokenchit",
   description: "Public ranking of developers who chose to publish their AI coding agent usage.",
 };
 
@@ -51,7 +51,7 @@ export default async function BoardPage({
       </header>
 
       <p className={styles.intro}>
-        Everyone who ran <span className={styles.strong}>tokenstats publish</span>. Rank is
+        Everyone who ran <span className={styles.strong}>tokenchit publish</span>. Rank is
         total tokens over the selected window, and every column — cost, agent mix — covers
         that same window. It is a usage count, not a skill score.
       </p>
@@ -82,7 +82,7 @@ export default async function BoardPage({
       {rows.length === 0 ? (
         <p className={styles.empty}>
           Nobody has published in this window yet.{" "}
-          <span className={styles.strong}>npx @tokenstats/cli publish</span> and the board is
+          <span className={styles.strong}>npx @tokenchit/cli publish</span> and the board is
           yours.
         </p>
       ) : (

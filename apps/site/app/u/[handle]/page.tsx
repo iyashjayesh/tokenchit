@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { buildCardSvg, formatTokens, formatUsd, sanitizeHandle } from "@tokenstats/core";
+import { buildCardSvg, formatTokens, formatUsd, sanitizeHandle } from "@tokenchit/core";
 
 import { ContributionGraph } from "@/components/contribution-graph";
 import { CopyButton } from "@/components/copy-button";
@@ -24,14 +24,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const handle = sanitizeHandle(decodeURIComponent((await params).handle));
   const profile = await readProfile(handle).catch(() => null);
 
-  if (!profile) return { title: "Not found · tokenstats" };
+  if (!profile) return { title: "Not found · tokenchit" };
 
   const summary = `${formatTokens(profile.tokens)} tokens across ${profile.activeDays} active days`;
   return {
-    title: `@${profile.handle} · tokenstats`,
+    title: `@${profile.handle} · tokenchit`,
     description: summary,
     openGraph: {
-      title: `@${profile.handle} · tokenstats`,
+      title: `@${profile.handle} · tokenchit`,
       description: summary,
       url: `${SITE_URL}/u/${profile.handle}`,
       // No `images` here on purpose: setting it overrides the file-based opengraph-image
@@ -68,7 +68,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   });
 
   const embed =
-    `[![tokenstats](${SITE_URL}/api/card/${profile.handle}.svg)]` +
+    `[![tokenchit](${SITE_URL}/api/card/${profile.handle}.svg)]` +
     `(${SITE_URL}/u/${profile.handle})`;
 
   const tiles: [string, string][] = [
@@ -105,7 +105,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         {profile.lastPublished
           ? `Last published ${profile.lastPublished.slice(0, 10)}.`
           : "Never published."}{" "}
-        Figures are self-reported by the tokenstats CLI from local agent logs.
+        Figures are self-reported by the tokenchit CLI from local agent logs.
       </p>
 
       <nav className={styles.windows} aria-label="Time window">
@@ -219,7 +219,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <code className={styles.embedCode}>{embed}</code>
             <p className={styles.embedNote}>
               This renders live from the endpoint. To commit the file instead — no request to
-              us at all — run <span className={styles.strong}>tokenstats sync</span> and add the
+              us at all — run <span className={styles.strong}>tokenchit sync</span> and add the
               SVG to your repo.
             </p>
           </div>

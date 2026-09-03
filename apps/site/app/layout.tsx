@@ -25,9 +25,9 @@ export const metadata: Metadata = {
   // shared from production would advertise a localhost preview image whenever the page was
   // rendered anywhere but the live host.
   metadataBase: new URL(SITE_URL),
-  title: "tokenstats — receipts for your robots",
+  title: "tokenchit — receipts for your robots",
   description:
-    "tokenstats reads your local Claude Code, Codex and OpenCode logs and renders one embeddable card straight into your repo.",
+    "tokenchit reads your local Claude Code, Codex and OpenCode logs and renders one embeddable card straight into your repo.",
 };
 
 export default function RootLayout({

@@ -2,7 +2,7 @@
 /**
  * Regenerate `src/prices.json` from LiteLLM's public price map.
  *
- * Run by a maintainer, never by the CLI. tokenstats's whole claim is that it reads local
+ * Run by a maintainer, never by the CLI. tokenchit's whole claim is that it reads local
  * files and talks to nobody, so the price table ships vendored — a card must render the
  * same on a plane as it does online, and a pricing lookup at sync time would be a network
  * call users did not ask for.

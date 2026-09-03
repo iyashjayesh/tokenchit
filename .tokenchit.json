@@ -5,7 +5,7 @@
     "codex",
     "opencode"
   ],
-  "output": "tokenstats.svg",
+  "output": "tokenchit.svg",
   "layout": "default",
   "theme": "auto"
 }

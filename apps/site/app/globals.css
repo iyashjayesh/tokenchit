@@ -1,5 +1,5 @@
 /* ── Design tokens ──────────────────────────────────────────────────────────
-   Source: design_handoff_tokenstats_site/README.md § Design tokens.
+   Source: design_handoff_tokenchit_site/README.md § Design tokens.
    Border radius is 0 everywhere. Shadows are hard offsets only (Npx Npx 0 c). */
 :root {
   --ink: #101010;
