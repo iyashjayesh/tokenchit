@@ -20,18 +20,38 @@ export async function schedule(argv: string[]): Promise<number> {
   const every: Every = oneOf(flag(argv, "--every"), EVERY, "every") ?? "daily";
   const cron = has(argv, "--cron") || process.platform !== "darwin";
 
-  // The path this process was started from, so the entry runs the same install the person is
-  // already using rather than whatever a future PATH happens to resolve.
+  /*
+   * A scheduled job has to survive longer than the process writing it.
+   *
+   * Using this process's own path is right for an installed copy and wrong under npx, where
+   * argv[1] points into ~/.npm/_npx/<hash>/ — a cache keyed to the exact version, pruned by
+   * npm, and never updated. A LaunchAgent pointing there runs today, pins itself to whichever
+   * version happened to be current, and one `npm cache clean` later fails every morning
+   * without saying so.
+   *
+   * So an npx run emits the durable npx command instead, and says the quieter thing is a
+   * global install.
+   */
   const entry = process.argv[1];
-  const command = entry
-    ? `${process.execPath} ${entry} publish`
-    : "npx @tokenchit/cli publish";
+  const viaNpx = !entry || /[\\/]_npx[\\/]/.test(entry);
+  const command = viaNpx
+    ? "npx -y @tokenchit/cli@latest publish"
+    : `${process.execPath} ${entry} publish`;
   const cwd = process.cwd();
 
   say();
   say(`  ${bold("Publishing is not automatic.")} ${grey("Your logs are local, so the schedule")}`);
   say(`  ${grey("has to be local too — CI has nothing to read.")}`);
   say();
+
+  if (viaNpx) {
+    // Said before the entry rather than after it, because it changes what someone should copy.
+    say(`  ${grey("Running under npx, so this uses")} ${bold("npx -y @tokenchit/cli@latest")}${grey(",")}`);
+    say(`  ${grey("which re-checks the registry on every run. For a job that fires daily:")}`);
+    say(`    ${bold("npm i -g @tokenchit/cli")}`);
+    say(`  ${grey("then re-run")} ${bold("tokenchit schedule")} ${grey("for an entry that starts faster.")}`);
+    say();
+  }
 
   if (cron) {
     const when = every === "hourly" ? "0 * * * *" : "0 9 * * *";
