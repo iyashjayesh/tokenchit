@@ -17,7 +17,7 @@
  *     origin, so it is sanitised to [A-Za-z0-9_-]{1,16} and XML-escaped.
  */
 
-import { DARK, esc, FONT, LIGHT, render, type Palette } from "./svg.js";
+import { CARD_HOST, DARK, esc, FONT, LIGHT, render, type Palette } from "./svg.js";
 import { agentMark, ICON_VIEWBOX } from "./agent-icons.js";
 
 export type Layout = "default" | "compact";
@@ -84,6 +84,12 @@ export function formatSynced(at: Date | string, now: Date = new Date()): string 
  * rather than leaving a sub-pixel gap at the right edge.
  * Reproduces the design's numbers: 439 -> 255/92/53/39, 292 -> 169/61/35/27.
  */
+/** A legend share. Anything present but below half a percent is "<1%", never "0%". */
+export function formatShare(pct: number): string {
+  if (pct > 0 && pct < 0.5) return "<1%";
+  return `${Math.round(pct)}%`;
+}
+
 export function segmentWidths(mix: MixEntry[], track: number): number[] {
   const total = mix.reduce((a, m) => a + m.pct, 0);
   if (total <= 0 || mix.length === 0) return [];
@@ -373,7 +379,11 @@ export function buildCardSvg(opts: CardOptions): string {
           },
           // Rounded here rather than by the caller: the legend sits at 8.5px in a fixed
           // slot, and one unrounded float ("98.677606%") overruns into the next entry.
-          text: `${m.agent} ${Math.round(m.pct)}%`,
+          //
+          // A share under half a percent rounds to "0%", which reads as "this agent did
+          // nothing" beside an agent that plainly did something — the legend would not list
+          // it otherwise. "<1%" is the same width and says what is true.
+          text: `${m.agent} ${formatShare(m.pct)}`,
         }),
       );
     });
@@ -390,7 +400,7 @@ export function buildCardSvg(opts: CardOptions): string {
     render({
       tag: "text",
       attrs: { ...cls("ft"), x: g.footer.left, y: g.footer.y, ...footAttrs },
-      text: "TOKENCHIT.APP",
+      text: CARD_HOST,
     }),
   );
   parts.push(

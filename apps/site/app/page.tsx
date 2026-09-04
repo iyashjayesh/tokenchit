@@ -5,6 +5,7 @@ import { CardSection } from "@/components/card-section";
 import { Leaderboard } from "@/components/leaderboard";
 import { DEFAULT_WINDOW } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
+import { readFeatured } from "@/lib/featured";
 import { Verification } from "@/components/verification";
 import { Privacy } from "@/components/privacy";
 import { Recap } from "@/components/recap";
@@ -27,11 +28,13 @@ export default async function Page() {
   // Failing to read the board should cost the reader the table, not the whole page.
   const rows = await readBoard(DEFAULT_WINDOW).catch(() => []);
 
+  const preview = await readFeatured(rows);
+
   return (
-    <SiteStateProvider>
+    <SiteStateProvider initialHandle={preview.handle}>
       <SiteHeader />
-      <Hero />
-      <CardSection />
+      <Hero preview={preview} />
+      <CardSection preview={preview} />
       <Leaderboard initialRows={rows} initialWindow={DEFAULT_WINDOW} />
       <Verification />
       <Privacy />

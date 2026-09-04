@@ -4,6 +4,10 @@ import { test } from "node:test";
 import {
   aggregate,
   buildCardSvg,
+  CARD_HOST,
+  formatShare,
+  reviewReason,
+  REVIEW,
   formatTokens,
   formatUsd,
   handleSize,
@@ -250,4 +254,76 @@ test("a long handle is shrunk to fit rather than cut short", () => {
   const shrunk = handleSize(long, 20, 439);
   assert.ok(shrunk < 20 && shrunk > 10, `expected a smaller readable size, got ${shrunk}`);
   assert.ok((long.length + 1) * 0.6 * shrunk <= 439, "must fit the 439px track");
+});
+
+
+test("a plausible-but-extreme day is held for review, not rejected", () => {
+  // The hard limits reject the arithmetically impossible. Between "normal" and "impossible"
+  // sits a range a heavy real user might reach and a fabricator certainly would; rejecting
+  // that outright turns a false positive into a locked-out user, so it is kept and held.
+  const day = (tokens, cost) => ({ day: "2026-09-01", agent: "claude-code", tokens, equivCostUsd: cost });
+
+  assert.equal(reviewReason({ days: [day(600_000_000, 400)] }), null, "a busy real day publishes");
+
+  const held = reviewReason({ days: [day(REVIEW.tokensPerDay + 1, 400)] });
+  assert.match(held ?? "", /2026-09-01/, "an extreme day names itself in the reason");
+});
+
+test("review looks at a whole day, not one agent at a time", () => {
+  // Three agents each sitting just under the bar is one day far over it. Checking rows
+  // individually is exactly how a split submission would walk past the threshold.
+  const third = Math.ceil(REVIEW.tokensPerDay / 3) + 1;
+  const days = ["claude-code", "codex", "opencode"].map((agent) => ({
+    day: "2026-09-01",
+    agent,
+    tokens: third,
+    equivCostUsd: 1,
+  }));
+
+  assert.ok(reviewReason({ days }), "summed across agents this day is over the threshold");
+  assert.equal(reviewReason({ days: [days[0]] }), null, "any one of them alone is not");
+});
+
+
+test("a present-but-tiny agent share is never rendered as 0%", () => {
+  // codex at 0.4% and opencode at 0.2% both rounded to "0%" on the live card, which reads as
+  // "this agent did nothing" beside an agent that plainly did something — the legend would
+  // not list it otherwise.
+  assert.equal(formatShare(0.4), "<1%");
+  assert.equal(formatShare(0.2), "<1%");
+  assert.equal(formatShare(0), "0%", "a genuine zero still reads as zero");
+  assert.equal(formatShare(99.5), "100%");
+  assert.equal(formatShare(58), "58%");
+
+  const svg = buildCardSvg({
+    handle: "dev",
+    tokens: "10.4B",
+    spend: "$7,005",
+    streak: "25d",
+    mix: [
+      { agent: "claude-code", pct: 99.4 },
+      { agent: "codex", pct: 0.4 },
+      { agent: "opencode", pct: 0.2 },
+    ],
+    syncedAt: "SYNCED 0M AGO",
+  });
+  assert.match(svg, /codex &lt;1%/, "the card should say <1%, not 0%");
+  assert.doesNotMatch(svg, /codex 0%/);
+});
+
+test("the card stamps the host from one shared constant", () => {
+  // It once stamped TOKENCHIT.APP before that domain existed — a watermark on a file people
+  // commit into their repositories, pointing at nothing. The domain is real now, but the
+  // lesson is the constant: the card and the recap must not disagree about where to send a
+  // reader, and neither may hardcode a host of its own.
+  const svg = buildCardSvg({
+    handle: "dev",
+    tokens: "1B",
+    spend: "$1",
+    streak: "1d",
+    mix: [{ agent: "claude-code", pct: 100 }],
+    syncedAt: "SYNCED 0M AGO",
+  });
+  assert.match(svg, new RegExp(CARD_HOST.replace(/\./g, "\\.")));
+  assert.doesNotMatch(svg, /VERCEL/, "the deployment host should not be stamped on a card");
 });

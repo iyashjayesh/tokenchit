@@ -1,8 +1,8 @@
 "use client";
 
-import { agentMark, ICON_VIEWBOX } from "@tokenchit/core";
+import { agentMark, CARD_HOST, formatShare, ICON_VIEWBOX } from "@tokenchit/core";
 
-import { OWN_STATS } from "@/lib/sample-data";
+import type { Featured } from "@/lib/featured";
 import { useSiteState } from "./site-state";
 import styles from "./stat-card.module.css";
 
@@ -19,8 +19,14 @@ import styles from "./stat-card.module.css";
  */
 const MIX_FILLS = ["var(--lime)", "var(--ink)", "var(--seg-2)", "var(--seg-3)"];
 
-export function StatCard() {
+
+export function StatCard({ preview }: { preview: Featured }) {
   const { handle } = useSiteState();
+
+  /* The figures belong to whoever the server featured. Typing another name changes whose card
+     this looks like but not whose numbers these are, and saying so is the difference between
+     a preview and a false claim about somebody. */
+  const borrowed = preview.real && handle !== preview.handle;
 
   return (
     <div className={styles.card}>
@@ -30,26 +36,26 @@ export function StatCard() {
       <div className={styles.stats}>
         <div className={styles.stat}>
           <div className={styles.statLabel}>TOKENS</div>
-          <div className={styles.statValue}>{OWN_STATS.tokens}</div>
+          <div className={styles.statValue}>{preview.tokens}</div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statLabel}>EQUIV. COST</div>
-          <div className={styles.statValue}>{OWN_STATS.spend}</div>
+          <div className={styles.statValue}>{preview.spend}</div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statLabel}>STREAK</div>
-          <div className={styles.statValue}>{OWN_STATS.streak}</div>
+          <div className={styles.statValue}>{preview.streak}</div>
         </div>
       </div>
 
       <div className={styles.mix}>
-        {OWN_STATS.mix.map((m, i) => (
+        {preview.mix.map((m, i) => (
           <span key={m.agent} style={{ flex: m.pct, background: MIX_FILLS[i] }} />
         ))}
       </div>
 
       <div className={styles.legend}>
-        {OWN_STATS.mix.map((m) => (
+        {preview.mix.map((m) => (
           <span key={m.agent} className={styles.legendItem}>
             <svg
               className={styles.mark}
@@ -59,14 +65,14 @@ export function StatCard() {
               {/* The card sits on a light ground, so the light colour is always the right one. */}
               <path d={agentMark(m.agent).path} fill={agentMark(m.agent).light} />
             </svg>
-            {m.agent} {m.pct}%
+            {m.agent} {formatShare(m.pct)}
           </span>
         ))}
       </div>
 
       <div className={styles.footer}>
-        <span>TOKENCHIT.APP</span>
-        <span>{OWN_STATS.syncedAt}</span>
+        <span>{borrowed ? `@${preview.handle}'S FIGURES` : CARD_HOST}</span>
+        <span>{preview.syncedAt}</span>
       </div>
     </div>
   );

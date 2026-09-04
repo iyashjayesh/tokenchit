@@ -45,6 +45,52 @@ export const LIMITS = {
   maxHandleLength: 39,
 } as const;
 
+/**
+ * The review band: plausible enough to accept, unusual enough not to rank unexamined.
+ *
+ * LIMITS above are hard rejections — arithmetically impossible or far past anything a person
+ * produces. Between "normal" and "impossible" sits a range that a heavy real user might reach
+ * and a fabricator certainly would, and rejecting it outright would turn a false positive into
+ * a locked-out user.
+ *
+ * So a submission in this band is stored and returned to its owner as normal, and marked for
+ * review, which keeps it off the public board until a human looks. Half the hard limit, which
+ * is still about 1.6x the busiest day in the corpus these figures were measured against.
+ */
+export const REVIEW = {
+  tokensPerDay: LIMITS.maxTokensPerDay / 2,
+  costPerDay: LIMITS.maxCostPerDay / 2,
+} as const;
+
+/**
+ * Why a submission should be held back from the board, or null to publish it.
+ *
+ * Separate from validatePayload because the outcomes differ: that returns errors and the
+ * submission is refused, this returns a reason and the submission is kept. A caller that
+ * conflated them would either publish what it should hold or reject what it should keep.
+ */
+export function reviewReason(p: Payload): string | null {
+  // Days arrive split by agent, so a day is only unusual once its agents are summed — three
+  // agents each sitting just under the bar is one day far over it.
+  const byDay = new Map<string, { tokens: number; cost: number }>();
+  for (const d of p.days) {
+    const acc = byDay.get(d.day) ?? { tokens: 0, cost: 0 };
+    acc.tokens += d.tokens;
+    acc.cost += d.equivCostUsd;
+    byDay.set(d.day, acc);
+  }
+
+  for (const [day, acc] of byDay) {
+    if (acc.tokens > REVIEW.tokensPerDay) {
+      return `${day} reports ${acc.tokens.toLocaleString()} tokens, above the review threshold`;
+    }
+    if (acc.cost > REVIEW.costPerDay) {
+      return `${day} reports $${acc.cost.toFixed(2)}, above the review threshold`;
+    }
+  }
+  return null;
+}
+
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**

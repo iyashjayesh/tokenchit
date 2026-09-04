@@ -1,6 +1,6 @@
 import { handleSize, sanitizeHandle, type Theme } from "./card-svg.js";
 import { RAMP, type Recap } from "./recap.js";
-import { DARK, esc, FONT, LIGHT, render } from "./svg.js";
+import { CARD_HOST, DARK, esc, FONT, LIGHT, render } from "./svg.js";
 
 /**
  * The year-in-review, as one committable SVG.
@@ -274,7 +274,7 @@ export function buildRecapSvg(opts: RecapCardOptions): string {
     render({
       tag: "text",
       attrs: { ...cls("ft"), x: PAD, y: H - 14, "font-family": FONT, "font-size": 8, "letter-spacing": 1, fill: pal.footer },
-      text: "TOKENCHIT.APP",
+      text: CARD_HOST,
     }),
   );
   parts.push(

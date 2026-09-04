@@ -1,6 +1,7 @@
 "use client";
 
 import { CopyButton } from "./copy-button";
+import type { Featured } from "@/lib/featured";
 import { StatCard } from "./stat-card";
 import { useSiteState } from "./site-state";
 import styles from "./hero.module.css";
@@ -10,14 +11,14 @@ import { PRIMARY_COMMAND } from "@/lib/cli";
 // and unpublished within a fortnight, and npm never lets an unpublished name be reused.
 const INSTALL = PRIMARY_COMMAND;
 
-export function Hero() {
+export function Hero({ preview }: { preview: Featured }) {
   const { handle, setHandle } = useSiteState();
 
   return (
     <section className={styles.hero}>
       <div className={styles.left}>
         <div className={styles.chips}>
-          <span className={styles.chipInk}>3 agents</span>
+          <span className={styles.chipInk}>no hosted endpoint</span>
           <span className={styles.chipYellow}>parsed locally</span>
           <span className={styles.chipWhite}>no prompts sent</span>
         </div>
@@ -30,8 +31,9 @@ export function Hero() {
 
         <p className={styles.lede}>
           tokenchit reads your local Claude Code, Codex and OpenCode logs and renders one
-          embeddable card straight into your repo. Nothing is uploaded — the card is a file
-          you commit.
+          embeddable card straight into your repo. The card is a file you commit, not a URL
+          you depend on — nothing to rate-limit, nothing to go down, and it keeps working if
+          this site does not.
         </p>
 
         <div className={styles.install}>
@@ -55,7 +57,7 @@ export function Hero() {
           <span className={styles.label}>live preview</span>
         </div>
 
-        <StatCard />
+        <StatCard preview={preview} />
 
         <div className={styles.handleRow}>
           <span className={styles.label}>handle</span>

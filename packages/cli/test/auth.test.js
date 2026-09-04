@@ -96,9 +96,9 @@ async function walk(dir) {
 }
 
 test("the help text names the same API the CLI actually posts to", async () => {
-  // These drifted once: the default moved to tokenchit.vercel.app while --help still
-  // advertised tokenchit-site.vercel.app, a host that 404s. Anyone who copied the URL out of
-  // --help would have pointed publish at nothing.
+  // These drifted once: the default moved on while --help still advertised a host that
+  // 404s, so anyone who copied the URL out of --help pointed publish at nothing. The host has
+  // changed twice since; the point is that only one of them is written down.
   //
   // Asserted against rendered output rather than the source string, so the help stays free to
   // interpolate the constant instead of repeating it.
@@ -165,5 +165,41 @@ test("the banner degrades rather than wrapping or leaking into pipes", async () 
   for (const line of wide) {
     const printable = line.replace(ANSI, "");
     assert.ok(printable.length <= 100, `banner line exceeds the terminal: ${printable.length}`);
+  }
+});
+
+test("the verification URL is offered pre-filled, without losing the plain one", async () => {
+  // GitHub does not return verification_uri_complete — RFC 8628 makes it optional and GitHub
+  // omits it — but the verification page accepts a user_code parameter that fills the box.
+  // That is undocumented, so it is used for the browser launch only; what gets printed is
+  // whatever GitHub actually sent.
+  const { prefilled } = await import(join(HERE, "..", ".build", "desktop.js"));
+
+  assert.equal(
+    prefilled("https://github.com/login/device", "WDJB-MJHT"),
+    "https://github.com/login/device?user_code=WDJB-MJHT",
+  );
+
+  // An enterprise host with an existing query string keeps it.
+  assert.equal(
+    prefilled("https://ghe.example.com/login/device?foo=1", "AAAA-BBBB"),
+    "https://ghe.example.com/login/device?foo=1&user_code=AAAA-BBBB",
+  );
+
+  // Anything unparseable falls back rather than throwing mid sign-in.
+  assert.equal(prefilled("not a url", "AAAA-BBBB"), "not a url");
+});
+
+test("a missing clipboard tool fails quietly rather than failing the sign-in", async () => {
+  // The clipboard is a convenience over output that already stands alone. On a machine with
+  // no clipboard tool — a container, a bare SSH session — this must return false, not throw.
+  const { copyToClipboard } = await import(join(HERE, "..", ".build", "desktop.js"));
+
+  const path = process.env.PATH;
+  process.env.PATH = "/nonexistent";
+  try {
+    assert.equal(await copyToClipboard("WDJB-MJHT"), false);
+  } finally {
+    process.env.PATH = path;
   }
 });

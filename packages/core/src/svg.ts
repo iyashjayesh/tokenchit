@@ -41,6 +41,18 @@ export const DARK: Palette = {
   segments: ["#C6FF3D", "#FFFFFF", "#6E6E66", "#3A3A34"],
 };
 
+/**
+ * The host stamped on every card and recap.
+ *
+ * It read TOKENCHIT.APP for a while before that domain existed — a watermark on a file people
+ * commit into their repositories, pointing at nothing. It briefly named the vercel.app
+ * deployment instead, and now names the domain for real.
+ *
+ * One constant, shared by the card and the recap, so the two cannot disagree about where a
+ * reader should go.
+ */
+export const CARD_HOST = "TOKENCHIT.APP";
+
 export const FONT = "'JetBrains Mono', ui-monospace, monospace";
 
 export const esc = (s: string) =>

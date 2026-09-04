@@ -57,6 +57,17 @@ export default async function BoardPage({
         that same window. It is a usage count, not a skill score.
       </p>
 
+      {/* Stated rather than left to be inferred from the ordering. A ranking whose rules are
+          not written down is one nobody can check, and the verified-first rule in particular
+          is invisible until it costs someone a place. */}
+      <p className={styles.intro}>
+        <span className={styles.strong}>How this is ranked.</span> Verified rows first, then
+        tokens. Signing in is the only thing that ties a row to a GitHub account, so it is the
+        only thing that can carry a position — an unverified row still appears and still shows
+        its figures, it just cannot outrank a verified one. Submissions far outside the range
+        of real usage are held for review and do not appear until a person has looked at them.
+      </p>
+
       <nav className={styles.windows} aria-label="Time window">
         {WINDOWS.map((w) => (
           <Link

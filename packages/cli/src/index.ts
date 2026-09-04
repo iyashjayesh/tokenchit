@@ -66,6 +66,8 @@ const COMMANDS: Record<string, Command> = {
     summary: "put your row on the public board",
     flags: [
       ["--anonymous", "publish without signing in; the row is marked unverified"],
+      ["--no-clipboard", "signing in: do not copy the device code"],
+      ["--no-browser", "signing in: do not open the verification page"],
       ["--dry-run", "print the exact bytes and send nothing"],
       ["--api <url>", `default ${DEFAULT_API}`],
       ["--handle <name>", ""],
@@ -99,7 +101,21 @@ const COMMANDS: Record<string, Command> = {
       "Scheduling has to run locally. The logs live on this machine and nowhere else, so a\n" +
       "GitHub Action cannot do this for you: there is nothing for it to read.",
   },
-  login: { summary: "prove your GitHub handle (device flow, no password)" },
+  login: {
+    summary: "prove your GitHub handle (device flow, no password)",
+    flags: [
+      ["--no-clipboard", "do not copy the device code"],
+      ["--no-browser", "do not open the verification page"],
+      ["--force", "sign in again when already signed in"],
+    ],
+    detail:
+      "Device flow, because a CLI cannot keep a secret. GitHub still requires a client secret\n" +
+      "for the redirect-based flow even with PKCE, so shipping that in a public package would\n" +
+      "mean publishing the secret — and a localhost callback breaks over SSH and in containers\n" +
+      "anyway, which is where a coding agent usually runs.\n\n" +
+      "The code is copied and the page is opened with it pre-filled, but both are conveniences:\n" +
+      "the URL and the code are printed first and remain correct if either quietly fails.",
+  },
   logout: { summary: "forget this machine" },
   whoami: { summary: "who this machine is signed in as" },
 };

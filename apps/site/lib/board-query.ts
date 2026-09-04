@@ -47,7 +47,11 @@ export async function readBoard(window: BoardWindow, limit = 25): Promise<BoardR
      JOIN users u ON u.id = t.user_id
      LEFT JOIN latest l ON l.user_id = t.user_id
      WHERE COALESCE(l.flagged, false) = false
-     ORDER BY t.tokens DESC
+     /* Verified first, then tokens. A tier that is displayed but never affects position is
+        decoration: an unverified row could outrank a signed-in one, so the badge told you
+        nothing about the ranking you were reading. Signing in is the only thing that ties a
+        row to a GitHub account, so it is the only thing that can carry a ranking. */
+     ORDER BY (u.tier = 'verified') DESC, t.tokens DESC
      LIMIT $2`,
     [WINDOW_DAYS[window], limit],
   );

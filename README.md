@@ -112,7 +112,7 @@ tokenchit sync           read your logs, show your stats, write the card
 tokenchit publish        put your row on the public board
   --anonymous            publish without signing in; the row is marked unverified
   --dry-run              print the exact bytes and send nothing
-  --api <url>            default https://tokenchit.vercel.app
+  --api <url>            default https://tokenchit.app
   --handle <name>
 
 tokenchit recap
@@ -186,18 +186,59 @@ of it, which `dryrun.exact` in the test suite enforces by comparing against what
 publish puts on the wire. The payload is aggregates only: totals, per-day token counts, agent
 and model ids. No prompts, no replies, no branch names, no paths.
 
+
+### How the board ranks
+
+Verified rows first, then tokens over the selected window.
+
+Signing in is the only thing that ties a row to a GitHub account, so it is the only thing that
+can carry a position. An unverified row still appears and still shows its figures; it simply
+cannot outrank a verified one. A `tier` that is displayed but never affects the ordering is
+decoration — it told you nothing about the ranking you were reading.
+
+Submissions far outside the range of real usage are **held for review**: stored, returned to
+their owner, and kept off the board until a person looks. The threshold is half the hard
+rejection limit — about 1.6x the busiest day in the corpus these figures were measured
+against — and `publish` says so out loud rather than leaving someone refreshing a board they
+will never appear on.
+
+The `flagged` column has existed since the first migration and, until this was added, nothing
+ever wrote to it. The board query already refused to show flagged rows; there was simply no
+code path that could set one.
+
 ## Signing in
 
 ```
 $ tokenchit login
-  Open https://github.com/login/device
-  and enter  WDJB-MJHT
+  Open  https://github.com/login/device
+  Code  WDJB-MJHT
+  opened your browser, copied the code — the code should already be filled in
 ✓ signed in as @octocat
 ```
 
 GitHub's **device flow** — no password, no token to paste, and no localhost callback server,
 which matters because the usual OAuth-in-a-CLI approach breaks over SSH, in containers and on
 remote dev boxes: exactly where people run coding agents.
+
+**Why not the redirect flow.** GitHub requires a `client_secret` at the token exchange even
+with PKCE, which it added in July 2025 — it does not distinguish public from confidential
+clients. Shipping that flow in a public npm package would mean publishing the secret. GitHub's
+own `gh` reaches for a localhost callback only as a fallback for Enterprise hosts without
+device flow, and embeds a secret to do it.
+
+**The code is copied and the page is opened with it pre-filled**, so there is nothing to
+retype. Both are conveniences layered over output that stands on its own: the URL and the code
+are printed first, and stay correct when a container has no clipboard tool or `xdg-open` opens
+a window nobody is looking at. `--no-clipboard` and `--no-browser` turn them off; neither runs
+without a TTY.
+
+The code is always shown, even when the page is pre-filled. RFC 8628 §3.3.1 requires it, and
+§5.4 explains why: confirming the code is how you know the device asking for access is the one
+in front of you.
+
+GitHub does not return `verification_uri_complete`, so the pre-filled URL uses a `user_code`
+query parameter the verification page accepts but does not document. That is why it is used
+for the browser launch only, and never printed in place of the URL GitHub actually sent.
 
 **No scopes are requested.** GitHub answers `GET /user` for an unscoped token, and your login
 and numeric id are all we need.
@@ -283,7 +324,7 @@ Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals
 | `/api/submissions` | publish (POST) and read the board (GET) |
 
 **The site is measured; the CLI is not.** Page views and one copy event go to Firebase
-Analytics from tokenchit.vercel.app — not from previews, not from localhost. The privacy
+Analytics from tokenchit.app — not from previews, not from localhost. The privacy
 guarantees in `packages/cli/test/privacy.test.js` are about the CLI, which makes exactly one
 network call, to publish, and carries no analytics of any kind. Saying so here rather than
 leaving someone to find a Google request in devtools and wonder what else is unstated.

@@ -14,7 +14,7 @@ import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { bold, dim, fail, green, grey, link, say, spin, warn, yellow } from "../ui.js";
 import { post } from "../net.js";
-import { signIn } from "./login.js";
+import { signIn, signInOptions } from "./login.js";
 
 /**
  * The only command that sends anything anywhere.
@@ -45,7 +45,7 @@ export async function publish(argv: string[], version: string): Promise<number> 
     say();
     say(`  ${bold("Sign in to publish a verified row.")}`);
     say(grey("  Skip with --anonymous; the row is then marked unverified."));
-    const result = await signIn(api);
+    const result = await signIn(api, signInOptions(argv));
     if (!result.ok) return 1;
     auth = await readAuth();
   }
@@ -118,6 +118,16 @@ export async function publish(argv: string[], version: string): Promise<number> 
       `${dim(`· ${payload.days.length} days · ${formatTokens(stats.tokens)} tokens · tier: ${tier}`)}`,
   );
   say();
+
+  /* A row held for review still has a profile, so the links below stand — but saying nothing
+     would leave someone refreshing a board they are never going to appear on. */
+  const review = res.body?.review;
+  if (typeof review === "string" && review) {
+    warn("This submission is held for review and will not appear on the board yet.");
+    say(dim(`  ${review}`));
+    say(dim("  Nothing was rejected — open an issue if this looks wrong."));
+    say();
+  }
 
   // The point of publishing. Printed last, because this is what someone actually wants out
   // of the command, and printed as full URLs so they survive a copy out of scrollback.
