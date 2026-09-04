@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { aggregate, buildPayload, validatePayload } from "../dist/index.js";
+import { aggregate, buildPayload, LIMITS, validatePayload } from "../dist/index.js";
 
 const at = (agent, day, tokens, model = "claude-opus-5") => ({
   agent,
@@ -49,9 +49,10 @@ test("day rows reconcile with the headline", async () => {
 });
 
 test("the daily ceiling is checked per day, not per agent row", async () => {
-  // Three agents at 100M each: every row is comfortably under the 2B ceiling on its own,
-  // but this is what a day summing over the limit has to be caught by.
-  const over = Math.floor(2_000_000_000 / 2);
+  // Three agents each comfortably under the ceiling on their own, summing to well over it.
+  // Derived from LIMITS rather than a literal: this test hardcoded 2e9 and started failing
+  // the day the ceiling moved, which told us nothing about the property it exists to protect.
+  const over = Math.floor(LIMITS.maxTokensPerDay / 2);
   const p = await payloadOf([
     at("claude-code", 20, over),
     at("codex", 20, over),

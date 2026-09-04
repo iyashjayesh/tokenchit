@@ -35,10 +35,25 @@ import type { Payload } from "./publish.js";
  * corpus sits at $77.76 per active day against a $5,000 limit — three orders of margin.
  */
 export const LIMITS = {
-  /** ~4x the measured peak, so a heavier or multi-machine user is not rejected. */
-  maxTokensPerDay: 2_000_000_000,
-  maxCostPerDay: 5_000,
-  maxCostTotal: 5_000 * 365,
+  /*
+   * Volume ceilings are sanity bounds, not judgements.
+   *
+   * These were 2e9 tokens and $5,000 a day, set at roughly four times the busiest day in the
+   * one corpus available at the time. The second real user to run this had a 3.37e9 day and
+   * was refused outright — locked out by a limit calibrated against somebody else's machine.
+   *
+   * A large day is unusual, never impossible: two agents in parallel on a fast machine, a
+   * shared box, a week of cache-heavy work. Nothing about volume alone makes a submission
+   * false, so nothing about volume alone rejects one — REVIEW below holds the unusual ones
+   * instead, which keeps a false positive a delay rather than a locked door.
+   *
+   * What remains here is the arithmetically impossible: negative figures, dates in the
+   * future, a headline that disagrees with its own series, a cost-per-token outside what any
+   * real model can produce, and volumes so large they indicate corruption rather than work.
+   */
+  maxTokensPerDay: 100_000_000_000,
+  maxCostPerDay: 50_000,
+  maxCostTotal: 50_000 * 365,
   /** Arithmetic floor: the cheapest cache-read rate in the price table. */
   minCostPerToken: 5e-9,
   maxCostPerToken: 0.1,
@@ -54,12 +69,16 @@ export const LIMITS = {
  * a locked-out user.
  *
  * So a submission in this band is stored and returned to its owner as normal, and marked for
- * review, which keeps it off the public board until a human looks. Half the hard limit, which
- * is still about 1.6x the busiest day in the corpus these figures were measured against.
+ * review, which keeps it off the public board until a human looks.
+ *
+ * Set against real days rather than as a fraction of the ceiling. The two heaviest days seen
+ * across real users are 0.61e9 and 3.37e9 tokens — a 5.5x spread between two people — so this
+ * sits about four times above the heavier of them, with room for a machine running several
+ * agents at once. It is a number to revise as more real days are seen, not a constant.
  */
 export const REVIEW = {
-  tokensPerDay: LIMITS.maxTokensPerDay / 2,
-  costPerDay: LIMITS.maxCostPerDay / 2,
+  tokensPerDay: 15_000_000_000,
+  costPerDay: 10_000,
 } as const;
 
 /**
@@ -147,7 +166,7 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
 
   for (const [day, tokens] of perDay) {
     if (tokens > LIMITS.maxTokensPerDay) {
-      fail(`day ${day} reports ${tokens} tokens, over the ${LIMITS.maxTokensPerDay} daily ceiling`);
+      fail(`day ${day} reports ${tokens.toLocaleString()} tokens, over the ${LIMITS.maxTokensPerDay.toLocaleString()} daily ceiling`);
     }
   }
 

@@ -8,6 +8,7 @@ import {
   formatShare,
   reviewReason,
   REVIEW,
+  validatePayload,
   formatTokens,
   formatUsd,
   handleSize,
@@ -363,4 +364,57 @@ test("the stats-panel reader sums a cache the way the panel does, and is quiet w
   const broken = await mkdtemp(join(tmpdir(), "tokenchit-broken-"));
   await writeFile(join(broken, "stats-cache.json"), "{ not json");
   assert.deepEqual(await readClaudeStatsPanels([join(broken, "projects")]), []);
+});
+
+test("a genuinely heavy day publishes instead of being refused", () => {
+  // The second real user to run this had a 3,374,192,877-token day and was rejected by a
+  // ceiling calibrated against one other machine, whose busiest day was 607M. Volume alone is
+  // never impossible — two agents in parallel, a shared box, a cache-heavy week — so it must
+  // not be what refuses a submission.
+  const day = (tokens, cost) => ({
+    day: "2026-09-02",
+    agent: "claude-code",
+    tokens,
+    equivCostUsd: cost,
+  });
+
+  const payload = {
+    handle: "someone",
+    tokens: 3_374_192_877,
+    equivCostUsd: 2360.12,
+    pricedShare: 1,
+    streakDays: 17,
+    activeDays: 50,
+    firstDay: "2026-09-02",
+    lastDay: "2026-09-02",
+    agents: [{ agent: "claude-code", tokens: 3_374_192_877 }],
+    models: [
+      { model: "claude-opus-5", tokens: 3_374_192_877, equivCostUsd: 2360.12, priced: true },
+    ],
+    days: [day(3_374_192_877, 2360.12)],
+    clientVersion: "test",
+  };
+
+  assert.deepEqual(validatePayload(payload), [], "the real user's day must not be rejected");
+  assert.equal(reviewReason(payload), null, "nor held, at four times the heaviest day seen");
+});
+
+test("volume still has a sanity ceiling, well above any real day", () => {
+  // Not a judgement about heavy use — a guard against corruption and overflow.
+  const absurd = {
+    handle: "someone",
+    tokens: 500_000_000_000,
+    equivCostUsd: 1000,
+    pricedShare: 1,
+    streakDays: 1,
+    activeDays: 1,
+    firstDay: "2026-09-02",
+    lastDay: "2026-09-02",
+    agents: [{ agent: "claude-code", tokens: 500_000_000_000 }],
+    models: [{ model: "claude-opus-5", tokens: 500_000_000_000, equivCostUsd: 1000, priced: true }],
+    days: [{ day: "2026-09-02", agent: "claude-code", tokens: 500_000_000_000, equivCostUsd: 1000 }],
+    clientVersion: "test",
+  };
+
+  assert.ok(validatePayload(absurd).length > 0, "half a trillion tokens in a day is not work");
 });
