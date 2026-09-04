@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   aggregate,
   buildCardSvg,
+  formatShare,
   reviewReason,
   REVIEW,
   formatTokens,
@@ -280,4 +281,46 @@ test("review looks at a whole day, not one agent at a time", () => {
 
   assert.ok(reviewReason({ days }), "summed across agents this day is over the threshold");
   assert.equal(reviewReason({ days: [days[0]] }), null, "any one of them alone is not");
+});
+
+
+test("a present-but-tiny agent share is never rendered as 0%", () => {
+  // codex at 0.4% and opencode at 0.2% both rounded to "0%" on the live card, which reads as
+  // "this agent did nothing" beside an agent that plainly did something — the legend would
+  // not list it otherwise.
+  assert.equal(formatShare(0.4), "<1%");
+  assert.equal(formatShare(0.2), "<1%");
+  assert.equal(formatShare(0), "0%", "a genuine zero still reads as zero");
+  assert.equal(formatShare(99.5), "100%");
+  assert.equal(formatShare(58), "58%");
+
+  const svg = buildCardSvg({
+    handle: "dev",
+    tokens: "10.4B",
+    spend: "$7,005",
+    streak: "25d",
+    mix: [
+      { agent: "claude-code", pct: 99.4 },
+      { agent: "codex", pct: 0.4 },
+      { agent: "opencode", pct: 0.2 },
+    ],
+    syncedAt: "SYNCED 0M AGO",
+  });
+  assert.match(svg, /codex &lt;1%/, "the card should say <1%, not 0%");
+  assert.doesNotMatch(svg, /codex 0%/);
+});
+
+test("the card stamps a host that actually resolves", () => {
+  // It stamped TOKENCHIT.APP, which does not resolve — a watermark on a file people commit
+  // into their repositories, pointing at nothing.
+  const svg = buildCardSvg({
+    handle: "dev",
+    tokens: "1B",
+    spend: "$1",
+    streak: "1d",
+    mix: [{ agent: "claude-code", pct: 100 }],
+    syncedAt: "SYNCED 0M AGO",
+  });
+  assert.doesNotMatch(svg, /TOKENCHIT\.APP/);
+  assert.match(svg, /TOKENCHIT\.VERCEL\.APP/);
 });

@@ -41,6 +41,15 @@ export const DARK: Palette = {
   segments: ["#C6FF3D", "#FFFFFF", "#6E6E66", "#3A3A34"],
 };
 
+/**
+ * The host stamped on every card and recap.
+ *
+ * It said TOKENCHIT.APP, which does not resolve — a watermark on a file people commit into
+ * their repositories, pointing at nothing. This is the host that actually serves the site;
+ * when the .app domain is bought, this is the one string to change.
+ */
+export const CARD_HOST = "TOKENCHIT.VERCEL.APP";
+
 export const FONT = "'JetBrains Mono', ui-monospace, monospace";
 
 export const esc = (s: string) =>
