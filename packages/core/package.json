@@ -1,6 +1,6 @@
 {
   "name": "@tokenchit/core",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "private": true,
   "description": "Internal engine for @tokenchit/cli: agent-log adapters, aggregation and the SVG builders. Not published; bundled into the CLI.",
   "license": "MIT",
