@@ -1,12 +1,10 @@
 /**
  * The stat card, built as an SVG string from one function.
  *
- * Both the marketing page and /api/card/[handle] render through this builder, so the
- * two cannot drift apart. Geometry is lifted from the approved prototype
- * (design_handoff_tokencard_site/Tokencard Site v2.dc.html):
- *   default 495x195 light  lines 123-147
- *   default 495x195 dark   lines 152-176
- *   compact 340x195        lines 183-201
+ * Both the marketing page and /api/card/[handle] render through this builder, so the two
+ * cannot drift apart. The numbers below are the geometry, not a copy of it — 495x195 for the
+ * default layout, 340x195 for compact — and they came from the original design prototype,
+ * which has since been removed now that this file is the source of truth.
  *
  * Constraints that shaped this file:
  *   - The card ships inside a GitHub README. GitHub strips external font references
