@@ -61,7 +61,17 @@ export async function publish(argv: string[], version: string): Promise<number> 
   }
 
   const reading = spin("reading local agent logs…");
-  const stats = await aggregate(readAll(config.agents));
+  /* Named and counted, because a scan that reports nothing looks the same as one that has
+     hung. On a large corpus this walks thousands of files over several seconds. */
+  const stats = await aggregate(
+    readAll(config.agents, ({ agent, events }) =>
+      reading.update(
+        events === 0
+          ? `reading ${agent}…`
+          : `reading ${agent}… ${events.toLocaleString()} events`,
+      ),
+    ),
+  );
   reading.stop();
 
   if (stats.tokens === 0) {

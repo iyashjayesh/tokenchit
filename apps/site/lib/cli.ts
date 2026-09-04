@@ -31,11 +31,15 @@ export const NPM_URL = `https://npmjs.com/package/${CLI_PACKAGE}`;
  * Pinned to @latest deliberately: npx will reuse a cached copy indefinitely, and someone
  * following a page that describes three steps should not be handed the build that did one.
  *
+ * `-y` because npx otherwise stops on "Ok to proceed?" before the first run — a confirmation
+ * for a package the reader has just been told to run, in the one moment they are least sure
+ * anything is working.
+ *
  * Defined once because it appears in the hero, the header button, the board, the leaderboard
  * and the 404 — five places that were five separate string literals until the rename proved
  * how well that goes.
  */
-export const PRIMARY_COMMAND = `npx ${CLI_PACKAGE}@latest generate`;
+export const PRIMARY_COMMAND = `npx -y ${CLI_PACKAGE}@latest generate`;
 
 /** `tokenchit sync` — the form for someone who has. */
 export const cmd = (...args: string[]) => `${CLI_BIN} ${args.join(" ")}`;
