@@ -1,7 +1,7 @@
 "use client";
 
 import { CopyButton } from "./copy-button";
-import { StatCard } from "./stat-card";
+import { StatCard, type PreviewFigures } from "./stat-card";
 import { useSiteState } from "./site-state";
 import styles from "./hero.module.css";
 import { PRIMARY_COMMAND } from "@/lib/cli";
@@ -10,7 +10,7 @@ import { PRIMARY_COMMAND } from "@/lib/cli";
 // and unpublished within a fortnight, and npm never lets an unpublished name be reused.
 const INSTALL = PRIMARY_COMMAND;
 
-export function Hero() {
+export function Hero({ preview }: { preview: PreviewFigures }) {
   const { handle, setHandle } = useSiteState();
 
   return (
@@ -56,7 +56,7 @@ export function Hero() {
           <span className={styles.label}>live preview</span>
         </div>
 
-        <StatCard />
+        <StatCard preview={preview} />
 
         <div className={styles.handleRow}>
           <span className={styles.label}>handle</span>

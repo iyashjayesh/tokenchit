@@ -41,7 +41,13 @@ export const AGENT_BREAKDOWN = [
   { name: "opencode",    pct: "21%", w: "21%", color: "#8A8A82", tokens: "902M",  cost: "—" },
 ];
 
-/** The signed-in developer's own card figures — what the hero preview and the endpoint show. */
+/**
+ * Illustrative card figures.
+ *
+ * Used only when the default handle has no published profile to read — a fresh database, or
+ * before anyone has run `publish`. When a real profile exists the hero shows that instead,
+ * because a made-up total under a real person's handle reads as their card and is wrong.
+ */
 export const OWN_STATS = {
   tokens: "4.24B",
   spend: "$1,284",

@@ -5,6 +5,11 @@ import { CardSection } from "@/components/card-section";
 import { Leaderboard } from "@/components/leaderboard";
 import { DEFAULT_WINDOW } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
+import { formatSynced } from "@tokenchit/core";
+
+import { cardFigures } from "@/lib/card-figures";
+import { readProfile } from "@/lib/profile";
+import { DEFAULT_HANDLE, OWN_STATS } from "@/lib/sample-data";
 import { Verification } from "@/components/verification";
 import { Privacy } from "@/components/privacy";
 import { Recap } from "@/components/recap";
@@ -27,10 +32,28 @@ export default async function Page() {
   // Failing to read the board should cost the reader the table, not the whole page.
   const rows = await readBoard(DEFAULT_WINDOW).catch(() => []);
 
+  /* The preview shows the default handle's real figures. It used to show invented ones under
+     whatever handle was set, which was harmless while that handle was a made-up persona and
+     wrong the moment it became a real person's — the card then reads as theirs and is false.
+     Sample figures remain the fallback for a database with nobody in it yet. */
+  const profile = await readProfile(DEFAULT_HANDLE, DEFAULT_WINDOW).catch(() => null);
+  const preview = profile
+    ? (({ tokens, spend, streak, mix }) => ({
+        tokens,
+        spend,
+        streak,
+        mix,
+        syncedAt: formatSynced(
+          profile.lastPublished ? new Date(profile.lastPublished) : new Date(),
+        ),
+        real: true,
+      }))(cardFigures(profile))
+    : { ...OWN_STATS, real: false };
+
   return (
     <SiteStateProvider>
       <SiteHeader />
-      <Hero />
+      <Hero preview={preview} />
       <CardSection />
       <Leaderboard initialRows={rows} initialWindow={DEFAULT_WINDOW} />
       <Verification />
