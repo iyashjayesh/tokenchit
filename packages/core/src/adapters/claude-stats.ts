@@ -1,5 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
+import { createInterface } from "node:readline";
 import { dirname, join } from "node:path";
+
+import { walkFiles } from "./walk.js";
 
 /**
  * What Claude Code's own Stats panel will say.
@@ -42,15 +46,82 @@ type StatsCache = {
   modelUsage?: Record<string, Record<string, unknown>>;
   dailyActivity?: { date?: unknown }[];
   dailyModelTokens?: { date?: unknown; tokensByModel?: Record<string, unknown> }[];
+  /** The last day the cache was computed for. Everything after it is missing from it. */
+  lastComputedDate?: unknown;
 };
+
+/**
+ * The four fields that are tokens.
+ *
+ * modelUsage also carries costUSD, contextWindow, maxOutputTokens and webSearchRequests.
+ * Summing every numeric field happened to be harmless on the machines checked, where those
+ * are zero, but a context window counted as tokens is wrong in kind rather than in degree.
+ */
+const TOKEN_FIELDS = [
+  "inputTokens",
+  "outputTokens",
+  "cacheReadInputTokens",
+  "cacheCreationInputTokens",
+] as const;
 
 /** Sum the per-model totals the way the panel does. */
 function total(cache: StatsCache): number {
   let sum = 0;
   for (const models of Object.values(cache.modelUsage ?? {})) {
     if (!models || typeof models !== "object") continue;
-    for (const value of Object.values(models)) {
+    for (const field of TOKEN_FIELDS) {
+      const value = (models as Record<string, unknown>)[field];
       if (typeof value === "number" && Number.isFinite(value)) sum += value;
+    }
+  }
+  return sum;
+}
+
+/**
+ * What the cache has not caught up with yet.
+ *
+ * `stats-cache.json` is computed to a date and no further, so a panel opened today shows the
+ * cache plus today's work, while the file alone is short by exactly that. Measured against
+ * two real accounts, the file read 18.17b and 10.57b while the panels showed 18.3b and 11.0b.
+ *
+ * Counted the way the panel counts — every usage record, no deduplication — because the point
+ * is to reproduce the figure on somebody's screen, not to be right about billing. Files
+ * untouched since the cache was computed cannot contain anything newer than it, so only the
+ * recently modified ones are opened.
+ */
+async function sinceComputed(projects: string, lastComputed: string): Promise<number> {
+  const after = Date.parse(`${lastComputed}T23:59:59.999Z`);
+  if (Number.isNaN(after)) return 0;
+
+  let sum = 0;
+  for await (const file of walkFiles(projects, ".jsonl")) {
+    const info = await stat(file).catch(() => null);
+    if (!info || info.mtimeMs < after) continue;
+
+    const lines = createInterface({
+      input: createReadStream(file, { encoding: "utf8" }),
+      crlfDelay: Infinity,
+    });
+
+    for await (const line of lines) {
+      if (!line.includes('"usage"')) continue;
+
+      let row: { timestamp?: unknown; message?: { usage?: Record<string, unknown> } };
+      try {
+        row = JSON.parse(line) as typeof row;
+      } catch {
+        continue;
+      }
+
+      const ts = typeof row.timestamp === "string" ? Date.parse(row.timestamp) : NaN;
+      if (Number.isNaN(ts) || ts <= after) continue;
+
+      const usage = row.message?.usage;
+      if (!usage) continue;
+      for (const field of ["input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"]) {
+        const value = usage[field];
+        if (typeof value === "number" && Number.isFinite(value)) sum += value;
+      }
     }
   }
   return sum;
@@ -79,7 +150,11 @@ export async function readClaudeStatsPanels(
 
     try {
       const cache = JSON.parse(await readFile(path, "utf8")) as StatsCache;
-      const tokens = total(cache);
+      const lastComputed =
+        typeof cache.lastComputedDate === "string" ? cache.lastComputedDate : null;
+      const tokens =
+        total(cache) +
+        (lastComputed ? await sinceComputed(root, lastComputed).catch(() => 0) : 0);
       const days = (cache.dailyActivity ?? []).filter((d) => typeof d?.date === "string").length;
 
       const daily = (cache.dailyModelTokens ?? [])
