@@ -1,7 +1,13 @@
 import "server-only";
 
 import { pool } from "@/lib/db";
-import { WINDOW_DAYS, type BoardRow, type BoardWindow } from "@/lib/board";
+import {
+  MOVEMENT_DAYS,
+  SPARK_DAYS,
+  WINDOW_DAYS,
+  type BoardRow,
+  type BoardWindow,
+} from "@/lib/board";
 
 /**
  * Read the board for one window.
@@ -24,7 +30,19 @@ export async function readBoard(
   offset = 0,
 ): Promise<BoardRow[]> {
   const { rows } = await pool.query(
-    `WITH windowed AS (
+    `WITH eligible AS (
+       /* Everyone whose latest submission is not held for review. Computed once and reused by
+          both rankings, so a flagged row cannot be absent from one and present in the other —
+          which would make every position below it move for no reason. */
+       SELECT u.id, u.handle, u.tier
+       FROM users u
+       LEFT JOIN LATERAL (
+         SELECT flagged, streak_days FROM submissions
+         WHERE user_id = u.id ORDER BY received_at DESC LIMIT 1
+       ) l ON true
+       WHERE COALESCE(l.flagged, false) = false
+     ),
+     windowed AS (
        SELECT d.user_id, d.agent,
               SUM(d.tokens)   AS tokens,
               SUM(d.cost_usd) AS cost
@@ -40,29 +58,65 @@ export async function readBoard(
        FROM windowed
        GROUP BY user_id
      ),
+     before AS (
+       /* The same window, shifted back. user_days keeps the whole daily series, so the board
+          as it stood a week ago is a query rather than a snapshot — no extra table, and no
+          waiting for history to start accumulating. */
+       SELECT d.user_id, SUM(d.tokens) AS tokens
+       FROM user_days d
+       WHERE d.day >= CURRENT_DATE - $1::int - $4::int
+         AND d.day <  CURRENT_DATE - $4::int
+       GROUP BY d.user_id
+     ),
      latest AS (
-       SELECT DISTINCT ON (user_id) user_id, streak_days, flagged
+       SELECT DISTINCT ON (user_id) user_id, streak_days
        FROM submissions
        ORDER BY user_id, received_at DESC
+     ),
+     spark_rolled AS (
+       SELECT user_id, array_agg(t ORDER BY dt) AS days, array_agg(dt ORDER BY dt) AS dates
+       FROM (
+         SELECT user_id, day AS dt, SUM(tokens) AS t
+         FROM user_days
+         WHERE day > CURRENT_DATE - $5::int
+         GROUP BY user_id, day
+       ) x
+       GROUP BY user_id
+     ),
+     ranked_now AS (
+       SELECT e.id, e.handle, e.tier, t.tokens, t.cost, t.mix,
+              ROW_NUMBER() OVER (ORDER BY (e.tier = 'verified') DESC, t.tokens DESC) AS rank
+       FROM totals t
+       JOIN eligible e ON e.id = t.user_id
+     ),
+     ranked_before AS (
+       /* Tier is today's, because no historical tier is stored. Someone who verified this week
+          therefore shows the rise that verifying earned them, which is the honest reading of
+          what changed. */
+       SELECT b.user_id,
+              ROW_NUMBER() OVER (ORDER BY (e.tier = 'verified') DESC, b.tokens DESC) AS rank
+       FROM before b
+       JOIN eligible e ON e.id = b.user_id
+       WHERE b.tokens > 0
      )
-     SELECT u.handle, u.tier, t.tokens, t.cost, t.mix,
-            COALESCE(l.streak_days, 0) AS streak_days
-     FROM totals t
-     JOIN users u ON u.id = t.user_id
-     LEFT JOIN latest l ON l.user_id = t.user_id
-     WHERE COALESCE(l.flagged, false) = false
-     /* Verified first, then tokens. A tier that is displayed but never affects position is
-        decoration: an unverified row could outrank a signed-in one, so the badge told you
-        nothing about the ranking you were reading. Signing in is the only thing that ties a
-        row to a GitHub account, so it is the only thing that can carry a ranking. */
-     ORDER BY (u.tier = 'verified') DESC, t.tokens DESC
+     SELECT r.handle, r.tier, r.tokens, r.cost, r.mix, r.rank,
+            COALESCE(l.streak_days, 0) AS streak_days,
+            rb.rank AS previous_rank,
+            sp.days AS spark_days,
+            sp.dates AS spark_dates
+     FROM ranked_now r
+     LEFT JOIN latest l  ON l.user_id = r.id
+     LEFT JOIN ranked_before rb ON rb.user_id = r.id
+     LEFT JOIN spark_rolled sp ON sp.user_id = r.id
+     ORDER BY r.rank
      LIMIT $2 OFFSET $3`,
-    [WINDOW_DAYS[window], limit, offset],
+    [WINDOW_DAYS[window], limit, offset, MOVEMENT_DAYS, SPARK_DAYS],
   );
 
-  return rows.map((r, i) => ({
-    // Rank is the position on the whole board, not within this page — page two starts at 26.
-    rank: offset + i + 1,
+  return rows.map((r) => ({
+    // Ranked in SQL now, because the previous ranking has to be computed over everyone
+    // rather than over one page: a row's movement depends on people who are not on it.
+    rank: Number(r.rank),
     handle: r.handle,
     tier: r.tier,
     tokens: Number(r.tokens),
@@ -71,5 +125,32 @@ export async function readBoard(
     mix: Object.fromEntries(
       Object.entries(r.mix as Record<string, string>).map(([a, n]) => [a, Number(n)]),
     ),
+    // null means "not ranked a week ago" — a new entrant, not a row that held position 0.
+    previousRank: r.previous_rank === null ? null : Number(r.previous_rank),
+    spark: densify(r.spark_dates as string[] | null, r.spark_days as string[] | null),
   }));
+}
+
+/**
+ * Turn the days a user actually has into one value per day, zeros included.
+ *
+ * The query returns only days with activity, because storing a row per idle day would be a
+ * lot of nothing. A sparkline needs the gaps though — without them a fortnight off looks like
+ * the bars simply moving closer together, which reads as steady work.
+ */
+function densify(dates: string[] | null, values: string[] | null): number[] {
+  const out = new Array<number>(SPARK_DAYS).fill(0);
+  if (!dates || !values) return out;
+
+  const byDay = new Map<string, number>();
+  dates.forEach((d, i) => byDay.set(String(d).slice(0, 10), Number(values[i] ?? 0)));
+
+  const today = new Date();
+  for (let i = 0; i < SPARK_DAYS; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (SPARK_DAYS - 1 - i));
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    out[i] = byDay.get(key) ?? 0;
+  }
+  return out;
 }

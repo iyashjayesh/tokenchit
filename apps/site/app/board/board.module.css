@@ -314,3 +314,64 @@
   font-weight: 800;
   letter-spacing: -0.01em;
 }
+
+/* ── Rank movement ───────────────────────────────────────────────────────── */
+
+.move {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.moveUp {
+  color: #3F8F2E;
+}
+
+.moveDown {
+  color: var(--coral, #FF5C3D);
+}
+
+/* Present but quiet: a row that has not moved should not compete with one that has. */
+.moveFlat {
+  color: var(--text-faint);
+}
+
+.moveNew {
+  background: var(--lime);
+  border: 1.5px solid var(--ink);
+  padding: 0 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+/* ── Sparkline ───────────────────────────────────────────────────────────── */
+
+.wSpark {
+  width: 130px;
+}
+
+.sparkCell {
+  padding-top: 6px;
+  padding-bottom: 4px;
+}
+
+.spark {
+  display: block;
+}
+
+.sparkBar {
+  fill: var(--ink);
+}
+
+/* Drawn at zero height, so an idle day occupies its slot without claiming activity. */
+.sparkGap {
+  fill: none;
+}
+
+.sparkEmpty {
+  color: var(--text-faint);
+}

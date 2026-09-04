@@ -14,7 +14,30 @@ export type BoardRow = {
   streakDays: number;
   /** Agent id to tokens, over the same window as the rest of the row. */
   mix: Record<string, number>;
+  /**
+   * Where this row stood a week ago, or null if it was not on the board then.
+   *
+   * Derived rather than recorded: user_days holds the whole daily series, so the same window
+   * shifted back seven days gives the ranking as it was, without a snapshot table and without
+   * waiting for history to accumulate.
+   */
+  previousRank: number | null;
+  /**
+   * Daily tokens for the last SPARK_DAYS days, oldest first, zeros included.
+   *
+   * Two people with the same total are indistinguishable on a leaderboard until you can see
+   * the shape of it — one steady, one a single enormous week. Zeros are kept rather than
+   * skipped so a gap reads as a gap instead of the bars simply moving closer together.
+   */
+  spark: number[];
 };
+
+/** A month is long enough to show a rhythm and short enough to fit beside a row. */
+export const SPARK_DAYS = 30;
+
+/** How far back "movement" looks. A week is long enough to mean something and short enough to
+ *  still be about now. */
+export const MOVEMENT_DAYS = 7;
 
 export const WINDOWS = [
   { key: "year", label: "this year" },
