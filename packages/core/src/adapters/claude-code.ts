@@ -20,7 +20,7 @@ import { walkFiles } from "./walk.js";
  * on a machine with several accounts the other three still hold real tokens, and a card
  * claiming to total your usage should not omit them because of one environment variable.
  */
-async function defaultRoots(): Promise<string[]> {
+export async function claudeRoots(): Promise<string[]> {
   const roots = new Set<string>();
 
   const configured = process.env["CLAUDE_CONFIG_DIR"];
@@ -86,7 +86,7 @@ type ClaudeLine = {
  */
 export function createClaudeCode(roots?: string[] | string): Adapter {
   const resolve = async (): Promise<string[]> =>
-    roots === undefined ? defaultRoots() : Array.isArray(roots) ? roots : [roots];
+    roots === undefined ? claudeRoots() : Array.isArray(roots) ? roots : [roots];
 
   return {
     id: "claude-code",

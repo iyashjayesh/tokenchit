@@ -50,3 +50,6 @@ export async function* readAll(
     onProgress?.({ agent: adapter.id, events });
   }
 }
+
+export { claudeRoots } from "./claude-code.js";
+export * from "./claude-stats.js";

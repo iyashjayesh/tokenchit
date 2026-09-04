@@ -4,18 +4,21 @@ import { dirname, relative, resolve } from "node:path";
 import {
   aggregate,
   buildCardSvg,
+  formatTokens,
   PRICES_GENERATED,
   sanitizeHandle,
   toCardOptions,
+  type AgentId,
   type Layout,
+  type Stats,
   type Theme,
 } from "@tokenchit/core";
-import { readAll } from "@tokenchit/core/adapters";
+import { claudeRoots, readAll, readClaudeStatsPanels } from "@tokenchit/core/adapters";
 
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { renderStats } from "../stats-view.js";
-import { bold, dim, green, grey, say, spin, under, warn } from "../ui.js";
+import { bold, dim, green, grey, note, say, spin, under, warn, yellow } from "../ui.js";
 
 const LAYOUTS = ["default", "compact"] as const satisfies readonly Layout[];
 const THEMES = ["auto", "light", "dark"] as const satisfies readonly Theme[];
@@ -90,6 +93,8 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   const svg = buildCardSvg(toCardOptions(stats, { handle, layout, theme }));
   const target = resolve(process.cwd(), out);
 
+  await explainClaudeGap(stats, config.agents);
+
   for (const line of renderStats(stats, handle, !chained)) {
     say(chained && line !== "" ? under(line.replace(/^ {2}/, "")) : line);
   }
@@ -132,4 +137,37 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   say();
 
   return 0;
+}
+
+/**
+ * Say why Claude Code's own Stats panel reads higher, before anyone has to go looking.
+ *
+ * This is the single most common question the tool produces, and it was answered only in the
+ * README — which nobody reads before running a command. It prints only when the two numbers
+ * actually disagree by enough to notice, so a machine where they agree stays quiet.
+ *
+ * To stderr, and never in --json: it is an aside about someone else's number, not part of the
+ * aggregate a caller asked for.
+ */
+async function explainClaudeGap(stats: Stats, agents: readonly AgentId[]): Promise<void> {
+  if (!agents.includes("claude-code")) return;
+
+  const ours = stats.byAgent.get("claude-code") ?? 0;
+  if (ours <= 0) return;
+
+  const panels = await readClaudeStatsPanels(await claudeRoots()).catch(() => []);
+  const theirs = panels.reduce((a, p) => a + p.tokens, 0);
+
+  // A small difference is the day still in progress, not the thing being explained.
+  if (theirs <= ours * 1.15) return;
+
+  note();
+  note(`  ${yellow("!")} ${bold("Claude Code's Stats panel will show more than this.")}`);
+  note(`      ${grey("its panel")}  ${bold(formatTokens(theirs))}`);
+  note(`      ${grey("this")}       ${bold(formatTokens(ours))}  ${grey("claude-code only")}`);
+  note();
+  note(grey("      The panel counts an API call once per streaming rewrite, and keeps totals"));
+  note(grey("      for transcripts Claude Code has since deleted. This counts one row per"));
+  note(grey("      call, from the transcripts still on disk. Neither is wrong; they answer"));
+  note(grey("      different questions — tokenchit.app explains it in full."));
 }
