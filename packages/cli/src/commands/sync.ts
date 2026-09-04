@@ -2,26 +2,19 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 
 import {
-  aggregate,
   buildCardSvg,
   formatTokens,
   PRICES_GENERATED,
   sanitizeHandle,
   toCardOptions,
-  type AgentId,
   type Layout,
-  type Stats,
   type Theme,
 } from "@tokenchit/core";
-import {
-  claudeRoots,
-  estimateUnseen,
-  readAll,
-  readClaudeStatsPanels,
-} from "@tokenchit/core/adapters";
 
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
+import { claudeContext, estimatedTotal } from "../claude-context.js";
+import { scan } from "../scan.js";
 import { renderStats } from "../stats-view.js";
 import { bold, dim, green, grey, note, say, spin, under, warn, yellow } from "../ui.js";
 
@@ -52,15 +45,16 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   const reading = spin("reading local agent logs…");
   /* Named and counted, because a scan that reports nothing looks the same as one that has
      hung. On a large corpus this walks thousands of files over several seconds. */
-  const stats = await aggregate(
-    readAll(config.agents, ({ agent, events }) =>
+  const { stats, recovered } = await scan(config.agents, {
+    // A dry run promises to write nothing, and the ledger is a file like any other.
+    write: !dryRun,
+    onProgress: ({ agent, events }) =>
       reading.update(
         events === 0
           ? `reading ${agent}…`
           : `reading ${agent}… ${events.toLocaleString()} events`,
       ),
-    ),
-  );
+  });
   reading.stop();
 
   if (stats.tokens === 0) {
@@ -95,15 +89,40 @@ export async function sync(argv: string[], chained = false): Promise<number> {
     return 0;
   }
 
-  const svg = buildCardSvg(toCardOptions(stats, { handle, layout, theme }));
+  /* Read here rather than inside the renderer: it touches the filesystem, and a function
+     that turns a Stats into strings should not also be deciding what to open. */
+  const claude = await claudeContext(stats, config.agents);
+
+  /* The card carries the same headline the panel does, tilde and all. A card that disagreed
+     with the terminal that wrote it, or with the profile it links to, is the bug this project
+     has already fixed twice — which is why both read the one helper rather than each doing
+     the arithmetic. */
+  const estimated = estimatedTotal(stats, claude);
+  const svg = buildCardSvg(
+    toCardOptions(stats, {
+      handle,
+      layout,
+      theme,
+      ...(estimated != null ? { tokens: `~${formatTokens(estimated)}` } : {}),
+    }),
+  );
   const target = resolve(process.cwd(), out);
 
-  await explainClaudeGap(stats, config.agents);
-
-  for (const line of renderStats(stats, handle, !chained)) {
+  for (const line of renderStats(stats, handle, !chained, claude)) {
     say(chained && line !== "" ? under(line.replace(/^ {2}/, "")) : line);
   }
   say();
+
+  /* Said once, and only when it did something. On a fresh install the bank is empty and this
+     is silent; it starts speaking the first time retention takes a day it had already seen,
+     which is the moment someone would otherwise notice their total quietly shrinking. */
+  if (recovered.days > 0) {
+    note(
+      `ledger restored ${recovered.days} ${recovered.days === 1 ? "day" : "days"} ` +
+        `the logs no longer hold (${formatTokens(recovered.tokens)})`,
+    );
+    say();
+  }
 
   // Never let the dollar figure imply more precision than it has. An unpriced model is not
   // a free one, and a card that quietly drops a third of someone's usage from the cost is
@@ -142,72 +161,4 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   say();
 
   return 0;
-}
-
-/**
- * Say why Claude Code's own Stats panel reads higher, before anyone has to go looking.
- *
- * This is the single most common question the tool produces, and it was answered only in the
- * README — which nobody reads before running a command. It prints only when the two numbers
- * actually disagree by enough to notice, so a machine where they agree stays quiet.
- *
- * To stderr, and never in --json: it is an aside about someone else's number, not part of the
- * aggregate a caller asked for.
- */
-async function explainClaudeGap(stats: Stats, agents: readonly AgentId[]): Promise<void> {
-  if (!agents.includes("claude-code")) return;
-
-  const ours = stats.byAgent.get("claude-code") ?? 0;
-  if (ours <= 0) return;
-
-  const panels = await readClaudeStatsPanels(await claudeRoots()).catch(() => []);
-  const theirs = panels.reduce((a, p) => a + p.tokens, 0);
-  const theirDays = panels.reduce((a, p) => a + p.days, 0);
-
-  /* Days on disk carrying claude-code, against days its cache remembers. This is the half of
-     the difference that is genuinely ours: deleted transcripts are real work we cannot read.
-     Stated as days rather than as an estimated token count, because the inflation factor
-     varied 1.15x to 2.18x across days on one corpus — there is no honest number to give. */
-  let ourDays = 0;
-  const ourDaily = new Map<string, number>();
-  for (const [day, agents] of stats.dayAgent) {
-    const cell = agents.get("claude-code");
-    if (!cell) continue;
-    ourDays++;
-    ourDaily.set(day, cell.tokens);
-  }
-
-  // A small difference is the day still in progress, not the thing being explained.
-  if (theirs <= ours * 1.15) return;
-
-  note();
-  note(`  ${yellow("!")} ${bold("Claude Code's Stats panel will show more than this.")}`);
-  note(`      ${grey("its panel")}  ${bold(formatTokens(theirs))}`);
-  note(`      ${grey("this")}       ${bold(formatTokens(ours))}  ${grey("claude-code only")}`);
-  note();
-  if (theirDays > ourDays && ourDays > 0) {
-    note(`      ${grey("days")}       ${bold(`${ourDays} of ${theirDays}`)}  ${grey("its cache remembers days your transcripts no longer have")}`);
-    note();
-  }
-
-  /* The one correction that can be made honestly. The cache overstates by a factor this
-     machine's own overlapping days reveal, so applying that factor to the days only the cache
-     has estimates what the deleted transcripts held — without adopting a figure that counts
-     records as calls. It is shown and never published: the board ranks what can be checked. */
-  const unseen = estimateUnseen(panels, ourDaily);
-  if (unseen) {
-    const [lo, hi] = unseen.spread;
-    note(
-      `      ${grey("estimate")}   ${bold(`~${formatTokens(ours + unseen.tokens)}`)}  ` +
-        `${grey(`including ${unseen.days} deleted days, at this machine's own ${unseen.ratio.toFixed(2)}x overlap`)}`,
-    );
-    note(grey(`                 ${grey(`per-day ratios ranged ${lo.toFixed(2)}x to ${hi.toFixed(2)}x, so treat it as a range`)}`));
-    note();
-  }
-
-  note(grey("      The panel counts an API call once per streaming rewrite, so its figure is"));
-  note(grey("      records summed rather than calls billed. It also keeps totals for"));
-  note(grey("      transcripts Claude Code has since deleted, which is real work this cannot"));
-  note(grey("      see. This counts one row per call, from what is still on disk — the only"));
-  note(grey("      figure that can be checked, and the only one published."));
 }

@@ -8,6 +8,7 @@ import { init } from "./commands/init.js";
 import { login, logout, whoami } from "./commands/login.js";
 import { publish } from "./commands/publish.js";
 import { recap } from "./commands/recap.js";
+import { ledger } from "./commands/ledger.js";
 import { schedule } from "./commands/schedule.js";
 import { sync } from "./commands/sync.js";
 import { bold, cyan, dim, fail, grey, muteSqliteWarning, pad, say, wordmark } from "./ui.js";
@@ -88,6 +89,24 @@ const COMMANDS: Record<string, Command> = {
       ["--json", "print the recap model instead of writing an SVG"],
       ["--dry-run", ""],
     ],
+  },
+  ledger: {
+    summary: "show the local history bank, or rebuild it",
+    flags: [
+      ["--rebuild", "discard it and re-derive from the logs still on disk"],
+      ["--yes", "required by --rebuild, which cannot be undone"],
+    ],
+    detail:
+      "Agent logs are deleted. Claude Code's cleanupPeriodDays defaults to 30, so a card built\n" +
+      "only from what is on disk reports usage since the last cleanup rather than usage since\n" +
+      "you installed anything — and that boundary moves every night.\n\n" +
+      "So every sync banks what it saw, keyed by day, agent and model, and keeps whichever\n" +
+      "reading is fuller. Once a day is recorded, retention can take the transcripts and the\n" +
+      "figure survives. The bank is local, is never uploaded on its own, and lives beside your\n" +
+      "credentials rather than in the repo.\n\n" +
+      "It cannot recover history from before it existed, and it cannot be moved between\n" +
+      "machines. --rebuild exists because a max-wins bank would otherwise keep a bad reading\n" +
+      "forever; it throws away every day the logs no longer cover.",
   },
   schedule: {
     summary: "print a cron or launchd entry to keep your row current",
@@ -221,6 +240,8 @@ async function main(): Promise<number> {
       return publish(argv, cliVersion());
     case "schedule":
       return schedule(argv);
+    case "ledger":
+      return ledger(argv);
     case "login":
       return login(argv);
     case "logout":

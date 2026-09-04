@@ -30,14 +30,19 @@ export type ClaudeStatsPanel = {
   /** Which config directory it came from, for a message that has to name one. */
   root: string;
   /**
-   * How many days of activity the cache remembers.
+   * The calendar days of activity the cache remembers.
    *
    * This is the honest half of the difference. The rewrite double-count inflates a number we
    * should not adopt, but deleted transcripts are real work we genuinely cannot see — and
    * unlike the inflation, the size of that blind spot can be stated exactly, as days rather
    * than as an invented token count.
+   *
+   * The dates themselves rather than a count of them, because a machine with several profiles
+   * has to union these before it can say how long its blind spot is. Summing per-profile
+   * counts charges a day twice when two accounts were both used on it, which on one real
+   * machine turned 75 days of history into a reported 100.
    */
-  days: number;
+  days: string[];
   /** Per-day totals, where the cache carries them. Oldest first. */
   daily: { day: string; tokens: number }[];
 };
@@ -155,7 +160,17 @@ export async function readClaudeStatsPanels(
       const tokens =
         total(cache) +
         (lastComputed ? await sinceComputed(root, lastComputed).catch(() => 0) : 0);
-      const days = (cache.dailyActivity ?? []).filter((d) => typeof d?.date === "string").length;
+      /* The dates themselves rather than a count of them, because a machine with several
+         profiles has to union these before it can say how long its blind spot is. Summing
+         per-profile counts charges a day twice when two accounts were both used on it, which
+         on one real machine turned 75 days of history into a reported 100. */
+      const days = [
+        ...new Set(
+          (cache.dailyActivity ?? [])
+            .map((d) => d?.date)
+            .filter((d): d is string => typeof d === "string"),
+        ),
+      ];
 
       const daily = (cache.dailyModelTokens ?? [])
         .filter((d): d is { date: string; tokensByModel?: Record<string, unknown> } =>
@@ -192,6 +207,10 @@ export async function readClaudeStatsPanels(
  * the result is an estimate of real work that was deleted — arrived at from this machine's
  * own overlap rather than from a constant.
  *
+ * Retention does not take a day all at once, so "the transcripts do not have it" is a matter
+ * of degree. A day whose transcripts are mostly gone is priced for the part that is gone
+ * rather than treated as present because a fragment of it survived.
+ *
  * It stays an estimate and is never published. Per-day ratios ranged 1.15x to 2.18x on one
  * corpus, so the median is a reasonable middle and not a fact; `spread` carries that range so
  * a caller can say how wide the uncertainty is rather than implying there is none.
@@ -203,7 +222,12 @@ export type UnseenEstimate = {
   ratio: number;
   /** Lowest and highest ratio seen, so the uncertainty can be stated. */
   spread: [number, number];
-  /** How many days the estimate covers. */
+  /**
+   * How many days the estimate found tokens for.
+   *
+   * Wholly-missing days and partly-rotated ones both count, because both contribute. It is
+   * therefore a count of days the estimate draws on, not of days that vanished completely.
+   */
   days: number;
 };
 
@@ -211,10 +235,13 @@ export type UnseenEstimate = {
  * A day only calibrates if we can see all of it.
  *
  * The cache is a superset of the transcripts, so a real overlap day has a ratio of at least
- * one. Below that means the cache lagged or was written mid-day; far above means the
- * transcripts for that day are already partly rotated, so the day is measuring the very loss
- * being estimated rather than the inflation. Both are excluded — an uncalibratable day must
- * not calibrate.
+ * one. Below that means the cache lagged, was written mid-day, or that a profile with no
+ * cache of its own contributed transcripts to the day; far above means the transcripts for
+ * that day are already partly rotated, so the day is measuring the very loss being estimated
+ * rather than the inflation. Both are excluded — an uncalibratable day must not calibrate.
+ *
+ * Excluded from the *median*, that is. A day above the ceiling is still priced as a loss;
+ * see the second pass below.
  */
 const RATIO_FLOOR = 1;
 const RATIO_CEILING = 5;
@@ -236,25 +263,24 @@ export function estimateUnseen(
     }
   }
 
+  /*
+   * Calibrate first, price second.
+   *
+   * These were one loop, which forced every day to be classified before there was a ratio to
+   * classify it with — and a day that could not calibrate was then dropped entirely rather
+   * than priced. Two passes cost one more walk over at most a few hundred days.
+   */
   const ratios: number[] = [];
-  let missing = 0;
-  let missingDays = 0;
-
   for (const [day, theirs] of theirDaily) {
     if (theirs <= 0) continue;
     const ours = ourDaily.get(day) ?? 0;
-
-    if (ours <= 0) {
-      missing += theirs;
-      missingDays++;
-      continue;
-    }
+    if (ours <= 0) continue;
 
     const ratio = theirs / ours;
     if (ratio >= RATIO_FLOOR && ratio <= RATIO_CEILING) ratios.push(ratio);
   }
 
-  if (ratios.length < MIN_OVERLAP_DAYS || missingDays === 0) return null;
+  if (ratios.length < MIN_OVERLAP_DAYS) return null;
 
   ratios.sort((a, b) => a - b);
   const mid = Math.floor(ratios.length / 2);
@@ -262,10 +288,105 @@ export function estimateUnseen(
     ratios.length % 2 === 0 ? (ratios[mid - 1]! + ratios[mid]!) / 2 : ratios[mid]!;
   if (!(ratio > 0)) return null;
 
+  let missing = 0;
+  let missingDays = 0;
+
+  for (const [day, theirs] of theirDaily) {
+    if (theirs <= 0) continue;
+    const ours = ourDaily.get(day) ?? 0;
+    // What the cache says this day was worth, deflated to calls rather than records.
+    const deflated = theirs / ratio;
+
+    // Nothing left on disk: the whole day is gone.
+    if (ours <= 0) {
+      missing += deflated;
+      missingDays++;
+      continue;
+    }
+
+    /*
+     * Above the ceiling a day is not inflated, it is eaten.
+     *
+     * Excluding these from the median is right — they measure the loss rather than the
+     * rewrite factor — but the first version excluded them from the estimate too, on the
+     * grounds that `ours > 0` meant the day was present. A day the cache prices at 326M
+     * against 787k of surviving transcript is 99.8% deleted, and calling it present threw
+     * away every token of it. What is missing is the deflated day less the fragment that
+     * survived; a day genuinely on disk clears the ceiling and adds nothing here.
+     */
+    if (theirs / ours <= RATIO_CEILING) continue;
+
+    const lost = deflated - ours;
+    if (lost <= 0) continue;
+    missing += lost;
+    missingDays++;
+  }
+
+  if (missingDays === 0 || missing <= 0) return null;
+
   return {
-    tokens: Math.round(missing / ratio),
+    tokens: Math.round(missing),
     ratio,
     spread: [ratios[0]!, ratios[ratios.length - 1]!],
     days: missingDays,
+  };
+}
+
+/** The three readings of the same usage, for a caller that wants to show all of them. */
+export type ClaudeReadings = {
+  /** Deduplicated, one row per API call, from transcripts still on disk. */
+  verified: number;
+  /** verified plus a calibrated estimate of days the transcripts no longer cover. */
+  estimated: number | null;
+  /** What Claude Code's own Stats panel shows, summed across every profile. */
+  panel: number;
+  /**
+   * How many days the panel covers, and how many the transcripts still do.
+   *
+   * Both distinct calendar days, so the pair is comparable. `theirs` used to be the sum of
+   * each profile's day count, which charged a day once per account that worked it.
+   */
+  days: { ours: number; theirs: number };
+  /**
+   * Days the estimate is actually built from.
+   *
+   * Not `theirs - ours`: dailyActivity spans a wider range than dailyModelTokens, so that
+   * subtraction names a number of days the estimate never priced. This is the count
+   * estimateUnseen found tokens for, partly-rotated days included.
+   */
+  estimatedDays: number;
+  /** The overlap ratio the estimate was calibrated on, and its range. */
+  calibration: { ratio: number; spread: [number, number] } | null;
+};
+
+/**
+ * The same usage, read three ways.
+ *
+ * These were presented as a warning above someone's stats — a discrepancy to be explained
+ * away, in the colour reserved for problems. They are not a problem: they are three honest
+ * answers to three different questions, and the person they belong to should see all of them
+ * as ordinary rows rather than as an apology for the smallest one.
+ */
+export function claudeReadings(
+  panels: ClaudeStatsPanel[],
+  ourDaily: Map<string, number>,
+  verified: number,
+): ClaudeReadings | null {
+  if (panels.length === 0 || verified <= 0) return null;
+
+  const panel = panels.reduce((a, p) => a + p.tokens, 0);
+  // Distinct calendar days, not the sum of per-profile counts: a Tuesday worked on two
+  // accounts is one Tuesday. `ourDaily` is keyed by day and so was always distinct, and
+  // summing on this side made the two halves of the same displayed pair incomparable.
+  const theirs = new Set(panels.flatMap((p) => p.days)).size;
+  const unseen = estimateUnseen(panels, ourDaily);
+
+  return {
+    verified,
+    estimated: unseen ? verified + unseen.tokens : null,
+    panel,
+    days: { ours: ourDaily.size, theirs },
+    estimatedDays: unseen?.days ?? 0,
+    calibration: unseen ? { ratio: unseen.ratio, spread: unseen.spread } : null,
   };
 }

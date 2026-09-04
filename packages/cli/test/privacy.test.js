@@ -25,6 +25,9 @@ const CORE_SRC = join(HERE, "..", "..", "core", "src");
 /** Run the CLI in a sandbox whose HOME contains only the fixture transcripts. */
 async function cli(args, extraEnv = {}) {
   const cwd = await mkdtemp(join(tmpdir(), "tokenchit-test-"));
+  // A throwaway config home per run. `net.isolated` publishes for real, and a real publish
+  // banks what it read — which would otherwise deposit a ledger inside the committed fixture.
+  const xdg = await mkdtemp(join(tmpdir(), "tokenchit-test-cfg-"));
   await writeFile(
     join(cwd, ".tokenchit.json"),
     JSON.stringify({ handle: "canary", agents: ["claude-code"], output: "c.svg", layout: "default", theme: "auto" }),
@@ -38,6 +41,7 @@ async function cli(args, extraEnv = {}) {
       // This machine sets CLAUDE_CONFIG_DIR, and the adapter honours it by design, so it
       // has to be cleared or the fixture home is ignored and the test reads real logs.
       CLAUDE_CONFIG_DIR: '',
+      XDG_CONFIG_HOME: xdg,
       USERPROFILE: FIXTURE_HOME,
       NO_COLOR: "1",
       ...extraEnv,

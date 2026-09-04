@@ -176,6 +176,17 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
     }
   }
 
+  /* Deliberately not checked against the daily series: it is an estimate of days that are not
+     in the series, so agreement would mean it was not doing its job. It only has to be a
+     number, and at least the figure it extends. */
+  if (p.estimatedTokens !== undefined) {
+    if (typeof p.estimatedTokens !== "number" || !Number.isFinite(p.estimatedTokens)) {
+      fail("estimatedTokens must be a number");
+    } else if (p.estimatedTokens < p.tokens) {
+      fail(`estimatedTokens ${p.estimatedTokens} is below the verified ${p.tokens}`);
+    }
+  }
+
   // The daily series is what the board actually sums, so a headline that disagrees with it
   // would put one number on the card and a different one on the board.
   if (p.days.length > 0 && daySum !== p.tokens) {

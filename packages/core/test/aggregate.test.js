@@ -372,7 +372,11 @@ test("the stats-panel reader sums a cache the way the panel does, and is quiet w
   const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
   assert.equal(panel?.tokens, 10015, "every numeric field across every model is summed");
   assert.equal(panel?.root, cfg, "the config directory is named, not the projects dir");
-  assert.equal(panel?.days, 3, "days come from dailyActivity, and only from dated entries");
+  assert.deepEqual(
+    panel?.days,
+    ["2026-06-02", "2026-06-03", "2026-09-02"],
+    "the dates themselves, from dailyActivity, and only from dated entries",
+  );
 
   // A directory with no cache at all says nothing rather than throwing.
   const bare = await mkdtemp(join(tmpdir(), "tokenchit-bare-"));
@@ -439,7 +443,7 @@ test("volume still has a sanity ceiling, well above any real day", () => {
 
 test("the unseen estimate calibrates on overlap and refuses to guess without it", async () => {
   const { estimateUnseen } = await import("@tokenchit/core/adapters");
-  const panel = (daily) => [{ tokens: 0, root: "/x", days: daily.length, daily }];
+  const panel = (daily) => [{ tokens: 0, root: "/x", days: daily.map((d) => d.day), daily }];
   const day = (n) => `2026-08-${String(n).padStart(2, "0")}`;
 
   // Six overlapping days at a clean 2x, plus two days only the cache has.
@@ -469,10 +473,26 @@ test("days that cannot calibrate are excluded rather than averaged in", async ()
   ];
   const ours = new Map([1, 2, 3, 4, 5, 6, 7, 8].map((n) => [day(n), 100]));
 
-  const est = estimateUnseen([{ tokens: 0, root: "/x", days: 9, daily }], ours);
+  const est = estimateUnseen([{ tokens: 0, root: "/x", days: [], daily }], ours);
   assert.equal(est?.ratio, 3, "only the calibratable days set the ratio");
   assert.deepEqual(est?.spread, [3, 3], "and the spread reports only those days");
-  assert.equal(est?.tokens, 300);
+
+  /*
+   * Excluded from the median, but not from the estimate.
+   *
+   * Day 8 is priced at 90,000 records against 100 tokens of surviving transcript: it is not
+   * an inflated day, it is a deleted one with a fragment left. The first version read
+   * `ours > 0` as "present" and dropped it, which on a real machine threw away 1.34b tokens
+   * across six such days. What it is worth is the deflated day less the fragment.
+   *
+   *   day 8  90,000 / 3 = 30,000, less the 100 already counted  = 29,900
+   *   day 20    900 / 3 =    300, nothing on disk               =    300
+   *
+   * Day 7 is the opposite case and must still contribute nothing: below the floor the
+   * transcripts already hold more than the cache, so there is nothing missing to price.
+   */
+  assert.equal(est?.tokens, 30_200, "a part-rotated day is priced for the part that is gone");
+  assert.equal(est?.days, 2, "and counts among the days the estimate draws on");
 });
 
 test("without enough overlap the estimate is silence, not a guess", async () => {
@@ -485,14 +505,14 @@ test("without enough overlap the estimate is silence, not a guess", async () => 
   // One overlapping day is not a calibration, and the whole point is that the correction
   // comes from this machine's own data rather than a constant.
   assert.equal(
-    estimateUnseen([{ tokens: 0, root: "/x", days: 2, daily }], new Map([["2026-08-01", 100]])),
+    estimateUnseen([{ tokens: 0, root: "/x", days: [], daily }], new Map([["2026-08-01", 100]])),
     null,
   );
 
   // Nor is there anything to estimate when nothing is missing.
   assert.equal(
     estimateUnseen(
-      [{ tokens: 0, root: "/x", days: 1, daily: [{ day: "2026-08-01", tokens: 200 }] }],
+      [{ tokens: 0, root: "/x", days: [], daily: [{ day: "2026-08-01", tokens: 200 }] }],
       new Map([["2026-08-01", 100]]),
     ),
     null,
@@ -542,4 +562,26 @@ test("the panel figure includes days the cache has not computed yet", async () =
 
   const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
   assert.equal(panel?.tokens, 1_500_000, "the cache plus only what came after it");
+});
+
+test("a day worked on two accounts is one day, not two", async () => {
+  const { claudeReadings } = await import("@tokenchit/core/adapters");
+
+  /*
+   * Someone with a work profile and a personal profile uses both on the same Tuesday. Summing
+   * each profile's day count charges that Tuesday twice — on one real machine 75 days of
+   * history were reported as 100, next to an `ours` that was distinct because it came from a
+   * Map. The two halves of one displayed pair have to be counted the same way.
+   */
+  const readings = claudeReadings(
+    [
+      { tokens: 6000, root: "/a", days: ["2026-08-01", "2026-08-02"], daily: [] },
+      { tokens: 4000, root: "/b", days: ["2026-08-02", "2026-08-03"], daily: [] },
+    ],
+    new Map([["2026-08-02", 500]]),
+    500,
+  );
+
+  assert.equal(readings?.days.theirs, 3, "four entries across two profiles, three days");
+  assert.equal(readings?.panel, 10_000, "tokens still sum across profiles");
 });
