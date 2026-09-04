@@ -210,14 +210,35 @@ code path that could set one.
 
 ```
 $ tokenchit login
-  Open https://github.com/login/device
-  and enter  WDJB-MJHT
+  Open  https://github.com/login/device
+  Code  WDJB-MJHT
+  opened your browser, copied the code — the code should already be filled in
 ✓ signed in as @octocat
 ```
 
 GitHub's **device flow** — no password, no token to paste, and no localhost callback server,
 which matters because the usual OAuth-in-a-CLI approach breaks over SSH, in containers and on
 remote dev boxes: exactly where people run coding agents.
+
+**Why not the redirect flow.** GitHub requires a `client_secret` at the token exchange even
+with PKCE, which it added in July 2025 — it does not distinguish public from confidential
+clients. Shipping that flow in a public npm package would mean publishing the secret. GitHub's
+own `gh` reaches for a localhost callback only as a fallback for Enterprise hosts without
+device flow, and embeds a secret to do it.
+
+**The code is copied and the page is opened with it pre-filled**, so there is nothing to
+retype. Both are conveniences layered over output that stands on its own: the URL and the code
+are printed first, and stay correct when a container has no clipboard tool or `xdg-open` opens
+a window nobody is looking at. `--no-clipboard` and `--no-browser` turn them off; neither runs
+without a TTY.
+
+The code is always shown, even when the page is pre-filled. RFC 8628 §3.3.1 requires it, and
+§5.4 explains why: confirming the code is how you know the device asking for access is the one
+in front of you.
+
+GitHub does not return `verification_uri_complete`, so the pre-filled URL uses a `user_code`
+query parameter the verification page accepts but does not document. That is why it is used
+for the browser launch only, and never printed in place of the URL GitHub actually sent.
 
 **No scopes are requested.** GitHub answers `GET /user` for an unscoped token, and your login
 and numeric id are all we need.

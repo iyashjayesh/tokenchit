@@ -14,7 +14,7 @@ import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { bold, dim, fail, green, grey, link, say, spin, warn, yellow } from "../ui.js";
 import { post } from "../net.js";
-import { signIn } from "./login.js";
+import { signIn, signInOptions } from "./login.js";
 
 /**
  * The only command that sends anything anywhere.
@@ -45,7 +45,7 @@ export async function publish(argv: string[], version: string): Promise<number> 
     say();
     say(`  ${bold("Sign in to publish a verified row.")}`);
     say(grey("  Skip with --anonymous; the row is then marked unverified."));
-    const result = await signIn(api);
+    const result = await signIn(api, signInOptions(argv));
     if (!result.ok) return 1;
     auth = await readAuth();
   }

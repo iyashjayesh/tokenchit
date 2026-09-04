@@ -1,6 +1,7 @@
 import { resolveApi } from "../api.js";
 import { flag } from "../args.js";
 import { readAuth, writeAuth, clearAuth, authFile } from "../auth.js";
+import { copyToClipboard, openBrowser, prefilled } from "../desktop.js";
 import { post, postForm } from "../net.js";
 import { bold, cyan, dim, fail, green, grey, say, spin, warn } from "../ui.js";
 
@@ -15,6 +16,13 @@ const DEVICE_CODE_URL = "https://github.com/login/device/code";
 const TOKEN_URL = "https://github.com/login/oauth/access_token";
 
 export type SignInResult = { ok: boolean; handle?: string };
+
+export type SignInOptions = {
+  /** Put the device code on the clipboard. On by default; --no-clipboard opts out. */
+  clipboard?: boolean;
+  /** Open the verification page. On by default at a TTY; --no-browser opts out. */
+  browser?: boolean;
+};
 
 /**
  * Prove a GitHub handle is yours, using GitHub's device flow.
@@ -31,7 +39,7 @@ export type SignInResult = { ok: boolean; handle?: string };
  * Split out from the `login` command so `publish` can call it mid-flow: signing in is a step
  * on the way to publishing, not a separate errand to be sent away on.
  */
-export async function signIn(api: string): Promise<SignInResult> {
+export async function signIn(api: string, opts: SignInOptions = {}): Promise<SignInResult> {
   const start = await postForm(DEVICE_CODE_URL, { client_id: CLIENT_ID, scope: "" });
   if (!start.ok) {
     fail(`GitHub refused the device request: ${String(start.body["error"] ?? start.status)}`);
@@ -47,11 +55,32 @@ export async function signIn(api: string): Promise<SignInResult> {
   const expiresIn = Number(start.body["expires_in"] ?? 900);
   let interval = Number(start.body["interval"] ?? 5);
 
-  // The code is the one thing the reader has to act on, so it gets its own line and the
-  // only strong colour on screen.
+  /*
+   * Printed before anything is attempted, and printed whatever happens afterwards.
+   *
+   * The clipboard and the browser are conveniences over an instruction that has to stand on
+   * its own: over SSH, in a container, or on a machine with no graphical session, both will
+   * quietly do nothing, and the person is left with exactly what they had before — a URL and
+   * a code. RFC 8628 requires the code be shown in any case, as a phishing mitigation: the
+   * point is to confirm the device asking is the one in front of you.
+   */
   say();
   say(`  Open  ${bold(verifyUrl)}`);
   say(`  Code  ${bold(cyan(userCode))}`);
+
+  const copied = opts.clipboard === false ? false : await copyToClipboard(userCode);
+
+  // Only at a terminal. Launching a browser from a cron entry or a CI job is at best useless
+  // and at worst a window opening on somebody's unattended desktop.
+  const opened =
+    opts.browser === false || !process.stdout.isTTY
+      ? false
+      : await openBrowser(prefilled(verifyUrl, userCode));
+
+  if (copied || opened) {
+    const did = [opened && "opened your browser", copied && "copied the code"].filter(Boolean);
+    say(grey(`  ${did.join(", ")}${opened ? " — the code should already be filled in" : ""}`));
+  }
   say();
 
   const spinner = spin(
@@ -149,6 +178,7 @@ export async function signIn(api: string): Promise<SignInResult> {
 
 export async function login(argv: string[]): Promise<number> {
   const api = resolveApi(flag(argv, "--api"));
+  const opts = signInOptions(argv);
 
   const existing = await readAuth();
   if (existing && !argv.includes("--force")) {
@@ -160,7 +190,7 @@ export async function login(argv: string[]): Promise<number> {
     return 0;
   }
 
-  const result = await signIn(api);
+  const result = await signIn(api, opts);
   if (!result.ok) return 1;
 
   say();
@@ -184,5 +214,11 @@ export async function whoami(): Promise<number> {
   say(`@${auth.handle} ${dim(`· ${auth.api} · since ${auth.createdAt.slice(0, 10)}`)}`);
   return 0;
 }
+
+/** Reads the two opt-outs. Both default on, so absence means enabled. */
+export const signInOptions = (argv: string[]): SignInOptions => ({
+  clipboard: !argv.includes("--no-clipboard"),
+  browser: !argv.includes("--no-browser"),
+});
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
