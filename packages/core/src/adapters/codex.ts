@@ -31,8 +31,8 @@ type CodexLine = {
  * Codex stores rollout files under `sessions/YYYY/MM/DD/`, and reports usage as a running
  * total that grows with every turn — verified on a real session as 132 monotonically
  * increasing `token_count` events from 29,781 up to 12,302,532. Summing those events would
- * overcount by orders of magnitude, so each file contributes exactly one event carrying its
- * final total.
+ * overcount by orders of magnitude, so each file contributes one event carrying the growth
+ * across that file: its final total less the value it started from.
  *
  * The consequence is a known coarseness we do not paper over: a Codex session that spans
  * midnight lands entirely on the date of its last turn, because a cumulative counter cannot
@@ -74,6 +74,18 @@ async function lastTotal(file: string): Promise<UsageEvent | null> {
   });
 
   let usage: TokenUsage | null = null;
+  /*
+   * The counter's value before this session did any work.
+   *
+   * A fresh rollout's first token_count already reflects its first turn — around 20-30k on
+   * real sessions — so subtracting it costs one turn, measured at 0.42% across a real corpus.
+   * A resumed rollout starts at whatever the previous session reached, and taking the final
+   * total would then count all of that again. Every resume compounds, which is what a chain
+   * of 42M, 2.8B, 24.6B, 42.4B codex days looks like from the outside.
+   *
+   * Subtracting the baseline is right in both cases and cheap in the harmless one.
+   */
+  let baseline: TokenUsage | null = null;
   let at: string | undefined;
   // Codex names the model per turn, not per session, so the last turn wins — which is also
   // the turn the final cumulative total belongs to.
@@ -100,6 +112,7 @@ async function lastTotal(file: string): Promise<UsageEvent | null> {
     const total = row.payload.info?.total_token_usage;
     if (!total) continue;
 
+    baseline ??= total;
     usage = total;
     at = row.timestamp;
   }
@@ -109,17 +122,25 @@ async function lastTotal(file: string): Promise<UsageEvent | null> {
   const ts = at ? new Date(at) : null;
   if (!ts || Number.isNaN(ts.getTime())) return null;
 
+  /*
+   * The growth across this file, not its final reading. Clamped at zero because a counter is
+   * only assumed to rise, and a file that contradicts that should contribute nothing rather
+   * than a negative.
+   */
+  const grew = (field: keyof TokenUsage) =>
+    Math.max(0, (usage![field] ?? 0) - (baseline === usage ? 0 : (baseline?.[field] ?? 0)));
+
   // Codex reports cached input inside `input_tokens`, not beside it, so subtracting keeps
   // the four buckets disjoint and the sum equal to the total it reports.
-  const cacheRead = usage.cached_input_tokens ?? 0;
-  const input = Math.max(0, (usage.input_tokens ?? 0) - cacheRead);
+  const cacheRead = grew("cached_input_tokens");
+  const input = Math.max(0, grew("input_tokens") - cacheRead);
 
   return {
       agent: "codex",
       ts,
       model,
       input,
-      output: usage.output_tokens ?? 0,
+      output: grew("output_tokens"),
       cacheWrite: 0,
       cacheRead,
   };
