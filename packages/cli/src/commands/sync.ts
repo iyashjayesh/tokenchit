@@ -42,7 +42,17 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   // Thousands of transcripts take a few seconds to walk. Silence over that long reads as a
   // hang, and the spinner writes to stderr so `--json` stays pipeable.
   const reading = spin("reading local agent logs…");
-  const stats = await aggregate(readAll(config.agents));
+  /* Named and counted, because a scan that reports nothing looks the same as one that has
+     hung. On a large corpus this walks thousands of files over several seconds. */
+  const stats = await aggregate(
+    readAll(config.agents, ({ agent, events }) =>
+      reading.update(
+        events === 0
+          ? `reading ${agent}…`
+          : `reading ${agent}… ${events.toLocaleString()} events`,
+      ),
+    ),
+  );
   reading.stop();
 
   if (stats.tokens === 0) {

@@ -176,8 +176,17 @@ export function spin(label: string): Spinner {
   };
 
   return {
+    /*
+     * Redraws immediately rather than waiting for the next frame.
+     *
+     * A label that changes and reverts inside one 80ms tick is never drawn at all, which is
+     * how a fast adapter can finish invisibly and leave the previous one's name on screen —
+     * so a hang in the quiet one would be blamed on the loud one. Terminal writes are cheap;
+     * being wrong about where the time is going is not.
+     */
     update: (next: string) => {
       text = next;
+      draw();
     },
     done: (final?: string) => {
       clear();
