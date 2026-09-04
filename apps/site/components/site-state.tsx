@@ -31,8 +31,15 @@ type SiteState = {
 
 const Ctx = createContext<SiteState | null>(null);
 
-export function SiteStateProvider({ children }: { children: ReactNode }) {
-  const [handle, setHandleRaw] = useState(DEFAULT_HANDLE);
+export function SiteStateProvider({
+  children,
+  initialHandle = DEFAULT_HANDLE,
+}: {
+  children: ReactNode;
+  /** Whoever the server picked off the board for the preview. */
+  initialHandle?: string;
+}) {
+  const [handle, setHandleRaw] = useState(initialHandle);
 
   const setHandle = useCallback((raw: string) => {
     setHandleRaw(sanitizeHandle(raw));

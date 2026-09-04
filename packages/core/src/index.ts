@@ -8,6 +8,7 @@
  * happened the first time this was one barrel.
  */
 export * from "./agent-icons.js";
+export * from "./svg.js";
 export * from "./card-svg.js";
 export * from "./types.js";
 export * from "./aggregate.js";

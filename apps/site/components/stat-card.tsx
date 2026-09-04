@@ -1,8 +1,8 @@
 "use client";
 
-import { agentMark, ICON_VIEWBOX } from "@tokenchit/core";
+import { agentMark, CARD_HOST, formatShare, ICON_VIEWBOX } from "@tokenchit/core";
 
-import { DEFAULT_HANDLE } from "@/lib/sample-data";
+import type { Featured } from "@/lib/featured";
 import { useSiteState } from "./site-state";
 import styles from "./stat-card.module.css";
 
@@ -19,23 +19,14 @@ import styles from "./stat-card.module.css";
  */
 const MIX_FILLS = ["var(--lime)", "var(--ink)", "var(--seg-2)", "var(--seg-3)"];
 
-export type PreviewFigures = {
-  tokens: string;
-  spend: string;
-  streak: string;
-  mix: { agent: string; pct: number }[];
-  syncedAt: string;
-  /** True when these came from a published profile rather than the sample fallback. */
-  real: boolean;
-};
 
-export function StatCard({ preview }: { preview: PreviewFigures }) {
+export function StatCard({ preview }: { preview: Featured }) {
   const { handle } = useSiteState();
 
-  /* The figures belong to the default handle. Typing another name changes whose card this
-     looks like but not whose numbers these are, and saying so is the difference between a
-     preview and a false claim about somebody. */
-  const borrowed = preview.real && handle !== DEFAULT_HANDLE;
+  /* The figures belong to whoever the server featured. Typing another name changes whose card
+     this looks like but not whose numbers these are, and saying so is the difference between
+     a preview and a false claim about somebody. */
+  const borrowed = preview.real && handle !== preview.handle;
 
   return (
     <div className={styles.card}>
@@ -74,13 +65,13 @@ export function StatCard({ preview }: { preview: PreviewFigures }) {
               {/* The card sits on a light ground, so the light colour is always the right one. */}
               <path d={agentMark(m.agent).path} fill={agentMark(m.agent).light} />
             </svg>
-            {m.agent} {m.pct}%
+            {m.agent} {formatShare(m.pct)}
           </span>
         ))}
       </div>
 
       <div className={styles.footer}>
-        <span>{borrowed ? `@${DEFAULT_HANDLE}'S FIGURES` : "TOKENCHIT.APP"}</span>
+        <span>{borrowed ? `@${preview.handle}'S FIGURES` : CARD_HOST}</span>
         <span>{preview.syncedAt}</span>
       </div>
     </div>
