@@ -101,6 +101,23 @@ logs that no longer exist. The cache is not a usable substitute, because it carr
 inflation described above and the factor varies day to day — between 1.15x and 2.18x on the
 days measured — so there is no constant to divide out.
 
+**Why not just report the panel's number?** Three reasons, and each is enough on its own.
+
+It is not billed tokens — it is records summed. Adopting it would mean publishing a figure
+nobody was charged for.
+
+It exists only for Claude Code. Codex and OpenCode have no equivalent cache, so a total that
+mixed one inflated agent with two honest ones would be incoherent, and on the board someone
+whose cache happened to survive would outrank someone whose did not, for identical work.
+
+It would fail this project's own validation. Submissions are bounded by cost per token, with a
+floor at the cheapest cache-read rate any model offers. Roughly doubling the tokens while the
+cost stays real pushes that ratio below the floor, and the payload is rejected.
+
+What *is* reported is the coverage gap, because it can be stated exactly: `sync` prints how
+many days of transcripts are on disk against how many days the cache remembers. That names the
+blind spot in days rather than inventing a token count for it.
+
 **Copilot CLI and Gemini CLI are detected but cannot be counted.** Copilot records only a
 live context-window gauge, never a cumulative total; Gemini's chat transcripts carry no token
 counts at all. `init` says so out loud rather than silently omitting them — if either starts

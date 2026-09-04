@@ -349,12 +349,21 @@ test("the stats-panel reader sums a cache the way the panel does, and is quiet w
         "claude-opus-5": { inputTokens: 1000, outputTokens: 500, cacheReadInputTokens: 8500 },
         "claude-haiku-4-5": { inputTokens: 10, outputTokens: 5 },
       },
+      // How many days it remembers is the honest half of the difference: deleted transcripts
+      // are real work, and the size of that blind spot can be stated exactly as days.
+      dailyActivity: [
+        { date: "2026-06-02" },
+        { date: "2026-06-03" },
+        { date: "2026-09-02" },
+        { messageCount: 4 },
+      ],
     }),
   );
 
   const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
   assert.equal(panel?.tokens, 10015, "every numeric field across every model is summed");
   assert.equal(panel?.root, cfg, "the config directory is named, not the projects dir");
+  assert.equal(panel?.days, 3, "days come from dailyActivity, and only from dated entries");
 
   // A directory with no cache at all says nothing rather than throwing.
   const bare = await mkdtemp(join(tmpdir(), "tokenchit-bare-"));

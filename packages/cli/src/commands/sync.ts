@@ -157,6 +157,14 @@ async function explainClaudeGap(stats: Stats, agents: readonly AgentId[]): Promi
 
   const panels = await readClaudeStatsPanels(await claudeRoots()).catch(() => []);
   const theirs = panels.reduce((a, p) => a + p.tokens, 0);
+  const theirDays = panels.reduce((a, p) => a + p.days, 0);
+
+  /* Days on disk carrying claude-code, against days its cache remembers. This is the half of
+     the difference that is genuinely ours: deleted transcripts are real work we cannot read.
+     Stated as days rather than as an estimated token count, because the inflation factor
+     varied 1.15x to 2.18x across days on one corpus — there is no honest number to give. */
+  let ourDays = 0;
+  for (const agents of stats.dayAgent.values()) if (agents.has("claude-code")) ourDays++;
 
   // A small difference is the day still in progress, not the thing being explained.
   if (theirs <= ours * 1.15) return;
@@ -166,8 +174,14 @@ async function explainClaudeGap(stats: Stats, agents: readonly AgentId[]): Promi
   note(`      ${grey("its panel")}  ${bold(formatTokens(theirs))}`);
   note(`      ${grey("this")}       ${bold(formatTokens(ours))}  ${grey("claude-code only")}`);
   note();
-  note(grey("      The panel counts an API call once per streaming rewrite, and keeps totals"));
-  note(grey("      for transcripts Claude Code has since deleted. This counts one row per"));
-  note(grey("      call, from the transcripts still on disk. Neither is wrong; they answer"));
-  note(grey("      different questions — tokenchit.app explains it in full."));
+  if (theirDays > ourDays && ourDays > 0) {
+    note(`      ${grey("days")}       ${bold(`${ourDays} of ${theirDays}`)}  ${grey("its cache remembers days your transcripts no longer have")}`);
+    note();
+  }
+
+  note(grey("      The panel counts an API call once per streaming rewrite, so its figure is"));
+  note(grey("      records summed rather than calls billed. It also keeps totals for"));
+  note(grey("      transcripts Claude Code has since deleted, which is real work this cannot"));
+  note(grey("      see. This counts one row per call, from what is still on disk — a figure"));
+  note(grey("      that can be checked. tokenchit.app explains both halves in full."));
 }

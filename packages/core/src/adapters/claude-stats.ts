@@ -25,9 +25,21 @@ export type ClaudeStatsPanel = {
   tokens: number;
   /** Which config directory it came from, for a message that has to name one. */
   root: string;
+  /**
+   * How many days of activity the cache remembers.
+   *
+   * This is the honest half of the difference. The rewrite double-count inflates a number we
+   * should not adopt, but deleted transcripts are real work we genuinely cannot see — and
+   * unlike the inflation, the size of that blind spot can be stated exactly, as days rather
+   * than as an invented token count.
+   */
+  days: number;
 };
 
-type StatsCache = { modelUsage?: Record<string, Record<string, unknown>> };
+type StatsCache = {
+  modelUsage?: Record<string, Record<string, unknown>>;
+  dailyActivity?: { date?: unknown }[];
+};
 
 /** Sum the per-model totals the way the panel does. */
 function total(cache: StatsCache): number {
@@ -65,7 +77,8 @@ export async function readClaudeStatsPanels(
     try {
       const cache = JSON.parse(await readFile(path, "utf8")) as StatsCache;
       const tokens = total(cache);
-      if (tokens > 0) panels.push({ tokens, root: dir });
+      const days = (cache.dailyActivity ?? []).filter((d) => typeof d?.date === "string").length;
+      if (tokens > 0) panels.push({ tokens, root: dir, days });
     } catch {
       /* absent, unreadable, or a shape we do not recognise — all mean "cannot say" */
     }
