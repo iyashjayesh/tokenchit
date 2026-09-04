@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { GithubMark } from "./github-mark";
@@ -8,14 +9,20 @@ import { PRIMARY_COMMAND, VERSION_LABEL } from "@/lib/cli";
 
 const LOGIN = PRIMARY_COMMAND;
 
-// Root-relative, not bare fragments: these render on /u/<handle> and /board too, where a
-// bare "#card" points at an anchor that does not exist on the page.
+/*
+ * Two destinations, not five.
+ *
+ * Verify, privacy and recap were anchors into the homepage — three links that scroll you
+ * somewhere on a page you may not be on, competing for attention with the two things anyone
+ * actually navigates to. The sections still exist and still have their ids; they are reached
+ * by reading the page, which is what a one-page site is for.
+ *
+ * Root-relative rather than bare fragments: these render on /u/<handle> and /board too, where
+ * "#card" would point at an anchor that does not exist on the page.
+ */
 const NAV = [
   { href: "/#card", label: "card" },
   { href: "/board", label: "board" },
-  { href: "/#verification", label: "verify" },
-  { href: "/#privacy", label: "privacy" },
-  { href: "/#recap", label: "recap" },
 ];
 
 /**
@@ -49,7 +56,11 @@ export function SiteHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
-        <span className={styles.wordmark}>tokenchit</span>
+        {/* The wordmark is the way home, which is what every reader already assumes. It was
+            inert on /board and /u/<handle> — the two pages where someone most needs it. */}
+        <Link href="/" className={styles.home} aria-label="tokenchit home">
+          <span className={styles.wordmark}>tokenchit</span>
+        </Link>
         <span className={styles.version}>{VERSION_LABEL}</span>
       </div>
 

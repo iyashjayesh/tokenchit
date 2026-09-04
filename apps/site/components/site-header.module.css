@@ -13,6 +13,18 @@
   gap: 12px;
 }
 
+/* The anchor wraps the badge; the badge keeps its own shadow and colour. */
+.home {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.home:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
 .wordmark {
   display: inline-block;
   padding: 10px 16px;

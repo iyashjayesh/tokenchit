@@ -18,7 +18,11 @@ import { WINDOW_DAYS, type BoardRow, type BoardWindow } from "@/lib/board";
  * Streak is the exception and is deliberately not windowed: it is a current-streak count, and
  * "your streak, but only counting last week" is not something anyone means.
  */
-export async function readBoard(window: BoardWindow, limit = 25): Promise<BoardRow[]> {
+export async function readBoard(
+  window: BoardWindow,
+  limit = 25,
+  offset = 0,
+): Promise<BoardRow[]> {
   const { rows } = await pool.query(
     `WITH windowed AS (
        SELECT d.user_id, d.agent,
@@ -52,12 +56,13 @@ export async function readBoard(window: BoardWindow, limit = 25): Promise<BoardR
         nothing about the ranking you were reading. Signing in is the only thing that ties a
         row to a GitHub account, so it is the only thing that can carry a ranking. */
      ORDER BY (u.tier = 'verified') DESC, t.tokens DESC
-     LIMIT $2`,
-    [WINDOW_DAYS[window], limit],
+     LIMIT $2 OFFSET $3`,
+    [WINDOW_DAYS[window], limit, offset],
   );
 
   return rows.map((r, i) => ({
-    rank: i + 1,
+    // Rank is the position on the whole board, not within this page — page two starts at 26.
+    rank: offset + i + 1,
     handle: r.handle,
     tier: r.tier,
     tokens: Number(r.tokens),
