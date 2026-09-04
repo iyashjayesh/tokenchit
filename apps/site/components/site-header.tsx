@@ -10,20 +10,16 @@ import { PRIMARY_COMMAND, VERSION_LABEL } from "@/lib/cli";
 const LOGIN = PRIMARY_COMMAND;
 
 /*
- * Two destinations, not five.
+ * One destination.
  *
- * Verify, privacy and recap were anchors into the homepage — three links that scroll you
- * somewhere on a page you may not be on, competing for attention with the two things anyone
- * actually navigates to. The sections still exist and still have their ids; they are reached
- * by reading the page, which is what a one-page site is for.
+ * This was five links, then two. "Card" pointed at a section of the homepage, which is not
+ * somewhere anyone navigates to — it is somewhere you arrive by reading. The leaderboard is
+ * the only page on this site that is not the homepage, so it is the only thing a nav has to
+ * do, and it says what it is rather than making the reader guess what "board" means.
  *
- * Root-relative rather than bare fragments: these render on /u/<handle> and /board too, where
- * "#card" would point at an anchor that does not exist on the page.
+ * The sections all still exist and still have their ids. The wordmark is the way home.
  */
-const NAV = [
-  { href: "/#card", label: "card" },
-  { href: "/board", label: "board" },
-];
+const NAV = [{ href: "/board", label: "leader board" }];
 
 /**
  * The header's one action.

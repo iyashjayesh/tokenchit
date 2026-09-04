@@ -61,6 +61,13 @@
   text-transform: uppercase;
 }
 
+/* "Leader board" is two words at 0.1em tracking, sat beside a button in a single-row header.
+   Left to wrap it breaks across two lines on a narrow window and drags the row's height with
+   it — one label should not be able to change the shape of the header. */
+.nav a {
+  white-space: nowrap;
+}
+
 /* Press physics unique to this button: the shadow is spent as the button travels
    into it, so rest/hover/active read as one solid object being pushed down. */
 .signIn {
