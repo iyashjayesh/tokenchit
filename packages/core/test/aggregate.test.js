@@ -427,3 +427,65 @@ test("volume still has a sanity ceiling, well above any real day", () => {
 
   assert.ok(validatePayload(absurd).length > 0, "half a trillion tokens in a day is not work");
 });
+
+test("the unseen estimate calibrates on overlap and refuses to guess without it", async () => {
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+  const panel = (daily) => [{ tokens: 0, root: "/x", days: daily.length, daily }];
+  const day = (n) => `2026-08-${String(n).padStart(2, "0")}`;
+
+  // Six overlapping days at a clean 2x, plus two days only the cache has.
+  const overlap = [1, 2, 3, 4, 5, 6].map((n) => ({ day: day(n), tokens: 200 }));
+  const gone = [{ day: day(20), tokens: 600 }, { day: day(21), tokens: 400 }];
+  const ours = new Map([1, 2, 3, 4, 5, 6].map((n) => [day(n), 100]));
+
+  const est = estimateUnseen(panel([...overlap, ...gone]), ours);
+  assert.equal(est?.ratio, 2, "the median of six clean 2x days is 2x");
+  assert.equal(est?.days, 2, "only the days with no transcript count as missing");
+  assert.equal(est?.tokens, 500, "1000 cache tokens deflated by 2x is 500 real ones");
+});
+
+test("days that cannot calibrate are excluded rather than averaged in", async () => {
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+  const day = (n) => `2026-08-${String(n).padStart(2, "0")}`;
+
+  // A ratio below 1 means the cache lagged; a huge one means that day's transcripts are
+  // already partly rotated, so it measures the very loss being estimated. Comparing each
+  // config directory against a total spanning all of them produced exactly these, from
+  // 0.00x to 414x, and dragged the median with them.
+  const daily = [
+    ...[1, 2, 3, 4, 5, 6].map((n) => ({ day: day(n), tokens: 300 })), // clean 3x
+    { day: day(7), tokens: 10 }, // 0.1x — cache lagged
+    { day: day(8), tokens: 90_000 }, // 900x — transcripts already rotated
+    { day: day(20), tokens: 900 }, // missing
+  ];
+  const ours = new Map([1, 2, 3, 4, 5, 6, 7, 8].map((n) => [day(n), 100]));
+
+  const est = estimateUnseen([{ tokens: 0, root: "/x", days: 9, daily }], ours);
+  assert.equal(est?.ratio, 3, "only the calibratable days set the ratio");
+  assert.deepEqual(est?.spread, [3, 3], "and the spread reports only those days");
+  assert.equal(est?.tokens, 300);
+});
+
+test("without enough overlap the estimate is silence, not a guess", async () => {
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+  const daily = [
+    { day: "2026-08-01", tokens: 200 },
+    { day: "2026-08-20", tokens: 900 },
+  ];
+
+  // One overlapping day is not a calibration, and the whole point is that the correction
+  // comes from this machine's own data rather than a constant.
+  assert.equal(
+    estimateUnseen([{ tokens: 0, root: "/x", days: 2, daily }], new Map([["2026-08-01", 100]])),
+    null,
+  );
+
+  // Nor is there anything to estimate when nothing is missing.
+  assert.equal(
+    estimateUnseen(
+      [{ tokens: 0, root: "/x", days: 1, daily: [{ day: "2026-08-01", tokens: 200 }] }],
+      new Map([["2026-08-01", 100]]),
+    ),
+    null,
+  );
+});

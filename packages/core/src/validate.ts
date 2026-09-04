@@ -50,10 +50,16 @@ export const LIMITS = {
    * What remains here is the arithmetically impossible: negative figures, dates in the
    * future, a headline that disagrees with its own series, a cost-per-token outside what any
    * real model can produce, and volumes so large they indicate corruption rather than work.
+   *
+   * Raised twice now, both times because a real person was refused. The lesson each time was
+   * the same: a number set from the machines we happen to have seen will be wrong for the
+   * next machine, and being wrong here costs someone their submission. A trillion tokens in
+   * one day is not a judgement about heavy use — it is the point where the figure stops
+   * describing work and starts describing a corrupt file.
    */
-  maxTokensPerDay: 100_000_000_000,
-  maxCostPerDay: 50_000,
-  maxCostTotal: 50_000 * 365,
+  maxTokensPerDay: 1_000_000_000_000,
+  maxCostPerDay: 500_000,
+  maxCostTotal: 500_000 * 365,
   /** Arithmetic floor: the cheapest cache-read rate in the price table. */
   minCostPerToken: 5e-9,
   maxCostPerToken: 0.1,
@@ -77,8 +83,8 @@ export const LIMITS = {
  * agents at once. It is a number to revise as more real days are seen, not a constant.
  */
 export const REVIEW = {
-  tokensPerDay: 15_000_000_000,
-  costPerDay: 10_000,
+  tokensPerDay: 100_000_000_000,
+  costPerDay: 100_000,
 } as const;
 
 /**

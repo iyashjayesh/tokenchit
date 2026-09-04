@@ -115,8 +115,28 @@ floor at the cheapest cache-read rate any model offers. Roughly doubling the tok
 cost stays real pushes that ratio below the floor, and the payload is rejected.
 
 What *is* reported is the coverage gap, because it can be stated exactly: `sync` prints how
-many days of transcripts are on disk against how many days the cache remembers. That names the
-blind spot in days rather than inventing a token count for it.
+many days of transcripts are on disk against how many days the cache remembers.
+
+And there is one correction that can be made honestly. On days where both sources exist, the
+cache's figure divided by the deduplicated figure is how much *this machine's* cache
+overstates. Apply that median ratio to the days only the cache has, and the result estimates
+what the deleted transcripts held — derived from the machine's own overlap rather than from a
+constant:
+
+```
+    its panel  27.8B
+    this       10.7B  claude-code only
+    days       41 of 98
+    estimate   ~14.4B  including 35 deleted days, at this machine's own 1.87x overlap
+               per-day ratios ranged 1.04x to 4.92x, so treat it as a range
+```
+
+Days that cannot calibrate are excluded rather than averaged in: a ratio below 1 means the
+cache lagged, and a very large one means that day's transcripts are already partly rotated, so
+it measures the loss being estimated rather than the inflation. Without at least five
+calibratable days there is no estimate at all — silence beats a guess.
+
+The estimate is shown and never published. The board ranks what can be checked.
 
 **Copilot CLI and Gemini CLI are detected but cannot be counted.** Copilot records only a
 live context-window gauge, never a cumulative total; Gemini's chat transcripts carry no token

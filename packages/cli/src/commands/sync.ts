@@ -13,7 +13,12 @@ import {
   type Stats,
   type Theme,
 } from "@tokenchit/core";
-import { claudeRoots, readAll, readClaudeStatsPanels } from "@tokenchit/core/adapters";
+import {
+  claudeRoots,
+  estimateUnseen,
+  readAll,
+  readClaudeStatsPanels,
+} from "@tokenchit/core/adapters";
 
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
@@ -164,7 +169,13 @@ async function explainClaudeGap(stats: Stats, agents: readonly AgentId[]): Promi
      Stated as days rather than as an estimated token count, because the inflation factor
      varied 1.15x to 2.18x across days on one corpus — there is no honest number to give. */
   let ourDays = 0;
-  for (const agents of stats.dayAgent.values()) if (agents.has("claude-code")) ourDays++;
+  const ourDaily = new Map<string, number>();
+  for (const [day, agents] of stats.dayAgent) {
+    const cell = agents.get("claude-code");
+    if (!cell) continue;
+    ourDays++;
+    ourDaily.set(day, cell.tokens);
+  }
 
   // A small difference is the day still in progress, not the thing being explained.
   if (theirs <= ours * 1.15) return;
@@ -179,9 +190,24 @@ async function explainClaudeGap(stats: Stats, agents: readonly AgentId[]): Promi
     note();
   }
 
+  /* The one correction that can be made honestly. The cache overstates by a factor this
+     machine's own overlapping days reveal, so applying that factor to the days only the cache
+     has estimates what the deleted transcripts held — without adopting a figure that counts
+     records as calls. It is shown and never published: the board ranks what can be checked. */
+  const unseen = estimateUnseen(panels, ourDaily);
+  if (unseen) {
+    const [lo, hi] = unseen.spread;
+    note(
+      `      ${grey("estimate")}   ${bold(`~${formatTokens(ours + unseen.tokens)}`)}  ` +
+        `${grey(`including ${unseen.days} deleted days, at this machine's own ${unseen.ratio.toFixed(2)}x overlap`)}`,
+    );
+    note(grey(`                 ${grey(`per-day ratios ranged ${lo.toFixed(2)}x to ${hi.toFixed(2)}x, so treat it as a range`)}`));
+    note();
+  }
+
   note(grey("      The panel counts an API call once per streaming rewrite, so its figure is"));
   note(grey("      records summed rather than calls billed. It also keeps totals for"));
   note(grey("      transcripts Claude Code has since deleted, which is real work this cannot"));
-  note(grey("      see. This counts one row per call, from what is still on disk — a figure"));
-  note(grey("      that can be checked. tokenchit.app explains both halves in full."));
+  note(grey("      see. This counts one row per call, from what is still on disk — the only"));
+  note(grey("      figure that can be checked, and the only one published."));
 }
