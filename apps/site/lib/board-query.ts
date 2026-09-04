@@ -1,7 +1,13 @@
 import "server-only";
 
 import { pool } from "@/lib/db";
-import { MOVEMENT_DAYS, WINDOW_DAYS, type BoardRow, type BoardWindow } from "@/lib/board";
+import {
+  MOVEMENT_DAYS,
+  SPARK_DAYS,
+  WINDOW_DAYS,
+  type BoardRow,
+  type BoardWindow,
+} from "@/lib/board";
 
 /**
  * Read the board for one window.
@@ -67,6 +73,16 @@ export async function readBoard(
        FROM submissions
        ORDER BY user_id, received_at DESC
      ),
+     spark_rolled AS (
+       SELECT user_id, array_agg(t ORDER BY dt) AS days, array_agg(dt ORDER BY dt) AS dates
+       FROM (
+         SELECT user_id, day AS dt, SUM(tokens) AS t
+         FROM user_days
+         WHERE day > CURRENT_DATE - $5::int
+         GROUP BY user_id, day
+       ) x
+       GROUP BY user_id
+     ),
      ranked_now AS (
        SELECT e.id, e.handle, e.tier, t.tokens, t.cost, t.mix,
               ROW_NUMBER() OVER (ORDER BY (e.tier = 'verified') DESC, t.tokens DESC) AS rank
@@ -85,13 +101,16 @@ export async function readBoard(
      )
      SELECT r.handle, r.tier, r.tokens, r.cost, r.mix, r.rank,
             COALESCE(l.streak_days, 0) AS streak_days,
-            rb.rank AS previous_rank
+            rb.rank AS previous_rank,
+            sp.days AS spark_days,
+            sp.dates AS spark_dates
      FROM ranked_now r
      LEFT JOIN latest l  ON l.user_id = r.id
      LEFT JOIN ranked_before rb ON rb.user_id = r.id
+     LEFT JOIN spark_rolled sp ON sp.user_id = r.id
      ORDER BY r.rank
      LIMIT $2 OFFSET $3`,
-    [WINDOW_DAYS[window], limit, offset, MOVEMENT_DAYS],
+    [WINDOW_DAYS[window], limit, offset, MOVEMENT_DAYS, SPARK_DAYS],
   );
 
   return rows.map((r) => ({
@@ -108,5 +127,30 @@ export async function readBoard(
     ),
     // null means "not ranked a week ago" — a new entrant, not a row that held position 0.
     previousRank: r.previous_rank === null ? null : Number(r.previous_rank),
+    spark: densify(r.spark_dates as string[] | null, r.spark_days as string[] | null),
   }));
+}
+
+/**
+ * Turn the days a user actually has into one value per day, zeros included.
+ *
+ * The query returns only days with activity, because storing a row per idle day would be a
+ * lot of nothing. A sparkline needs the gaps though — without them a fortnight off looks like
+ * the bars simply moving closer together, which reads as steady work.
+ */
+function densify(dates: string[] | null, values: string[] | null): number[] {
+  const out = new Array<number>(SPARK_DAYS).fill(0);
+  if (!dates || !values) return out;
+
+  const byDay = new Map<string, number>();
+  dates.forEach((d, i) => byDay.set(String(d).slice(0, 10), Number(values[i] ?? 0)));
+
+  const today = new Date();
+  for (let i = 0; i < SPARK_DAYS; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (SPARK_DAYS - 1 - i));
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    out[i] = byDay.get(key) ?? 0;
+  }
+  return out;
 }

@@ -347,3 +347,31 @@
   font-size: 9px;
   text-transform: uppercase;
 }
+
+/* ── Sparkline ───────────────────────────────────────────────────────────── */
+
+.wSpark {
+  width: 130px;
+}
+
+.sparkCell {
+  padding-top: 6px;
+  padding-bottom: 4px;
+}
+
+.spark {
+  display: block;
+}
+
+.sparkBar {
+  fill: var(--ink);
+}
+
+/* Drawn at zero height, so an idle day occupies its slot without claiming activity. */
+.sparkGap {
+  fill: none;
+}
+
+.sparkEmpty {
+  color: var(--text-faint);
+}
