@@ -1,6 +1,7 @@
 import "server-only";
 
 import { pool } from "@/lib/db";
+import { densify } from "@/lib/spark";
 import {
   MOVEMENT_DAYS,
   SPARK_DAYS,
@@ -127,30 +128,11 @@ export async function readBoard(
     ),
     // null means "not ranked a week ago" — a new entrant, not a row that held position 0.
     previousRank: r.previous_rank === null ? null : Number(r.previous_rank),
-    spark: densify(r.spark_dates as string[] | null, r.spark_days as string[] | null),
+    spark: densify(
+      r.spark_dates as (string | Date)[] | null,
+      r.spark_days as string[] | null,
+      SPARK_DAYS,
+    ),
   }));
 }
 
-/**
- * Turn the days a user actually has into one value per day, zeros included.
- *
- * The query returns only days with activity, because storing a row per idle day would be a
- * lot of nothing. A sparkline needs the gaps though — without them a fortnight off looks like
- * the bars simply moving closer together, which reads as steady work.
- */
-function densify(dates: string[] | null, values: string[] | null): number[] {
-  const out = new Array<number>(SPARK_DAYS).fill(0);
-  if (!dates || !values) return out;
-
-  const byDay = new Map<string, number>();
-  dates.forEach((d, i) => byDay.set(String(d).slice(0, 10), Number(values[i] ?? 0)));
-
-  const today = new Date();
-  for (let i = 0; i < SPARK_DAYS; i++) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (SPARK_DAYS - 1 - i));
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    out[i] = byDay.get(key) ?? 0;
-  }
-  return out;
-}
