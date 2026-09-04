@@ -1,10 +1,10 @@
 /**
- * Placeholder sample data, ported verbatim from the design prototype
- * (design_handoff_tokencard_site/Tokencard Site v2.dc.html, class Component).
+ * Fallback sample data, originally ported from the design prototype.
  *
- * Every figure here is realistic individual-developer sample data, not a real user.
- * The real app replaces this with the board rows for the selected window and the
- * signed-in user's own totals, mix, sync timestamp and verification tier.
+ * Only reached when the board is empty and there is no real member to feature. Every figure
+ * is plausible individual-developer usage rather than anybody's actual totals — which is why
+ * it must never be shown under a real handle, and why readFeatured prefers a published
+ * profile over any of this.
  */
 
 export const DEFAULT_HANDLE = "iyashjayesh";
