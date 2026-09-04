@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatTokens, formatUsd } from "@tokenchit/core";
 
 import { PageShell } from "@/components/page-shell";
-import { isWindow, WINDOWS, type BoardWindow } from "@/lib/board";
+import { isWindow, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
 import { readBoardTotals } from "@/lib/board-totals";
 
@@ -21,6 +21,40 @@ export const metadata: Metadata = {
 /** Gold, silver, bronze. Only the top three; everyone else takes the default fill. */
 const MEDALS = ["#FFD23D", "#E4E2D8", "#F0B37E"] as const;
 const SEGMENTS = [styles.seg0, styles.seg1, styles.seg2] as const;
+
+/**
+ * How a row has moved since a week ago.
+ *
+ * `previousRank` is null for someone who was not ranked then — a new entrant, not a row that
+ * held position zero, and the difference matters because "NEW" is the more interesting fact.
+ *
+ * A row can fall without doing anything wrong: if two people pass it, it drops two places on
+ * unchanged usage. That is what a ranking means, and showing it is more honest than showing
+ * only the rises.
+ */
+function movement(r: BoardRow) {
+  if (r.previousRank === null) {
+    return <span className={`${styles.move} ${styles.moveNew}`}>new</span>;
+  }
+  const delta = r.previousRank - r.rank;
+  if (delta === 0) {
+    return (
+      <span className={`${styles.move} ${styles.moveFlat}`} title="unchanged since last week">
+        –
+      </span>
+    );
+  }
+  const up = delta > 0;
+  return (
+    <span
+      className={`${styles.move} ${up ? styles.moveUp : styles.moveDown}`}
+      title={`${up ? "up" : "down"} ${Math.abs(delta)} since last week`}
+    >
+      {up ? "▲" : "▼"}
+      {Math.abs(delta)}
+    </span>
+  );
+}
 
 /** A page that fits on a screen rather than becoming a scroll. */
 const PER_PAGE = 25;
@@ -115,7 +149,7 @@ export default async function BoardPage({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => {
+              {rows.map((r) => {
                 const mix = Object.entries(r.mix).sort((a, b) => b[1] - a[1]);
                 const mixTotal = mix.reduce((a, [, n]) => a + n, 0);
                 return (
@@ -123,10 +157,11 @@ export default async function BoardPage({
                     <td>
                       <span
                         className={styles.rank}
-                        style={{ background: i < 3 ? MEDALS[i] : "var(--surface)" }}
+                        style={{ background: r.rank <= 3 ? MEDALS[r.rank - 1] : "var(--surface)" }}
                       >
                         {r.rank}
                       </span>
+                      {movement(r)}
                     </td>
                     <td>
                       <Link href={`/u/${r.handle}`} className={styles.dev}>
