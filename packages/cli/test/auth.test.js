@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -202,4 +202,27 @@ test("a missing clipboard tool fails quietly rather than failing the sign-in", a
   } finally {
     process.env.PATH = path;
   }
+});
+
+test("schedule never bakes an npx cache path into a scheduled job", async () => {
+  // argv[1] under npx points into ~/.npm/_npx/<hash>/, a cache keyed to the exact version,
+  // pruned by npm and never updated. A LaunchAgent pointing there runs today, pins itself to
+  // whichever version happened to be current, and fails silently every morning after a
+  // `npm cache clean`. It must emit a durable command instead.
+  //
+  // Reproduced the way npx actually does it — the binary really is invoked from inside a
+  // _npx path — rather than by faking argv, which would not exercise the same code path.
+  const box = await sandbox();
+  const binDir = join(box.home, ".npm", "_npx", "d414d16f3454c6a4", "node_modules", ".bin");
+  await mkdir(binDir, { recursive: true });
+  const shim = join(binDir, "tokenchit");
+  await symlink(CLI, shim);
+
+  const { stdout } = await run(process.execPath, [shim, "schedule", "--cron"], {
+    cwd: box.cwd,
+    env: { ...process.env, HOME: box.home, NO_COLOR: "1" },
+  });
+
+  assert.ok(!stdout.includes("_npx"), `an npx cache path leaked into the entry:\n${stdout}`);
+  assert.match(stdout, /npx -y @tokenchit\/cli@latest publish/, "expected the durable command");
 });
