@@ -349,12 +349,21 @@ test("the stats-panel reader sums a cache the way the panel does, and is quiet w
         "claude-opus-5": { inputTokens: 1000, outputTokens: 500, cacheReadInputTokens: 8500 },
         "claude-haiku-4-5": { inputTokens: 10, outputTokens: 5 },
       },
+      // How many days it remembers is the honest half of the difference: deleted transcripts
+      // are real work, and the size of that blind spot can be stated exactly as days.
+      dailyActivity: [
+        { date: "2026-06-02" },
+        { date: "2026-06-03" },
+        { date: "2026-09-02" },
+        { messageCount: 4 },
+      ],
     }),
   );
 
   const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
   assert.equal(panel?.tokens, 10015, "every numeric field across every model is summed");
   assert.equal(panel?.root, cfg, "the config directory is named, not the projects dir");
+  assert.equal(panel?.days, 3, "days come from dailyActivity, and only from dated entries");
 
   // A directory with no cache at all says nothing rather than throwing.
   const bare = await mkdtemp(join(tmpdir(), "tokenchit-bare-"));
@@ -417,4 +426,66 @@ test("volume still has a sanity ceiling, well above any real day", () => {
   };
 
   assert.ok(validatePayload(absurd).length > 0, "half a trillion tokens in a day is not work");
+});
+
+test("the unseen estimate calibrates on overlap and refuses to guess without it", async () => {
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+  const panel = (daily) => [{ tokens: 0, root: "/x", days: daily.length, daily }];
+  const day = (n) => `2026-08-${String(n).padStart(2, "0")}`;
+
+  // Six overlapping days at a clean 2x, plus two days only the cache has.
+  const overlap = [1, 2, 3, 4, 5, 6].map((n) => ({ day: day(n), tokens: 200 }));
+  const gone = [{ day: day(20), tokens: 600 }, { day: day(21), tokens: 400 }];
+  const ours = new Map([1, 2, 3, 4, 5, 6].map((n) => [day(n), 100]));
+
+  const est = estimateUnseen(panel([...overlap, ...gone]), ours);
+  assert.equal(est?.ratio, 2, "the median of six clean 2x days is 2x");
+  assert.equal(est?.days, 2, "only the days with no transcript count as missing");
+  assert.equal(est?.tokens, 500, "1000 cache tokens deflated by 2x is 500 real ones");
+});
+
+test("days that cannot calibrate are excluded rather than averaged in", async () => {
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+  const day = (n) => `2026-08-${String(n).padStart(2, "0")}`;
+
+  // A ratio below 1 means the cache lagged; a huge one means that day's transcripts are
+  // already partly rotated, so it measures the very loss being estimated. Comparing each
+  // config directory against a total spanning all of them produced exactly these, from
+  // 0.00x to 414x, and dragged the median with them.
+  const daily = [
+    ...[1, 2, 3, 4, 5, 6].map((n) => ({ day: day(n), tokens: 300 })), // clean 3x
+    { day: day(7), tokens: 10 }, // 0.1x — cache lagged
+    { day: day(8), tokens: 90_000 }, // 900x — transcripts already rotated
+    { day: day(20), tokens: 900 }, // missing
+  ];
+  const ours = new Map([1, 2, 3, 4, 5, 6, 7, 8].map((n) => [day(n), 100]));
+
+  const est = estimateUnseen([{ tokens: 0, root: "/x", days: 9, daily }], ours);
+  assert.equal(est?.ratio, 3, "only the calibratable days set the ratio");
+  assert.deepEqual(est?.spread, [3, 3], "and the spread reports only those days");
+  assert.equal(est?.tokens, 300);
+});
+
+test("without enough overlap the estimate is silence, not a guess", async () => {
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+  const daily = [
+    { day: "2026-08-01", tokens: 200 },
+    { day: "2026-08-20", tokens: 900 },
+  ];
+
+  // One overlapping day is not a calibration, and the whole point is that the correction
+  // comes from this machine's own data rather than a constant.
+  assert.equal(
+    estimateUnseen([{ tokens: 0, root: "/x", days: 2, daily }], new Map([["2026-08-01", 100]])),
+    null,
+  );
+
+  // Nor is there anything to estimate when nothing is missing.
+  assert.equal(
+    estimateUnseen(
+      [{ tokens: 0, root: "/x", days: 1, daily: [{ day: "2026-08-01", tokens: 200 }] }],
+      new Map([["2026-08-01", 100]]),
+    ),
+    null,
+  );
 });
