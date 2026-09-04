@@ -34,7 +34,7 @@ export default async function Page() {
     <SiteStateProvider initialHandle={preview.handle}>
       <SiteHeader />
       <Hero preview={preview} />
-      <CardSection />
+      <CardSection preview={preview} />
       <Leaderboard initialRows={rows} initialWindow={DEFAULT_WINDOW} />
       <Verification />
       <Privacy />

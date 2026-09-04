@@ -3,20 +3,18 @@
 import { CopyButton } from "@/components/copy-button";
 import { SectionHeading } from "@/components/section-heading";
 import { useSiteState } from "@/components/site-state";
-import { buildCardSvg } from "@tokenchit/core";
-import { DEFAULT_HANDLE, OWN_STATS, QUERY_OPTIONS } from "@/lib/sample-data";
+import type { Featured } from "@/lib/featured";
+import { QUERY_OPTIONS } from "@/lib/sample-data";
 import { SITE_URL } from "@/lib/site";
 import styles from "./card-section.module.css";
 
-/* The three variant cards are fixed artefacts of the sample handle, not the live one —
-   they illustrate layout/theme, so they are built once at module scope. */
-const SAMPLE = { handle: DEFAULT_HANDLE, ...OWN_STATS };
-const LIGHT_SVG = buildCardSvg({ ...SAMPLE, layout: "default", theme: "light" });
-const DARK_SVG = buildCardSvg({ ...SAMPLE, layout: "default", theme: "dark" });
-const COMPACT_SVG = buildCardSvg({ ...SAMPLE, layout: "compact", theme: "light" });
-
-export function CardSection() {
+export function CardSection({ preview }: { preview: Featured }) {
   const { handle } = useSiteState();
+
+  /* Built on the server from a real board member, not here from a sample. These illustrated
+     the layout with invented figures under whatever handle was set, which was a false claim
+     about a real account the moment that handle belonged to one. */
+  const { light, dark, compact } = preview.cards;
 
   // Linked to the profile: every embedded card is a door back to the site, which is the
   // whole growth loop. The plain-image form is still what `tokenchit sync` prints, because
@@ -50,11 +48,11 @@ export function CardSection() {
           <div className={styles.label}>variant / light</div>
           {/* Builder output, not user content: the handle is sanitised and XML-escaped
               inside buildCardSvg. */}
-          <div className={styles.card} dangerouslySetInnerHTML={{ __html: LIGHT_SVG }} />
+          <div className={styles.card} dangerouslySetInnerHTML={{ __html: light }} />
         </div>
         <div className={styles.cardCol}>
           <div className={styles.label}>variant / dark</div>
-          <div className={styles.card} dangerouslySetInnerHTML={{ __html: DARK_SVG }} />
+          <div className={styles.card} dangerouslySetInnerHTML={{ __html: dark }} />
         </div>
       </div>
 
@@ -63,7 +61,7 @@ export function CardSection() {
           <div className={styles.label}>layout=compact · 340px</div>
           <div
             className={styles.compactCard}
-            dangerouslySetInnerHTML={{ __html: COMPACT_SVG }}
+            dangerouslySetInnerHTML={{ __html: compact }}
           />
         </div>
 
