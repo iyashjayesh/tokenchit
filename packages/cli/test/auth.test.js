@@ -96,9 +96,9 @@ async function walk(dir) {
 }
 
 test("the help text names the same API the CLI actually posts to", async () => {
-  // These drifted once: the default moved to tokenchit.vercel.app while --help still
-  // advertised tokenchit-site.vercel.app, a host that 404s. Anyone who copied the URL out of
-  // --help would have pointed publish at nothing.
+  // These drifted once: the default moved on while --help still advertised a host that
+  // 404s, so anyone who copied the URL out of --help pointed publish at nothing. The host has
+  // changed twice since; the point is that only one of them is written down.
   //
   // Asserted against rendered output rather than the source string, so the help stays free to
   // interpolate the constant instead of repeating it.

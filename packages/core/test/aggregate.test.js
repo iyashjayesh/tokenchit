@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   aggregate,
   buildCardSvg,
+  CARD_HOST,
   formatShare,
   reviewReason,
   REVIEW,
@@ -310,9 +311,11 @@ test("a present-but-tiny agent share is never rendered as 0%", () => {
   assert.doesNotMatch(svg, /codex 0%/);
 });
 
-test("the card stamps a host that actually resolves", () => {
-  // It stamped TOKENCHIT.APP, which does not resolve — a watermark on a file people commit
-  // into their repositories, pointing at nothing.
+test("the card stamps the host from one shared constant", () => {
+  // It once stamped TOKENCHIT.APP before that domain existed — a watermark on a file people
+  // commit into their repositories, pointing at nothing. The domain is real now, but the
+  // lesson is the constant: the card and the recap must not disagree about where to send a
+  // reader, and neither may hardcode a host of its own.
   const svg = buildCardSvg({
     handle: "dev",
     tokens: "1B",
@@ -321,6 +324,6 @@ test("the card stamps a host that actually resolves", () => {
     mix: [{ agent: "claude-code", pct: 100 }],
     syncedAt: "SYNCED 0M AGO",
   });
-  assert.doesNotMatch(svg, /TOKENCHIT\.APP/);
-  assert.match(svg, /TOKENCHIT\.VERCEL\.APP/);
+  assert.match(svg, new RegExp(CARD_HOST.replace(/\./g, "\\.")));
+  assert.doesNotMatch(svg, /VERCEL/, "the deployment host should not be stamped on a card");
 });

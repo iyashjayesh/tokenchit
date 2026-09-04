@@ -112,7 +112,7 @@ tokenchit sync           read your logs, show your stats, write the card
 tokenchit publish        put your row on the public board
   --anonymous            publish without signing in; the row is marked unverified
   --dry-run              print the exact bytes and send nothing
-  --api <url>            default https://tokenchit.vercel.app
+  --api <url>            default https://tokenchit.app
   --handle <name>
 
 tokenchit recap
@@ -324,7 +324,7 @@ Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals
 | `/api/submissions` | publish (POST) and read the board (GET) |
 
 **The site is measured; the CLI is not.** Page views and one copy event go to Firebase
-Analytics from tokenchit.vercel.app — not from previews, not from localhost. The privacy
+Analytics from tokenchit.app — not from previews, not from localhost. The privacy
 guarantees in `packages/cli/test/privacy.test.js` are about the CLI, which makes exactly one
 network call, to publish, and carries no analytics of any kind. Saying so here rather than
 leaving someone to find a Google request in devtools and wonder what else is unstated.
