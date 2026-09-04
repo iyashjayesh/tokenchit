@@ -327,3 +327,40 @@ test("the card stamps the host from one shared constant", () => {
   assert.match(svg, new RegExp(CARD_HOST.replace(/\./g, "\\.")));
   assert.doesNotMatch(svg, /VERCEL/, "the deployment host should not be stamped on a card");
 });
+
+test("the stats-panel reader sums a cache the way the panel does, and is quiet when it cannot", async () => {
+  // Claude Code's panel reads a cumulative stats-cache.json, not the transcripts. Reading it
+  // is the only way to explain the difference to someone comparing the two numbers — and a
+  // missing or unrecognised file must be an absent answer rather than a failed sync, because
+  // the file is Claude Code's and its shape is not promised to us.
+  const { readClaudeStatsPanels } = await import("@tokenchit/core/adapters");
+  const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+
+  const home = await mkdtemp(join(tmpdir(), "tokenchit-stats-"));
+  const cfg = join(home, ".claude");
+  await mkdir(join(cfg, "projects"), { recursive: true });
+  await writeFile(
+    join(cfg, "stats-cache.json"),
+    JSON.stringify({
+      modelUsage: {
+        "claude-opus-5": { inputTokens: 1000, outputTokens: 500, cacheReadInputTokens: 8500 },
+        "claude-haiku-4-5": { inputTokens: 10, outputTokens: 5 },
+      },
+    }),
+  );
+
+  const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
+  assert.equal(panel?.tokens, 10015, "every numeric field across every model is summed");
+  assert.equal(panel?.root, cfg, "the config directory is named, not the projects dir");
+
+  // A directory with no cache at all says nothing rather than throwing.
+  const bare = await mkdtemp(join(tmpdir(), "tokenchit-bare-"));
+  assert.deepEqual(await readClaudeStatsPanels([join(bare, "projects")]), []);
+
+  // Neither does an unparseable one.
+  const broken = await mkdtemp(join(tmpdir(), "tokenchit-broken-"));
+  await writeFile(join(broken, "stats-cache.json"), "{ not json");
+  assert.deepEqual(await readClaudeStatsPanels([join(broken, "projects")]), []);
+});
