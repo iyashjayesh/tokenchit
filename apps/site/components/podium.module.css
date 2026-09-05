@@ -1,0 +1,175 @@
+/* Three columns aligned to a common floor, so the height difference reads as a podium rather
+   than as three cards that happen to differ. */
+.stage {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.slot {
+  display: flex;
+}
+
+/* DOM order stays 1, 2, 3 — for screen readers, and so the stacked layout below needs no
+   special case — while `order` puts first place in the middle where a podium puts it. */
+.place1 { order: 2; }
+.place2 { order: 1; }
+.place3 { order: 3; }
+
+.card {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 16px 12px 12px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 3px 3px 0 var(--hairline);
+  color: var(--ink);
+  text-align: center;
+}
+
+/* The riser. Padding rather than a fixed height, so a long handle grows the card instead of
+   overflowing it, and the floor alignment keeps the step shape either way. */
+.place1 .card {
+  padding-top: 26px;
+  padding-bottom: 16px;
+  box-shadow: 4px 4px 0 var(--lime);
+}
+
+.card:hover {
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.place1 .card:hover {
+  box-shadow: 6px 6px 0 var(--lime);
+}
+
+/* The medal straddles the top border, the way the section stickers do elsewhere. */
+.rank {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 22px;
+  padding: 2px 7px;
+  border: 2px solid var(--ink);
+  background: var(--medal);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.avatar,
+.avatarBlank {
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--ink);
+  background: #d9d7cd;
+  object-fit: cover;
+}
+
+.place1 .avatar,
+.place1 .avatarBlank {
+  width: 44px;
+  height: 44px;
+}
+
+.avatarBlank {
+  border-style: dashed;
+  opacity: 0.45;
+}
+
+.handle {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place1 .handle {
+  font-size: 13px;
+}
+
+.card:hover .handle {
+  color: var(--coral);
+}
+
+.tokens {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.place1 .tokens {
+  font-size: 21px;
+}
+
+.cost {
+  font-size: 10.5px;
+  opacity: 0.6;
+}
+
+/* Stacked, a podium is just three cards, so the step and the reordering both come off and they
+   read 1, 2, 3 down the page. */
+@media (max-width: 620px) {
+  .stage {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .place1,
+  .place2,
+  .place3 {
+    order: 0;
+  }
+
+  .card,
+  .place1 .card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    text-align: left;
+  }
+
+  .rank {
+    position: static;
+    transform: none;
+  }
+
+  .avatar,
+  .avatarBlank,
+  .place1 .avatar,
+  .place1 .avatarBlank {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+  }
+
+  .handle {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .tokens,
+  .place1 .tokens {
+    font-size: 16px;
+  }
+
+  .cost {
+    display: none;
+  }
+}

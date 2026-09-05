@@ -8,6 +8,7 @@ import { isWindow, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board"
 import { readBoard } from "@/lib/board-query";
 import { findOnBoard } from "@/lib/board-search";
 import { SearchResult } from "@/components/search-result";
+import { Podium } from "@/components/podium";
 import { readBoardTotals } from "@/lib/board-totals";
 
 import styles from "./board.module.css";
@@ -159,6 +160,10 @@ export default async function BoardPage({
         count over the selected window, not a skill score.
       </p>
 
+      {/* Filters and search travel together and pin on scroll: on a long board the controls
+          were a screen and a half behind the rows they govern. Sticky rather than a sidebar,
+          because the table needs 720px of width more than the page needs a second column. */}
+      <div className={styles.controls}>
       <nav className={styles.windows} aria-label="Time window">
         {WINDOWS.map((w) => (
           <Link
@@ -197,7 +202,14 @@ export default async function BoardPage({
         )}
       </form>
 
+      </div>
+
       {found && <SearchResult found={found} window={window} query={query} />}
+
+      {/* Above the totals, not below them: the question a reader arrives with is who is winning,
+          and the four aggregate figures are context for that rather than the other way round.
+          The same three carry a medal edge in the table — see the row classes. */}
+      {!query && page === 1 && <Podium rows={rows} />}
 
       {summary.length > 0 && (
         <div className={styles.summary}>
@@ -238,8 +250,23 @@ export default async function BoardPage({
                   <tr
                     key={r.handle}
                     id={`u-${r.handle}`}
-                    className={
-                      hit === r.handle.toLowerCase() ? `${styles.row} ${styles.rowHit}` : styles.row
+                    /* The top three are marked in the table rather than lifted out above it.
+                       A separate podium showed the same three people twice — once as a card and
+                       again three rows later — and spent a chunk of the first screen doing it.
+                       Here the ranking is its own stage. Only on an unsearched first page: on
+                       page four these are not the top three of anything the reader can see. */
+                    className={[
+                      styles.row,
+                      !query && page === 1 && r.rank <= 3 ? styles.rowTop : "",
+                      !query && page === 1 && r.rank === 1 ? styles.rowFirst : "",
+                      hit === r.handle.toLowerCase() ? styles.rowHit : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    style={
+                      !query && page === 1 && r.rank <= 3
+                        ? ({ ["--medal" as string]: MEDALS[r.rank - 1] } as React.CSSProperties)
+                        : undefined
                     }
                   >
                     <td>

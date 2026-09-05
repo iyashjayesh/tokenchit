@@ -30,7 +30,7 @@
 }
 
 .intro {
-  margin: 16px 0 24px;
+  margin: 14px 0 6px;
   font-size: 13px;
   line-height: 1.8;
   color: var(--text-muted);
@@ -72,17 +72,24 @@
 .summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 26px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
+/* One line instead of two, and roughly half the height. These are read once on arrival; four
+   tall boxes were spending 120px of the first screen on figures nobody returns to, and pushing
+   the ranking itself below the fold. */
 .stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   flex: 1 1 160px;
   min-width: min(100%, 160px);
-  padding: 14px 16px 16px;
+  padding: 9px 14px;
   border: 2px solid var(--ink);
   background: var(--surface);
-  box-shadow: 4px 4px 0 var(--hairline);
+  box-shadow: 3px 3px 0 var(--hairline);
 }
 
 .statLabel {
@@ -94,9 +101,8 @@
 }
 
 .statValue {
-  margin-top: 8px;
   font-family: var(--font-display);
-  font-size: clamp(22px, 3vw, 28px);
+  font-size: clamp(16px, 2vw, 19px);
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -380,15 +386,19 @@
 
 .search {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  align-items: stretch;
+  /* No wrapping: this is one control, and a field that drops its own button onto a second line
+     reads as two unrelated things that happen to be near each other. */
+  flex-wrap: nowrap;
   margin: 0 0 22px;
 }
 
 .searchInput {
-  flex: 1 1 260px;
-  max-width: 380px;
+  /* A fixed basis rather than a flexible one, so the control keeps its shape wherever the row
+     puts it instead of growing until the button falls off the end. */
+  flex: 0 1 240px;
+  width: 240px;
+  min-width: 0;
   padding: 8px 12px;
   border: 2px solid var(--ink);
   background: var(--surface);
@@ -407,7 +417,11 @@
 }
 
 .searchGo {
-  padding: 9px 14px;
+  flex: 0 0 auto;
+  /* Flush against the field, sharing its edge — a search box and its button are one control,
+     and the 10px gap that used to sit between them made two. */
+  margin-left: -2px;
+  padding: 0 16px;
   border: 2px solid var(--ink);
   background: var(--ink);
   color: var(--lime);
@@ -424,6 +438,8 @@
 }
 
 .searchClear {
+  align-self: center;
+  margin-left: 12px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -464,4 +480,94 @@
 .avatarBlank {
   border-style: dashed;
   opacity: 0.45;
+}
+
+/* Sticky controls --------------------------------------------------------- */
+
+/* Filters and search pin as one unit. A sidebar was the alternative and would have cost the
+   table its width — eight columns need 720px, and a 320px column pushes that under the wrap
+   point on any laptop below about 1100px, trading vertical scroll for horizontal. */
+.controls {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  /* One row: the windows narrow the board and the search finds a name in it — both are ways of
+     asking "show me less", and stacking them spent a second line saying so twice. The search
+     goes right, where it reads as a separate question rather than a fifth filter. */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0 -8px 16px;
+  padding: 12px 8px 10px;
+  background: var(--paper);
+  /* The page has a printed grid behind it; without a hairline the pinned bar looks like it is
+     floating rather than sitting on top of what scrolls beneath it. */
+  border-bottom: 2px solid var(--ink);
+}
+
+.controls .windows,
+.controls .search {
+  margin-bottom: 0;
+}
+
+/* Pushed to the far edge when there is room; the wrap below drops it onto its own line before
+   the two ever collide. */
+.controls .search {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Narrow enough that the four window buttons and a usable field cannot share a line, so stop
+   pretending and let the search have its own. */
+@media (max-width: 860px) {
+  .controls .search {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* A pinned bar on a short viewport can eat the rows it is meant to help you read. */
+@media (max-height: 620px) {
+  .controls {
+    position: static;
+  }
+}
+
+/* The stage, inside the ranking ------------------------------------------- */
+
+/* Medal-coloured edge on the top three, so first place is legible as first place without a
+   second component repeating it above the table. The bar is the same width as the search hit's
+   so a searched top-three row does not jump. */
+.rowTop {
+  box-shadow: inset 5px 0 0 var(--medal);
+}
+
+.rowTop .handle {
+  font-weight: 700;
+}
+
+/* First place takes a tint as well as an edge. Kept faint: this is a table, and a row that
+   shouts stops the eight below it from being readable. */
+.rowFirst {
+  background: color-mix(in srgb, var(--lime) 14%, transparent);
+}
+
+.rowTop .tokens {
+  font-weight: 800;
+}
+
+/* Larger faces on the podium rows. 28px against the table's 24 is enough to register as
+   difference without unsettling the row height, which the other columns are set to. */
+.rowTop .avatar,
+.rowTop .avatarBlank {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+}
+
+/* A searched row wins the tint, because it is the thing the reader just asked for. */
+.rowHit.rowTop,
+.rowHit.rowFirst {
+  background: color-mix(in srgb, var(--lime) 22%, transparent);
 }
