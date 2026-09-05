@@ -375,3 +375,70 @@
 .sparkEmpty {
   color: var(--text-faint);
 }
+
+/* Search ------------------------------------------------------------------ */
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 22px;
+}
+
+.searchInput {
+  flex: 1 1 260px;
+  max-width: 380px;
+  padding: 8px 12px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.searchInput::placeholder {
+  opacity: 0.5;
+}
+
+.searchInput:focus {
+  outline: none;
+  box-shadow: 3px 3px 0 var(--lime);
+}
+
+.searchGo {
+  padding: 9px 14px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.searchGo:hover {
+  background: var(--coral);
+  color: var(--surface);
+}
+
+.searchClear {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.searchClear:hover {
+  opacity: 1;
+  color: var(--coral);
+}
+
+/* The searched row, when this page happens to hold it. A left bar and a tint rather than a
+   colour swap, so the row still reads as one of the table's rather than as a selection. */
+.rowHit {
+  background: color-mix(in srgb, var(--lime) 18%, transparent);
+  box-shadow: inset 4px 0 0 var(--lime);
+}

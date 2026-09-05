@@ -6,6 +6,8 @@ import { formatTokens, formatUsd } from "@tokenchit/core";
 import { PageShell } from "@/components/page-shell";
 import { isWindow, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
+import { findOnBoard } from "@/lib/board-search";
+import { SearchResult } from "@/components/search-result";
 import { readBoardTotals } from "@/lib/board-totals";
 
 import styles from "./board.module.css";
@@ -105,7 +107,7 @@ const PER_PAGE = 25;
 export default async function BoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ window?: string; page?: string }>;
+  searchParams: Promise<{ window?: string; page?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const requested = params.window ?? null;
@@ -114,16 +116,24 @@ export default async function BoardPage({
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const offset = (page - 1) * PER_PAGE;
 
-  const [rows, totals] = await Promise.all([
+  const query = (params.q ?? "").trim();
+
+  const [rows, totals, found] = await Promise.all([
     readBoard(window, PER_PAGE, offset).catch(() => []),
     readBoardTotals(window).catch(() => null),
+    query ? findOnBoard(query, window, PER_PAGE).catch(() => null) : Promise.resolve(null),
   ]);
+
+  /* Highlight the searched row when this page happens to contain it, so a hit reads as a
+     position in the ranking rather than as a card floating above an unrelated table. */
+  const hit = found?.state === "ranked" ? found.handle.toLowerCase() : null;
 
   const total = totals?.developers ?? rows.length;
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
   const from = total === 0 ? 0 : offset + 1;
   const to = offset + rows.length;
-  const href = (p: number) => `/board?window=${window}${p > 1 ? `&page=${p}` : ""}`;
+  const href = (p: number) =>
+    `/board?window=${window}${p > 1 ? `&page=${p}` : ""}${query ? `&q=${encodeURIComponent(query)}` : ""}`;
 
   const summary: [string, string][] = totals
     ? [
@@ -161,6 +171,34 @@ export default async function BoardPage({
         ))}
       </nav>
 
+      {/* A GET form, so a search is a URL: shareable, reloadable, and back-button-able, and it
+          keeps this page free of client JavaScript. The window rides along in a hidden field
+          so searching does not silently reset the reader to "this year". */}
+      <form className={styles.search} action="/board" method="get" role="search">
+        <input type="hidden" name="window" value={window} />
+        <input
+          className={styles.searchInput}
+          type="search"
+          name="q"
+          defaultValue={query}
+          placeholder="find a developer by handle…"
+          aria-label="Find a developer by handle"
+          spellCheck={false}
+          autoComplete="off"
+          maxLength={39}
+        />
+        <button className={styles.searchGo} type="submit">
+          search
+        </button>
+        {query && (
+          <Link className={styles.searchClear} href={`/board?window=${window}`}>
+            clear
+          </Link>
+        )}
+      </form>
+
+      {found && <SearchResult found={found} window={window} query={query} />}
+
       {summary.length > 0 && (
         <div className={styles.summary}>
           {summary.map(([label, value]) => (
@@ -197,7 +235,13 @@ export default async function BoardPage({
                 const mix = Object.entries(r.mix).sort((a, b) => b[1] - a[1]);
                 const mixTotal = mix.reduce((a, [, n]) => a + n, 0);
                 return (
-                  <tr key={r.handle} className={styles.row}>
+                  <tr
+                    key={r.handle}
+                    id={`u-${r.handle}`}
+                    className={
+                      hit === r.handle.toLowerCase() ? `${styles.row} ${styles.rowHit}` : styles.row
+                    }
+                  >
                     <td>
                       <span
                         className={styles.rank}
