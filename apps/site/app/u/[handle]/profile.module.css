@@ -383,3 +383,14 @@
   color: var(--ink);
   font-weight: 700;
 }
+
+/* Matches the board's treatment at profile scale. The background sits behind the image so a
+   transparent or slow-loading avatar is a neutral square, not the page grid showing through. */
+.avatar {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 2px solid var(--ink);
+  background: #d9d7cd;
+  object-fit: cover;
+}

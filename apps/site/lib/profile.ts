@@ -15,6 +15,8 @@ export type ProfileDay = { day: string; tokens: number };
 export type Profile = {
   handle: string;
   tier: string;
+  /** GitHub account id, or null until somebody proved the handle. Gates the avatar. */
+  githubId: string | null;
   /** Tokens over the selected window. */
   tokens: number;
   equivCostUsd: number;
@@ -62,7 +64,8 @@ export async function readProfile(
     id: string;
     handle: string;
     tier: string;
-  }>("SELECT id, handle::text, tier FROM users WHERE handle = $1", [handle]);
+    github_id: string | null;
+  }>("SELECT id, handle::text, tier, github_id::text FROM users WHERE handle = $1", [handle]);
 
   const user = userRows[0];
   if (!user) return null;
@@ -159,6 +162,8 @@ export async function readProfile(
   return {
     handle: user.handle,
     tier: user.tier,
+    /* Null until the handle is proved, which is what gates the avatar everywhere it appears. */
+    githubId: user.github_id,
     tokens: Number(a?.tokens ?? 0),
     equivCostUsd: Number(a?.cost ?? 0),
     streakDays: Number(l?.streak_days ?? 0),

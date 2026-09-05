@@ -126,6 +126,22 @@ export function Leaderboard({ initialRows, initialWindow }: {
                     </td>
                     <td>
                       <Link href={`/u/${r.handle}`} className={styles.dev}>
+                        {/* Same rule as the full board: the avatar comes from the GitHub id,
+                            which only exists once somebody proved the handle, so an
+                            unverified row has nothing to render a face from. */}
+                        {r.githubId ? (
+                          <img
+                            className={styles.avatar}
+                            src={`/api/avatar/${r.githubId}`}
+                            width={22}
+                            height={22}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className={styles.avatarBlank} aria-hidden="true" />
+                        )}
                         <span className={styles.handle}>@{r.handle}</span>
                         {/* Tier-driven. Marking an unverified row with the same tick as a
                             verified one is the single thing this board must never do. */}

@@ -73,6 +73,18 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     <PageShell crumbs={[{ href: "/board", label: "board" }, { href: `/u/${profile.handle}`, label: `@${profile.handle}` }]}>
       <header className={styles.head}>
         <div className={styles.identity}>
+          {/* Bigger here than in a table row, because a profile is the one page that is about
+              a person rather than about a ranking. Same gate: no proved handle, no face. */}
+          {profile.githubId && (
+            <img
+              className={styles.avatar}
+              src={`/api/avatar/${profile.githubId}`}
+              width={40}
+              height={40}
+              alt=""
+              decoding="async"
+            />
+          )}
           <h1 className={styles.handle}>@{profile.handle}</h1>
           {profile.tier === "verified" ? (
             <span className={styles.verified}>✓ github verified</span>

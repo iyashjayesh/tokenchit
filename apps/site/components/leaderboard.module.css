@@ -262,3 +262,22 @@
   color: var(--coral);
   border-bottom-color: var(--coral);
 }
+
+/* Avatars, matching /board so the preview and the page it previews agree. */
+.avatar,
+.avatarBlank {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 1.5px solid var(--ink);
+  background: #d9d7cd;
+}
+
+.avatar {
+  object-fit: cover;
+}
+
+.avatarBlank {
+  border-style: dashed;
+  opacity: 0.45;
+}
