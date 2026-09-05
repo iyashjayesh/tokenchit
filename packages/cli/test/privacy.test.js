@@ -23,14 +23,14 @@ const CORE_SRC = join(HERE, "..", "..", "core", "src");
  */
 
 /** Run the CLI in a sandbox whose HOME contains only the fixture transcripts. */
-async function cli(args, extraEnv = {}) {
+async function cli(args, extraEnv = {}, agents = ["claude-code"]) {
   const cwd = await mkdtemp(join(tmpdir(), "tokenchit-test-"));
   // A throwaway config home per run. `net.isolated` publishes for real, and a real publish
   // banks what it read — which would otherwise deposit a ledger inside the committed fixture.
   const xdg = await mkdtemp(join(tmpdir(), "tokenchit-test-cfg-"));
   await writeFile(
     join(cwd, ".tokenchit.json"),
-    JSON.stringify({ handle: "canary", agents: ["claude-code"], output: "c.svg", layout: "default", theme: "auto" }),
+    JSON.stringify({ handle: "canary", agents, output: "c.svg", layout: "default", theme: "auto" }),
   );
 
   return run(process.execPath, [CLI, ...args], {
@@ -161,3 +161,34 @@ async function walk(dir) {
   }
   return out;
 }
+
+test("payload.noContent.everyAdapter", async () => {
+  /*
+   * The guarantee is "we never collect content", and until now one adapter of three was made to
+   * prove it. `payload.noContent` runs with `agents: ["claude-code"]`, so a Codex or OpenCode
+   * adapter that copied a prompt, a path or a model-supplied string into an event would have
+   * sailed through the whole suite — the fixture home did not even contain a rollout or a
+   * database for them to read.
+   *
+   * Each fixture carries content in a different shape: Codex a user_message and an
+   * agent_message beside a cwd, OpenCode a reply and a path inside the JSON blob the adapter
+   * parses. Both also carry real usage, so the assertions below cannot pass by reading nothing.
+   */
+  const { stdout } = await cli(["publish", "--dry-run"], {}, []);
+  const body = payloadFrom(stdout);
+
+  for (const canary of [
+    "CANARY_CODEX_PROMPT_a7f3",
+    "CANARY_CODEX_REPLY_a7f3",
+    "CANARY_OPENCODE_REPLY_a7f3",
+    "secret-project",
+  ]) {
+    assert.ok(!body.includes(canary), `${canary} leaked into the payload`);
+  }
+
+  const parsed = JSON.parse(body);
+  const agents = Object.fromEntries(parsed.agents.map((a) => [a.agent, a.tokens]));
+  assert.equal(agents["codex"], 1000, "the codex rollout really was read");
+  assert.equal(agents["opencode"], 500, "and so was the opencode database");
+  assert.ok(agents["claude-code"] > 0, "and claude-code alongside them");
+});

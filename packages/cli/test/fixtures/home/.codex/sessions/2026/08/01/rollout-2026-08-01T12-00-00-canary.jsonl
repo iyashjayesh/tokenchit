@@ -1,0 +1,4 @@
+{"type":"turn_context","payload":{"model":"gpt-5.5","cwd":"/Users/canary/secret-project"}}
+{"timestamp":"2026-08-01T12:00:00.000Z","type":"event_msg","payload":{"type":"user_message","message":"CANARY_CODEX_PROMPT_a7f3"}}
+{"timestamp":"2026-08-01T12:00:01.000Z","type":"event_msg","payload":{"type":"agent_message","message":"CANARY_CODEX_REPLY_a7f3"}}
+{"timestamp":"2026-08-01T12:00:02.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":700,"cached_input_tokens":0,"output_tokens":300,"reasoning_output_tokens":0,"total_tokens":1000}}}}
