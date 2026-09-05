@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { resolveApi } from "../api.js";
 import { flag } from "../args.js";
 import { readAuth, writeAuth, clearAuth, authFile } from "../auth.js";
@@ -56,6 +58,38 @@ export async function signIn(api: string, opts: SignInOptions = {}): Promise<Sig
   let interval = Number(start.body["interval"] ?? 5);
 
   /*
+   * Park the code where the browser can read it.
+   *
+   * The device flow puts the code in a terminal and the authorisation in a browser and asks
+   * the person to carry one to the other. This hands our own site the half that is safe to
+   * hand over — the `user_code`, which is already on their screen — so the page it opens can
+   * show the code with a copy button instead of sending them back here to select it.
+   *
+   * `deviceCode` is not sent and must never be: that is the half that exchanges for a token,
+   * and the session row is readable by anyone holding the id.
+   *
+   * The id is 32 random bytes from the platform CSPRNG. It is the only thing protecting the
+   * row, so it is generated here rather than by the server: the CLI is the one party that
+   * certainly has not leaked it yet.
+   *
+   * Entirely best-effort. If our site is down, or slow, or the user passed --no-browser, the
+   * fallback is what this command did before — open GitHub directly — and the terminal has
+   * printed everything needed either way.
+   */
+  const sessionId = randomBytes(32).toString("hex");
+  const parked =
+    opts.browser === false || !process.stdout.isTTY
+      ? false
+      : await post(`${api}/api/login/session`, JSON.stringify({
+          id: sessionId,
+          userCode,
+          verifyUrl,
+          expiresIn,
+        }))
+          .then((r) => r.ok)
+          .catch(() => false);
+
+  /*
    * Printed before anything is attempted, and printed whatever happens afterwards.
    *
    * The clipboard and the browser are conveniences over an instruction that has to stand on
@@ -75,7 +109,7 @@ export async function signIn(api: string, opts: SignInOptions = {}): Promise<Sig
   const opened =
     opts.browser === false || !process.stdout.isTTY
       ? false
-      : await openBrowser(prefilled(verifyUrl, userCode));
+      : await openBrowser(parked ? `${api}/login/${sessionId}` : prefilled(verifyUrl, userCode));
 
   if (copied || opened) {
     const did = [opened && "opened your browser", copied && "copied the code"].filter(Boolean);
@@ -173,6 +207,12 @@ export async function signIn(api: string, opts: SignInOptions = {}): Promise<Sig
     createdAt: new Date().toISOString(),
     ...(avatar ? { avatar } : {}),
   });
+
+  /* Tell the waiting page it can stop. Pure courtesy: the sign-in is already finished and the
+     key is already on disk, so a failure here costs nothing but a tab that keeps spinning. */
+  if (parked) {
+    void post(`${api}/api/login/session/${sessionId}`, JSON.stringify({ handle })).catch(() => {});
+  }
 
   say(`${green("✓")} signed in as ${bold(`@${handle}`)}`);
   say(dim(`  key stored in ${path} (0600)`));
