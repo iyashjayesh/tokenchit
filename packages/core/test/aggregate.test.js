@@ -347,7 +347,16 @@ test("the stats-panel reader sums a cache the way the panel does, and is quiet w
     JSON.stringify({
       modelUsage: {
         "claude-opus-5": { inputTokens: 1000, outputTokens: 500, cacheReadInputTokens: 8500 },
-        "claude-haiku-4-5": { inputTokens: 10, outputTokens: 5 },
+        "claude-haiku-4-5": {
+          inputTokens: 10,
+          outputTokens: 5,
+          // Not tokens, and must not be counted as such. Harmless where these are zero, but
+          // a context window summed into a token total is wrong in kind, not degree.
+          costUSD: 1234.56,
+          contextWindow: 200_000,
+          maxOutputTokens: 64_000,
+          webSearchRequests: 12,
+        },
       },
       // How many days it remembers is the honest half of the difference: deleted transcripts
       // are real work, and the size of that blind spot can be stated exactly as days.
@@ -488,4 +497,49 @@ test("without enough overlap the estimate is silence, not a guess", async () => 
     ),
     null,
   );
+});
+
+test("the panel figure includes days the cache has not computed yet", async () => {
+  // stats-cache.json is computed to a date and no further, so a panel opened today shows the
+  // cache plus today's work while the file alone is short by exactly that. Against two real
+  // accounts the file read 18.17b and 10.57b while the panels showed 18.3b and 11.0b — the
+  // gap being that day. An explainer that prints a third number nobody recognises is worse
+  // than one that prints none.
+  const { readClaudeStatsPanels } = await import("@tokenchit/core/adapters");
+  const { mkdtemp, mkdir, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+
+  const cfg = await mkdtemp(join(tmpdir(), "tokenchit-lag-"));
+  const projects = join(cfg, "projects", "repo");
+  await mkdir(projects, { recursive: true });
+
+  await writeFile(
+    join(cfg, "stats-cache.json"),
+    JSON.stringify({
+      lastComputedDate: "2026-09-03",
+      modelUsage: { "claude-opus-5": { cacheReadInputTokens: 1_000_000 } },
+      dailyActivity: [{ date: "2026-09-03" }],
+    }),
+  );
+
+  const line = (ts, tokens) =>
+    JSON.stringify({
+      timestamp: ts,
+      message: { id: `m-${ts}`, usage: { cache_read_input_tokens: tokens } },
+    });
+
+  await writeFile(
+    join(projects, "session.jsonl"),
+    [
+      // Already inside the cache's figure; adding it again would double-count.
+      line("2026-09-03T10:00:00.000Z", 500_000),
+      // After the cache was computed, so the panel shows it and the file does not.
+      line("2026-09-04T09:00:00.000Z", 250_000),
+      line("2026-09-04T11:00:00.000Z", 250_000),
+    ].join("\n"),
+  );
+
+  const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
+  assert.equal(panel?.tokens, 1_500_000, "the cache plus only what came after it");
 });
