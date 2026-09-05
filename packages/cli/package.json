@@ -1,6 +1,6 @@
 {
   "name": "@tokenchit/cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Read your local AI coding agent logs and render a stat card into your repo.",
   "keywords": [
     "tokens",
