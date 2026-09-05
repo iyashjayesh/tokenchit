@@ -19,6 +19,19 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
+ * An anonymous caller tried to write a handle a GitHub login has already proved.
+ *
+ * Thrown from inside the transaction so the write rolls back, and caught before the generic
+ * 500 below so the caller gets a 403 that says what happened. A sentinel class rather than a
+ * flag on the result, because the point is that nothing downstream of it runs.
+ */
+class ProtectedHandleError extends Error {
+  constructor(readonly handle: string) {
+    super(`@${handle} is verified; sign in to publish as them`);
+  }
+}
+
+/**
  * Accept a self-reported usage submission.
  *
  * Validation runs here even though the CLI already ran it. The client is the thing we cannot
@@ -100,6 +113,23 @@ export async function POST(req: Request) {
       );
       const user = userRows[0]!;
 
+      /*
+       * A verified handle is not writable anonymously.
+       *
+       * The ownership check above only fires when `auth` is present — it exists to stop a valid
+       * key writing someone else's row, and an unauthenticated request skipped it entirely,
+       * falling through to `auth?.handle ?? payload.handle`. Combined with the ON CONFLICT just
+       * above, which deliberately never downgrades `tier`, that let anyone overwrite a proven
+       * user's figures and keep the badge — an invalid Bearer token was more permissive than a
+       * valid one for the wrong handle.
+       *
+       * Only 'verified' is protected. Anonymous publishing is a supported flow and an anonymous
+       * user has no credential to re-publish their own 'cli' row with, so requiring auth for
+       * every existing handle would let one publish exactly once. Proving the handle is what
+       * closes it to strangers.
+       */
+      if (!auth && user.tier === "verified") throw new ProtectedHandleError(payload.handle);
+
       /* Held back from the board, not refused. The column has existed since the first
          migration and until now nothing ever wrote to it, so the hide path the board query
          already implements could never fire. */
@@ -130,8 +160,13 @@ export async function POST(req: Request) {
       // Replaced wholesale rather than merged. A user who deletes local history and re-syncs
       // should see their board row shrink to match; merging would make the board a high-water
       // mark that can only ever grow.
-      await client.query("DELETE FROM user_days WHERE user_id = $1", [user.id]);
+      /* Inside the guard, not before it. The DELETE was unconditional while the re-insert was
+         gated, so a payload carrying `days: []` — which passed validation — erased the row's
+         entire series and wrote nothing back: board row, sparkline, rank movement and card,
+         gone in one request. Replacing wholesale is still the intent; replacing with nothing
+         is not a replacement. */
       if (payload.days.length > 0) {
+        await client.query("DELETE FROM user_days WHERE user_id = $1", [user.id]);
         await client.query(
           `INSERT INTO user_days (user_id, day, agent, tokens, cost_usd)
            SELECT $1, d.day::date, d.agent, d.tokens::bigint, d.cost::numeric
@@ -170,6 +205,9 @@ export async function POST(req: Request) {
       { status: 201, headers: tightest ? limitHeaders(tightest) : undefined },
     );
   } catch (err) {
+    if (err instanceof ProtectedHandleError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
     console.error("submission failed", err);
     return NextResponse.json({ error: "could not store submission" }, { status: 500 });
   }

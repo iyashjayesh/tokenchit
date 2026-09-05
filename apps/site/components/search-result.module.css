@@ -1,0 +1,99 @@
+/* The board's own chrome: 2px ink border and a hard offset shadow, so a result reads as part
+   of the table's family rather than as a notification dropped on top of it. The left bar is
+   the only thing that varies, because three outcomes want telling apart at a glance. */
+.panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  border: 2px solid var(--ink);
+  border-left-width: 8px;
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.hit {
+  border-left-color: var(--lime);
+}
+
+.warm {
+  border-left-color: #ffd23d;
+}
+
+.cold {
+  border-left-color: var(--coral);
+}
+
+.line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sub {
+  margin: 0;
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.72;
+}
+
+.handle {
+  font-weight: 700;
+}
+
+.strong {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rank {
+  font-weight: 700;
+  color: var(--coral);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action {
+  padding: 7px 12px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.action:hover {
+  background: var(--coral);
+  color: var(--surface);
+}
+
+.secondary {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-bottom: 1.5px solid var(--lime);
+}
+
+.secondary:hover {
+  color: var(--coral);
+  border-bottom-color: var(--coral);
+}
+
+@media (max-width: 560px) {
+  .panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

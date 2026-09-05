@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { buildCardSvg, formatTokens, formatUsd, sanitizeHandle } from "@tokenchit/core";
+import { buildCardSvg, formatSynced, formatTokens, formatUsd, sanitizeHandle } from "@tokenchit/core";
 
 import { ContributionGraph } from "@/components/contribution-graph";
 import { CopyButton } from "@/components/copy-button";
@@ -73,6 +73,18 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     <PageShell crumbs={[{ href: "/board", label: "board" }, { href: `/u/${profile.handle}`, label: `@${profile.handle}` }]}>
       <header className={styles.head}>
         <div className={styles.identity}>
+          {/* Bigger here than in a table row, because a profile is the one page that is about
+              a person rather than about a ranking. Same gate: no proved handle, no face. */}
+          {profile.githubId && (
+            <img
+              className={styles.avatar}
+              src={`/api/avatar/${profile.githubId}`}
+              width={40}
+              height={40}
+              alt=""
+              decoding="async"
+            />
+          )}
           <h1 className={styles.handle}>@{profile.handle}</h1>
           {profile.tier === "verified" ? (
             <span className={styles.verified}>✓ github verified</span>
@@ -94,7 +106,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
       <p className={styles.since}>
         {profile.firstDay ? `First activity ${profile.firstDay}.` : "No activity yet."}{" "}
         {profile.lastPublished
-          ? `Last published ${profile.lastPublished.slice(0, 10)}.`
+          ? `${formatSynced(new Date(profile.lastPublished)).toLowerCase()}.`
           : "Never published."}{" "}
         Figures are self-reported by the tokenchit CLI from local agent logs.
       </p>

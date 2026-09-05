@@ -2,12 +2,14 @@
 import { createRequire } from "node:module";
 
 import { DEFAULT_API } from "./api.js";
+import { unknownFlags } from "./args.js";
 import { banner } from "./banner.js";
 import { generate } from "./commands/generate.js";
 import { init } from "./commands/init.js";
 import { login, logout, whoami } from "./commands/login.js";
 import { publish } from "./commands/publish.js";
 import { recap } from "./commands/recap.js";
+import { ledger } from "./commands/ledger.js";
 import { schedule } from "./commands/schedule.js";
 import { sync } from "./commands/sync.js";
 import { bold, cyan, dim, fail, grey, muteSqliteWarning, pad, say, wordmark } from "./ui.js";
@@ -88,6 +90,24 @@ const COMMANDS: Record<string, Command> = {
       ["--json", "print the recap model instead of writing an SVG"],
       ["--dry-run", ""],
     ],
+  },
+  ledger: {
+    summary: "show the local history bank, or rebuild it",
+    flags: [
+      ["--rebuild", "discard it and re-derive from the logs still on disk"],
+      ["--yes", "required by --rebuild, which cannot be undone"],
+    ],
+    detail:
+      "Agent logs are deleted. Claude Code's cleanupPeriodDays defaults to 30, so a card built\n" +
+      "only from what is on disk reports usage since the last cleanup rather than usage since\n" +
+      "you installed anything — and that boundary moves every night.\n\n" +
+      "So every sync banks what it saw, keyed by day, agent and model, and keeps whichever\n" +
+      "reading is fuller. Once a day is recorded, retention can take the transcripts and the\n" +
+      "figure survives. The bank is local, is never uploaded on its own, and lives beside your\n" +
+      "credentials rather than in the repo.\n\n" +
+      "It cannot recover history from before it existed, and it cannot be moved between\n" +
+      "machines. --rebuild exists because a max-wins bank would otherwise keep a bad reading\n" +
+      "forever; it throws away every day the logs no longer cover.",
   },
   schedule: {
     summary: "print a cron or launchd entry to keep your row current",
@@ -208,6 +228,40 @@ async function main(): Promise<number> {
     return 0;
   }
 
+  /*
+   * A flag this command does not read is a mistake, not a no-op.
+   *
+   * `oneOf` already refuses an unrecognised flag value; nothing refused an unrecognised flag
+   * name, so `publish --dry-runn` published for real and exited 0. Checked centrally because
+   * the hazard is uniform and a per-command check is a per-command thing to forget.
+   *
+   * `generate` runs init, sync and publish in turn and forwards its argv to each, so it
+   * accepts the union of their flags.
+   */
+  const SYNC_FLAGS = ["--handle", "--layout", "--theme", "--out", "--json", "--dry-run"];
+  const PUBLISH_FLAGS = ["--api", "--dry-run", "--anonymous", "--handle"];
+  const VALUED = ["--handle", "--layout", "--theme", "--out", "--api", "--year", "--cron"];
+
+  const ALLOWED: Record<string, readonly string[]> = {
+    generate: [...new Set([...SYNC_FLAGS, ...PUBLISH_FLAGS, "--no-publish"])],
+    init: ["--handle"],
+    sync: SYNC_FLAGS,
+    recap: ["--handle", "--theme", "--out", "--json", "--dry-run", "--year"],
+    publish: PUBLISH_FLAGS,
+    schedule: ["--cron"],
+    ledger: ["--rebuild", "--yes"],
+    login: ["--api"],
+    logout: [],
+    whoami: [],
+  };
+
+  const stray = unknownFlags(argv, ALLOWED[command] ?? [], VALUED);
+  if (stray.length > 0) {
+    fail(`unknown ${stray.length === 1 ? "flag" : "flags"}: ${stray.join(", ")}`);
+    say(commandHelp(command));
+    return 1;
+  }
+
   switch (command) {
     case "generate":
       return generate(argv, cliVersion());
@@ -221,6 +275,8 @@ async function main(): Promise<number> {
       return publish(argv, cliVersion());
     case "schedule":
       return schedule(argv);
+    case "ledger":
+      return ledger(argv);
     case "login":
       return login(argv);
     case "logout":

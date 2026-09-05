@@ -10,6 +10,9 @@
  * ASCII-ish glyphs, and nothing here depends on knowing the terminal width beyond a clamp.
  */
 import { formatTokens, formatUsd, type Stats } from "@tokenchit/core";
+import type { ClaudeReadings } from "@tokenchit/core/adapters";
+
+import { estimatedTotal } from "./claude-context.js";
 
 import { bar, bold, cyan, dim, grey, magenta, pad, padStart, sparkline, width } from "./ui.js";
 
@@ -20,9 +23,16 @@ const MAX = 84;
 const term = () => Math.max(MIN, Math.min(MAX, (process.stdout.columns ?? 80) - 4));
 
 /** `10.2B` over `tokens`, four to a row, sized to whichever is wider. */
-function headline(stats: Stats): string[] {
+function headline(stats: Stats, claude?: ClaudeReadings | null): string[] {
+  /* The estimate leads when there is one, marked with a tilde. It is the closest honest
+     answer to "how much have I used" — every agent's verified calls plus the deleted Claude
+     Code days, deflated by the machine's own overlap — and the figure it replaces is still on
+     the row below. `estimatedTotal` is what keeps the other agents in it. */
+  const estimated = estimatedTotal(stats, claude ?? null);
+  const total = estimated != null ? `~${formatTokens(estimated)}` : formatTokens(stats.tokens);
+
   const cells: Array<[string, string]> = [
-    [formatTokens(stats.tokens), "tokens"],
+    [total, "tokens"],
     [stats.equivCostUsd > 0 ? formatUsd(stats.equivCostUsd) : "—", "equiv. cost"],
     [`${stats.streakDays}d`, "streak"],
     [String(stats.activeDays), "active days"],
@@ -106,12 +116,77 @@ function models(stats: Stats, limit = 5): string[] {
 }
 
 /**
+ * The same usage read three ways, as ordinary rows.
+ *
+ * This was a yellow warning block above the stats — a discrepancy to be explained away, in
+ * the colour kept for problems. It is not a problem. Someone with two Claude Code profiles has
+ * three true answers to three different questions, and the smallest of them is the one that
+ * can be checked, not the one that needs an apology.
+ *
+ * Shown only when the readings differ. Where the transcripts are complete there is one number,
+ * and printing it three times would be noise.
+ */
+function readings(r: ClaudeReadings): string[] {
+  if (r.panel <= r.verified * 1.15) return [];
+
+  const rows: Array<[string, string, string]> = [
+    [
+      "verified",
+      formatTokens(r.verified),
+      r.estimated !== null
+        ? `of that, one row per API call from transcripts on disk`
+        : "one row per API call, from transcripts on disk",
+    ],
+  ];
+
+  // Not repeated as a row when it is already the headline.
+  if (r.estimated === null) {
+    rows.push(["estimated", "—", "not enough overlap to calibrate one"]);
+  }
+
+  /* Sits with `verified` because both are parts of the headline, not of the panel below. Under
+     the panel row it read as a component of Claude Code's figure, which it is not: it is the
+     part of our own estimate that the rollup reaches and no day bucket can. */
+  if (r.residual > 0) {
+    rows.push([
+      "recovered",
+      formatTokens(r.residual),
+      r.installedOn
+        ? `also in that: usage from before the daily window, back to ${r.installedOn}`
+        : "also in that: usage from before the daily window opened",
+    ]);
+  }
+
+  rows.push([
+    "stats panel",
+    formatTokens(r.panel),
+    "Claude Code's own figure, counting streaming rewrites",
+  ]);
+
+  const labelW = Math.max(...rows.map(([l]) => l.length)) + 2;
+  const valueW = Math.max(...rows.map(([, v]) => width(v))) + 2;
+
+  return [
+    "",
+    ...rows.map(
+      ([label, value, note]) =>
+        "  " + pad(grey(label.toUpperCase()), labelW) + padStart(bold(value), valueW) + "   " + grey(note),
+    ),
+  ];
+}
+
+/**
  * The full panel, as lines. Returned rather than printed so callers control placement.
  *
  * `framed` draws the panel's own bracket. Inside `generate` it is off: the step's gutter is
  * already grouping these lines, and a frame within a frame reads as a mistake.
  */
-export function renderStats(stats: Stats, handle: string, framed = true): string[] {
+export function renderStats(
+  stats: Stats,
+  handle: string,
+  framed = true,
+  claude?: ClaudeReadings | null,
+): string[] {
   const w = term();
   const title = ` @${handle} `;
   const rule = "─".repeat(Math.max(0, w - width(title) - 3));
@@ -121,9 +196,10 @@ export function renderStats(stats: Stats, handle: string, framed = true): string
 
   const body = [
     "",
-    ...headline(stats),
+    ...headline(stats, claude),
     "",
     ...recent(stats),
+    ...(claude ? readings(claude) : []),
     ...agents(stats),
     ...models(stats),
     "",

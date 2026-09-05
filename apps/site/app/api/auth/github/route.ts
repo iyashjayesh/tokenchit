@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
+import { avatarDataUri } from "@/lib/avatar";
 import { transaction } from "@/lib/db";
 import { clientIp, hit, limitHeaders, LIMITS } from "@/lib/rate-limit";
 
@@ -93,13 +94,66 @@ export async function POST(req: Request) {
       );
       const userId = rows[0]!.id;
 
+      /*
+       * Inherited figures are quarantined, not adopted.
+       *
+       * Anyone could publish to an unclaimed handle anonymously, and this INSERT sets
+       * `tier = 'verified'` on whatever row is already there. So the sequence "publish
+       * fabricated numbers under a stranger's handle, wait for them to sign in" ended with the
+       * stranger's page carrying someone else's invention behind a ✓ — verification laundering
+       * the squat instead of clearing it. `takenOver` was computed and only reported.
+       *
+       * Flagging the inherited submissions holds them off the board (board-query.ts filters on
+       * the newest submission's `flagged`) without deleting anything: if the figures were in
+       * fact this person's own anonymous publishing, their next `tokenchit publish` writes an
+       * unflagged submission and the row returns on its own.
+       */
+      if (takenOver) {
+        await client.query("UPDATE submissions SET flagged = true WHERE user_id = $1", [userId]);
+      }
+
       await client.query(
         "INSERT INTO api_tokens (user_id, token_hash, label) VALUES ($1, $2, $3)",
         [userId, keyHash, "cli"],
       );
 
+      /*
+       * Bounded, so repeated logins cannot accumulate live keys forever.
+       *
+       * Each sign-in minted a key and nothing ever removed one, so a user who logs in on a new
+       * machine every few months carries an ever-growing set of credentials they cannot see and
+       * could not revoke. Keeping the newest few preserves the multi-machine case the `label`
+       * column exists for while putting a ceiling on the blast radius; DELETE /api/auth/tokens
+       * is the deliberate path for giving one up early.
+       *
+       * Ordered by `id` as well as `created_at`, because `created_at` defaults to `now()` and
+       * `now()` is transaction time, not statement time — rows written in one transaction all
+       * carry the same timestamp and `ORDER BY created_at DESC` alone then picks arbitrarily.
+       * Against a real Postgres that kept the five *oldest* of eight. The key minted just above
+       * shares this transaction's timestamp, so without the `id` tiebreaker a tie could evict
+       * the credential this request is about to hand back. `id` is bigserial and monotonic.
+       */
+      await client.query(
+        `DELETE FROM api_tokens WHERE user_id = $1 AND id NOT IN (
+           SELECT id FROM api_tokens WHERE user_id = $1
+           ORDER BY created_at DESC, id DESC LIMIT 5
+         )`,
+        [userId],
+      );
+
       return { userId, takenOver };
     });
+
+    /*
+     * The avatar rides back with the sign-in rather than being fetched by the CLI.
+     *
+     * `sync` writes the committed card and `sync` makes no network request — that is the
+     * claim the README leads with, and `net.isolated` fails the build if any file outside
+     * net.ts can open a socket. So the bytes have to arrive some other way, and this request
+     * is already happening, already talks to GitHub, and already proves who the caller is.
+     * The CLI stores what comes back and reads it off disk forever after.
+     */
+    const avatar = await avatarDataUri(String(ghUser.id));
 
     return NextResponse.json({
       ok: true,
@@ -107,6 +161,7 @@ export async function POST(req: Request) {
       tier: "verified",
       token: apiKey,
       takenOver: result.takenOver,
+      avatar,
     });
   } catch (err) {
     // A github_id already bound to a different handle lands here: someone renamed their

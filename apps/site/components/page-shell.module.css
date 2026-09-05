@@ -1,9 +1,11 @@
+/* The breadcrumb sits between the header's own bottom padding and the main block's top one, so
+   its 20px was the third of three gaps in a row saying the same thing. */
 .crumbs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 20px 0 0;
+  padding: 12px 0 0;
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -29,6 +31,9 @@
   color: var(--hairline);
 }
 
+/* Top padding trimmed hard: on a page whose masthead, breadcrumb and rule already announce
+   where you are, 56px of air before the title was pushing the content it introduces down the
+   screen. The generous bottom is kept — that one ends the page rather than delaying it. */
 .main {
-  padding: clamp(30px, 4vw, 56px) 0 clamp(40px, 6vw, 80px);
+  padding: clamp(16px, 1.8vw, 26px) 0 clamp(40px, 6vw, 80px);
 }

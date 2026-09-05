@@ -7,6 +7,7 @@ import {
   type Theme,
 } from "@tokenchit/core";
 import { DEFAULT_WINDOW } from "@/lib/board";
+import { avatarDataUri } from "@/lib/avatar";
 import { cardFigures, EMPTY_FIGURES } from "@/lib/card-figures";
 import { readProfile } from "@/lib/profile";
 
@@ -69,7 +70,26 @@ export async function GET(
      They are cached differently below, so the two cases stay distinct here. */
   const profile = await readProfile(handle, DEFAULT_WINDOW).catch(() => undefined);
 
-  const figures = profile ? cardFigures(profile) : EMPTY_FIGURES;
+  /*
+   * A submission held back from the board is held back from the card too.
+   *
+   * The card is the most widely copied surface this project has — it goes in READMEs, where it
+   * is seen by people who will never open the board. Serving unexamined figures here while the
+   * board hides them defeats the review gate entirely: verified against a live instance, a
+   * flagged user whose row was absent from /board still had 9,000 tokens rendered into an
+   * embeddable badge.
+   *
+   * Rendered empty rather than 404'd, for the reason the empty case already gives above: a
+   * broken image in someone's README is a worse answer than an honest empty one. It also takes
+   * the short cache below, so the real card appears soon after a review clears rather than four
+   * hours later.
+   */
+  const held = profile?.underReview === true;
+  const figures = profile && !held ? cardFigures(profile) : EMPTY_FIGURES;
+
+  /* Held rows get no face either: the point of holding is that nothing about the row
+     circulates until somebody has looked, and a face is the most circulating part of it. */
+  const avatar = profile && !held ? await avatarDataUri(profile.githubId) : undefined;
 
   const svg = buildCardSvg({
     handle,
@@ -81,6 +101,7 @@ export async function GET(
     layout,
     theme,
     hide,
+    avatar,
   });
 
   /* A failed lookup must not be cached: the next request should try the database again
@@ -88,6 +109,8 @@ export async function GET(
   const cache =
     profile === undefined
       ? "no-store"
+      : held
+        ? `public, max-age=${EMPTY_CACHE}, s-maxage=${EMPTY_CACHE}`
       : profile === null
         ? `public, max-age=${EMPTY_CACHE}, s-maxage=${EMPTY_CACHE}`
         : `public, max-age=${maxAge}, s-maxage=${maxAge}`;

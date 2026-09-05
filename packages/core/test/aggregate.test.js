@@ -370,9 +370,18 @@ test("the stats-panel reader sums a cache the way the panel does, and is quiet w
   );
 
   const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
-  assert.equal(panel?.tokens, 10015, "every numeric field across every model is summed");
+  assert.equal(
+    panel?.tokens,
+    10015,
+    "only the four token fields are summed — contextWindow, maxOutputTokens, costUSD and " +
+      "webSearchRequests are not tokens and must not reach the total",
+  );
   assert.equal(panel?.root, cfg, "the config directory is named, not the projects dir");
-  assert.equal(panel?.days, 3, "days come from dailyActivity, and only from dated entries");
+  assert.deepEqual(
+    panel?.days,
+    ["2026-06-02", "2026-06-03", "2026-09-02"],
+    "the dates themselves, from dailyActivity, and only from dated entries",
+  );
 
   // A directory with no cache at all says nothing rather than throwing.
   const bare = await mkdtemp(join(tmpdir(), "tokenchit-bare-"));
@@ -401,8 +410,14 @@ test("a genuinely heavy day publishes instead of being refused", () => {
     tokens: 3_374_192_877,
     equivCostUsd: 2360.12,
     pricedShare: 1,
-    streakDays: 17,
-    activeDays: 50,
+    /* One day, so the counts say one day. This fixture is a single heavy day lifted out of a
+       real 50-day history, and it used to keep that history's `streakDays: 17` and
+       `activeDays: 50` beside a one-entry series — a shape `buildPayload` cannot produce, since
+       it fills `days` from the same `dayAgent` the counts are derived from. `reviewReason` now
+       reconciles the two, and the mismatch flagged it. The volume this test exists to check is
+       unchanged. */
+    streakDays: 1,
+    activeDays: 1,
     firstDay: "2026-09-02",
     lastDay: "2026-09-02",
     agents: [{ agent: "claude-code", tokens: 3_374_192_877 }],
@@ -439,7 +454,7 @@ test("volume still has a sanity ceiling, well above any real day", () => {
 
 test("the unseen estimate calibrates on overlap and refuses to guess without it", async () => {
   const { estimateUnseen } = await import("@tokenchit/core/adapters");
-  const panel = (daily) => [{ tokens: 0, root: "/x", days: daily.length, daily }];
+  const panel = (daily) => [{ tokens: 0, root: "/x", days: daily.map((d) => d.day), daily }];
   const day = (n) => `2026-08-${String(n).padStart(2, "0")}`;
 
   // Six overlapping days at a clean 2x, plus two days only the cache has.
@@ -469,10 +484,26 @@ test("days that cannot calibrate are excluded rather than averaged in", async ()
   ];
   const ours = new Map([1, 2, 3, 4, 5, 6, 7, 8].map((n) => [day(n), 100]));
 
-  const est = estimateUnseen([{ tokens: 0, root: "/x", days: 9, daily }], ours);
+  const est = estimateUnseen([{ tokens: 0, root: "/x", days: [], daily }], ours);
   assert.equal(est?.ratio, 3, "only the calibratable days set the ratio");
   assert.deepEqual(est?.spread, [3, 3], "and the spread reports only those days");
-  assert.equal(est?.tokens, 300);
+
+  /*
+   * Excluded from the median, but not from the estimate.
+   *
+   * Day 8 is priced at 90,000 records against 100 tokens of surviving transcript: it is not
+   * an inflated day, it is a deleted one with a fragment left. The first version read
+   * `ours > 0` as "present" and dropped it, which on a real machine threw away 1.34b tokens
+   * across six such days. What it is worth is the deflated day less the fragment.
+   *
+   *   day 8  90,000 / 3 = 30,000, less the 100 already counted  = 29,900
+   *   day 20    900 / 3 =    300, nothing on disk               =    300
+   *
+   * Day 7 is the opposite case and must still contribute nothing: below the floor the
+   * transcripts already hold more than the cache, so there is nothing missing to price.
+   */
+  assert.equal(est?.tokens, 30_200, "a part-rotated day is priced for the part that is gone");
+  assert.equal(est?.days, 2, "and counts among the days the estimate draws on");
 });
 
 test("without enough overlap the estimate is silence, not a guess", async () => {
@@ -485,14 +516,14 @@ test("without enough overlap the estimate is silence, not a guess", async () => 
   // One overlapping day is not a calibration, and the whole point is that the correction
   // comes from this machine's own data rather than a constant.
   assert.equal(
-    estimateUnseen([{ tokens: 0, root: "/x", days: 2, daily }], new Map([["2026-08-01", 100]])),
+    estimateUnseen([{ tokens: 0, root: "/x", days: [], daily }], new Map([["2026-08-01", 100]])),
     null,
   );
 
   // Nor is there anything to estimate when nothing is missing.
   assert.equal(
     estimateUnseen(
-      [{ tokens: 0, root: "/x", days: 1, daily: [{ day: "2026-08-01", tokens: 200 }] }],
+      [{ tokens: 0, root: "/x", days: [], daily: [{ day: "2026-08-01", tokens: 200 }] }],
       new Map([["2026-08-01", 100]]),
     ),
     null,
@@ -542,4 +573,177 @@ test("the panel figure includes days the cache has not computed yet", async () =
 
   const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
   assert.equal(panel?.tokens, 1_500_000, "the cache plus only what came after it");
+});
+
+test("a day worked on two accounts is one day, not two", async () => {
+  const { claudeReadings } = await import("@tokenchit/core/adapters");
+
+  /*
+   * Someone with a work profile and a personal profile uses both on the same Tuesday. Summing
+   * each profile's day count charges that Tuesday twice — on one real machine 75 days of
+   * history were reported as 100, next to an `ours` that was distinct because it came from a
+   * Map. The two halves of one displayed pair have to be counted the same way.
+   */
+  const readings = claudeReadings(
+    [
+      { tokens: 6000, root: "/a", days: ["2026-08-01", "2026-08-02"], daily: [] },
+      { tokens: 4000, root: "/b", days: ["2026-08-02", "2026-08-03"], daily: [] },
+    ],
+    new Map([["2026-08-02", 500]]),
+    500,
+  );
+
+  assert.equal(readings?.days.theirs, 3, "four entries across two profiles, three days");
+  assert.equal(readings?.panel, 10_000, "tokens still sum across profiles");
+});
+
+test("the rollup residual is netted against days we already hold", async () => {
+  /*
+   * `estimateUnseen` prices what the lifetime `modelUsage` rollup knows and the rotating daily
+   * window no longer lists. The first version added that whole difference, subtracting only
+   * `panel.daily` — never `ourDaily`. The day loop above it does subtract (`lost = deflated -
+   * ours`), and once the ledger began replaying banked days into `ourDaily`, every restored
+   * pre-window day was counted twice: once in `verified`, once here. Reproduced before the fix
+   * as 750 real tokens reported as 1000.
+   *
+   * Every panel fixture in this file uses `tokens: 0`, so none of them could reach this path.
+   */
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+
+  // Five days the window still lists, at a clean 2x, so the ratio calibrates to exactly 2.
+  const daily = [1, 2, 3, 4, 5].map((n) => ({ day: `2026-08-0${n}`, tokens: 200 }));
+  const ours = new Map(daily.map((d) => [d.day, 100]));
+
+  // The rollup carries 500 more than the window lists: ten pre-window days at 25, doubled.
+  // `rollup` is the cache's own figure; `tokens` may also carry today's live work, which the
+  // residual must not price — see "priced off the cache, not off the live panel figure".
+  const panel = { tokens: 1500, rollup: 1500, root: "/x", days: [], daily, firstDay: "2026-07-01" };
+
+  // Nothing banked yet: the pre-window stretch is genuinely unseen, so it is priced in full.
+  const cold = estimateUnseen([panel], ours);
+  assert.equal(cold?.residual, 250, "500 records of pre-window usage, deflated by the 2x");
+
+  // The ledger has since restored those ten days, so they are already in `ourDaily` — and in
+  // the verified total the caller adds this to. Pricing them again is the double count.
+  const restored = new Map(ours);
+  for (let n = 1; n <= 10; n++) restored.set(`2026-07-${String(n).padStart(2, "0")}`, 25);
+
+  const warm = estimateUnseen([panel], restored);
+  assert.equal(
+    warm,
+    null,
+    "with every pre-window day already held there is nothing left to estimate, and the " +
+      "headline falls back to the verified total rather than adding it a second time",
+  );
+
+  /*
+   * Days *after* the cache was last computed must not be netted off. A sync sees transcripts the
+   * cache has not caught up with; those are absent from `panel.tokens` too, so subtracting them
+   * would push the estimate below what is already verified.
+   */
+  const withRecent = new Map(ours);
+  withRecent.set("2026-09-01", 9999);
+  assert.equal(
+    estimateUnseen([panel], withRecent)?.residual,
+    250,
+    "a day after the window is not pre-window usage and must not reduce the residual",
+  );
+});
+
+test("the payload's types are checked, not assumed", () => {
+  /*
+   * `validatePayload` is annotated to take a `Payload`, but its real input is `JSON.parse` of an
+   * HTTP body — the annotation is a compile-time promise about a runtime value the server does
+   * not control. Every bound below the type is written as if the promise held, so a wrong type
+   * cleared validation and failed later, at the database or on a string method, as a 500 from a
+   * route whose whole design is to answer 422 with reasons.
+   *
+   * Each case here was reproduced against the built module before the check existed.
+   */
+  /* A real day, because "no tokens and no days" is itself rejected now — the baseline has to be
+     valid for the type failures below to be the only thing each case is testing. */
+  const base = {
+    handle: "someone",
+    tokens: 100,
+    equivCostUsd: 0.05,
+    pricedShare: 1,
+    streakDays: 1,
+    activeDays: 1,
+    firstDay: "2026-09-01",
+    lastDay: "2026-09-01",
+    agents: [{ agent: "claude-code", tokens: 100 }],
+    models: [],
+    days: [{ day: "2026-09-01", agent: "claude-code", tokens: 100, equivCostUsd: 0.05 }],
+    clientVersion: "test",
+  };
+  assert.deepEqual(validatePayload(base), [], "the baseline is valid");
+
+  // Cleared validation, then threw an uncaught TypeError on `.toLowerCase()` in the route.
+  assert.ok(
+    validatePayload({ ...base, handle: 12345 }).some((e) => e.includes("string")),
+    "a non-string handle is refused here rather than throwing in the route",
+  );
+
+  // `NaN < 0` and `NaN > 1` are both false, so a NaN share passed every comparison and hit a
+  // CHECK constraint. Every other numeric field already used Number.isFinite.
+  assert.ok(
+    validatePayload({ ...base, pricedShare: NaN }).length > 0,
+    "NaN is not a share between 0 and 1",
+  );
+
+  // `value &&` skipped a missing day entirely, so it reached a NOT NULL column.
+  assert.ok(
+    validatePayload({ ...base, firstDay: undefined }).some((e) => e.includes("required")),
+    "firstDay is required, not merely well-formed when present",
+  );
+
+  for (const field of ["days", "models", "agents"]) {
+    assert.ok(
+      validatePayload({ ...base, [field]: "not an array" }).some((e) => e.includes(field)),
+      `${field} must be an array before anything iterates it`,
+    );
+  }
+});
+
+test("the residual is priced off the cache, not off the live panel figure", async () => {
+  /*
+   * Two changes that were correct apart and wrong together.
+   *
+   * `panel.tokens` now carries the cache's rollup *plus* today's work, so the explainer quotes
+   * a figure someone can actually see in their Stats panel. The residual asks a different
+   * question — what does the rollup know that the rotating daily window no longer lists — and
+   * both sides of that have to come from the same file. Priced off the live figure, it charged
+   * today's usage as history the window had dropped, on top of the verified total that already
+   * held it: 800 real tokens reported as 1100.
+   *
+   * Neither change is wrong; only their product was, which is why this test exists at the seam.
+   */
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+
+  const daily = [1, 2, 3, 4, 5].map((n) => ({ day: `2026-08-0${n}`, tokens: 200 }));
+  const ours = new Map(daily.map((d) => [d.day, 100]));
+  ours.set("2026-09-04", 300); // today: after lastComputedDate, so only `tokens` carries it
+
+  // The rollup equals what the window lists, so there is no pre-window history at all.
+  const panel = {
+    tokens: 1000 + 600, // cache 1000 + today's 300 counted the panel's way
+    rollup: 1000,
+    root: "/x",
+    days: [],
+    daily,
+    firstDay: "2026-08-01",
+  };
+
+  assert.equal(
+    estimateUnseen([panel], ours),
+    null,
+    "nothing is missing, so nothing is estimated — the live top-up is not a deleted day",
+  );
+
+  // And a genuine pre-window gap is still priced, live top-up notwithstanding.
+  assert.equal(
+    estimateUnseen([{ ...panel, rollup: 1500 }], ours)?.residual,
+    250,
+    "500 records the window no longer lists, deflated by the 2x",
+  );
 });

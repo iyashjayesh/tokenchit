@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { pool } from "@/lib/db";
 
 export type Limit = { limit: number; windowSeconds: number };
@@ -77,8 +79,22 @@ export async function hit(bucket: string, { limit, windowSeconds }: Limit): Prom
  */
 export function clientIp(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip")?.trim() || "unknown";
+  const raw = forwarded
+    ? forwarded.split(",")[0]!.trim()
+    : req.headers.get("x-real-ip")?.trim() || "unknown";
+
+  /*
+   * Hashed before it becomes a row key.
+   *
+   * These keys are stored in `rate_limits` beside the handle being published, so a raw address
+   * made the table a log of which IP publishes as whom — personal data this feature never needs
+   * and no part of the product reads back. A hash counts requests exactly as well: the key only
+   * ever has to be equal to itself.
+   *
+   * Truncated to 32 hex characters because it is a bucket label, not a credential, and the
+   * shorter key keeps the index small.
+   */
+  return createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
 
 /**

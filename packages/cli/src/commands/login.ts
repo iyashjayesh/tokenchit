@@ -158,11 +158,20 @@ export async function signIn(api: string, opts: SignInOptions = {}): Promise<Sig
     return { ok: false };
   }
 
+  /* Kept only if it is what it claims to be. It goes straight into an SVG the user commits,
+     and the one shape that cannot reach out of that document is an inline image. */
+  const returned = res.body?.["avatar"];
+  const avatar =
+    typeof returned === "string" && /^data:image\/(png|jpeg|gif|webp);base64,/.test(returned)
+      ? returned
+      : undefined;
+
   const path = await writeAuth({
     token,
     handle,
     api,
     createdAt: new Date().toISOString(),
+    ...(avatar ? { avatar } : {}),
   });
 
   say(`${green("✓")} signed in as ${bold(`@${handle}`)}`);

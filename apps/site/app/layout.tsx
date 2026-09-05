@@ -6,6 +6,7 @@ import { Analytics } from "@/components/analytics";
 import { SITE_URL } from "@/lib/site";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SiteTicker } from "@/components/site-ticker";
 import styles from "./layout.module.css";
 
 /* Both faces are variable fonts, so no `weight` is passed — the full range
@@ -40,6 +41,8 @@ export default function RootLayout({
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
       <body>
         <div className={styles.grid}>
+          {/* Outside the container on purpose — see SiteTicker. */}
+          <SiteTicker />
           <div className={styles.container}>{children}</div>
         </div>
         {/* useSearchParams needs a boundary or the whole route opts out of static

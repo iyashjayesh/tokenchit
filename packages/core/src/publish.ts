@@ -32,6 +32,16 @@ export type Payload = {
    * then quote at each other.
    */
   days: { day: string; agent: AgentId; tokens: number; equivCostUsd: number }[];
+  /**
+   * Verified calls plus a calibrated estimate of days the agent's own logs no longer hold.
+   *
+   * Carried beside `tokens` rather than replacing it, because only `tokens` decomposes into
+   * `days` — and the board's windows, sparkline and agent split are all built from those.
+   * This exists so a profile can show the same headline the card does instead of quietly
+   * disagreeing with it. It is never ranked: a figure calibrated per machine cannot order
+   * people against each other.
+   */
+  estimatedTokens?: number;
   clientVersion: string;
 };
 

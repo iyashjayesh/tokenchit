@@ -35,10 +35,10 @@ export async function readBoard(
        /* Everyone whose latest submission is not held for review. Computed once and reused by
           both rankings, so a flagged row cannot be absent from one and present in the other —
           which would make every position below it move for no reason. */
-       SELECT u.id, u.handle, u.tier
+       SELECT u.id, u.handle, u.tier, u.github_id, l.received_at
        FROM users u
        LEFT JOIN LATERAL (
-         SELECT flagged, streak_days FROM submissions
+         SELECT flagged, streak_days, received_at FROM submissions
          WHERE user_id = u.id ORDER BY received_at DESC LIMIT 1
        ) l ON true
        WHERE COALESCE(l.flagged, false) = false
@@ -85,7 +85,7 @@ export async function readBoard(
        GROUP BY user_id
      ),
      ranked_now AS (
-       SELECT e.id, e.handle, e.tier, t.tokens, t.cost, t.mix,
+       SELECT e.id, e.handle, e.tier, e.github_id, e.received_at, t.tokens, t.cost, t.mix,
               ROW_NUMBER() OVER (ORDER BY (e.tier = 'verified') DESC, t.tokens DESC) AS rank
        FROM totals t
        JOIN eligible e ON e.id = t.user_id
@@ -100,7 +100,7 @@ export async function readBoard(
        JOIN eligible e ON e.id = b.user_id
        WHERE b.tokens > 0
      )
-     SELECT r.handle, r.tier, r.tokens, r.cost, r.mix, r.rank,
+     SELECT r.handle, r.tier, r.github_id, r.received_at, r.tokens, r.cost, r.mix, r.rank,
             COALESCE(l.streak_days, 0) AS streak_days,
             rb.rank AS previous_rank,
             sp.days AS spark_days,
@@ -120,6 +120,13 @@ export async function readBoard(
     rank: Number(r.rank),
     handle: r.handle,
     tier: r.tier,
+    /* Null for anyone who has not proved the handle, which is what gates the avatar: an
+       unverified row has no id to render one from, so it cannot show a face. */
+    githubId: r.github_id === null ? null : String(r.github_id),
+    /* When this row was last republished. The ranking already decays on its own as days age
+       out of the window, so this is not about the position — it is about `streakDays`, `mix`
+       and the models, which all come from that newest submission and can be months old. */
+    lastPublished: r.received_at === null ? null : new Date(r.received_at).toISOString(),
     tokens: Number(r.tokens),
     equivCostUsd: Number(r.cost),
     streakDays: Number(r.streak_days),

@@ -129,3 +129,67 @@ test("a resumed codex session contributes its growth, not the total it inherited
   const total = events[0].input + events[0].output + events[0].cacheRead + events[0].cacheWrite;
   assert.equal(total, 1_000_000, "only the million it grew by, not the twenty billion it began with");
 });
+
+test("one unreadable transcript does not abort the scan", async (t) => {
+  /*
+   * A corrupt line was already tolerated; an unreadable file was not. `createReadStream` defers
+   * the open, so EACCES arrived on first read, threw out of the adapter's generator and took the
+   * whole scan with it — every other transcript and every other agent discarded, no card, exit
+   * 1. A root-owned transcript left behind by one `sudo` run is enough to cause it. Reproduced
+   * against the built CLI before the fix.
+   */
+  const { mkdtemp, mkdir, writeFile, chmod } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { readAll } = await import("@tokenchit/core/adapters");
+  const { aggregate } = await import("@tokenchit/core");
+
+  const home = await mkdtemp(join(tmpdir(), "tokenchit-eacces-"));
+  const dir = join(home, ".claude", "projects", "p");
+  await mkdir(dir, { recursive: true });
+
+  const row = (id, n) =>
+    JSON.stringify({
+      type: "assistant",
+      requestId: `req_${id}`,
+      timestamp: new Date(Date.UTC(2026, 7, 1, 12)).toISOString(),
+      message: {
+        id: `msg_${id}`,
+        role: "assistant",
+        model: "claude-opus-5",
+        usage: { input_tokens: n, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+      },
+    });
+
+  await writeFile(join(dir, "readable.jsonl"), row("a", 100) + "\n");
+  await writeFile(join(dir, "locked.jsonl"), row("b", 500) + "\n");
+  await chmod(join(dir, "locked.jsonl"), 0o000);
+
+  // Running as root would read it anyway and prove nothing.
+  if (process.getuid && process.getuid() === 0) return t.skip("running as root");
+
+  /* HOME as well as CLAUDE_CONFIG_DIR: the adapter resolves several roots, so setting only the
+     latter left the real machine's profiles in scope and the assertion read the whole corpus. */
+  const prev = {
+    cfg: process.env["CLAUDE_CONFIG_DIR"],
+    home: process.env["HOME"],
+    up: process.env["USERPROFILE"],
+  };
+  process.env["CLAUDE_CONFIG_DIR"] = join(home, ".claude");
+  process.env["HOME"] = home;
+  process.env["USERPROFILE"] = home;
+  try {
+    const stats = await aggregate(readAll(["claude-code"]));
+    assert.equal(stats.tokens, 100, "the readable transcript survives the unreadable one");
+  } finally {
+    for (const [k, v] of [
+      ["CLAUDE_CONFIG_DIR", prev.cfg],
+      ["HOME", prev.home],
+      ["USERPROFILE", prev.up],
+    ]) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    await chmod(join(dir, "locked.jsonl"), 0o644).catch(() => {});
+  }
+});

@@ -4,8 +4,11 @@ import Link from "next/link";
 import { formatTokens, formatUsd } from "@tokenchit/core";
 
 import { PageShell } from "@/components/page-shell";
-import { isWindow, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board";
+import { isWindow, staleLabel, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
+import { findOnBoard } from "@/lib/board-search";
+import { SearchResult } from "@/components/search-result";
+import { Podium } from "@/components/podium";
 import { readBoardTotals } from "@/lib/board-totals";
 
 import styles from "./board.module.css";
@@ -105,7 +108,7 @@ const PER_PAGE = 25;
 export default async function BoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ window?: string; page?: string }>;
+  searchParams: Promise<{ window?: string; page?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const requested = params.window ?? null;
@@ -114,16 +117,24 @@ export default async function BoardPage({
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const offset = (page - 1) * PER_PAGE;
 
-  const [rows, totals] = await Promise.all([
+  const query = (params.q ?? "").trim();
+
+  const [rows, totals, found] = await Promise.all([
     readBoard(window, PER_PAGE, offset).catch(() => []),
     readBoardTotals(window).catch(() => null),
+    query ? findOnBoard(query, window, PER_PAGE).catch(() => null) : Promise.resolve(null),
   ]);
+
+  /* Highlight the searched row when this page happens to contain it, so a hit reads as a
+     position in the ranking rather than as a card floating above an unrelated table. */
+  const hit = found?.state === "ranked" ? found.handle.toLowerCase() : null;
 
   const total = totals?.developers ?? rows.length;
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
   const from = total === 0 ? 0 : offset + 1;
   const to = offset + rows.length;
-  const href = (p: number) => `/board?window=${window}${p > 1 ? `&page=${p}` : ""}`;
+  const href = (p: number) =>
+    `/board?window=${window}${p > 1 ? `&page=${p}` : ""}${query ? `&q=${encodeURIComponent(query)}` : ""}`;
 
   const summary: [string, string][] = totals
     ? [
@@ -149,6 +160,10 @@ export default async function BoardPage({
         count over the selected window, not a skill score.
       </p>
 
+      {/* Filters and search travel together and pin on scroll: on a long board the controls
+          were a screen and a half behind the rows they govern. Sticky rather than a sidebar,
+          because the table needs 720px of width more than the page needs a second column. */}
+      <div className={styles.controls}>
       <nav className={styles.windows} aria-label="Time window">
         {WINDOWS.map((w) => (
           <Link
@@ -160,6 +175,41 @@ export default async function BoardPage({
           </Link>
         ))}
       </nav>
+
+      {/* A GET form, so a search is a URL: shareable, reloadable, and back-button-able, and it
+          keeps this page free of client JavaScript. The window rides along in a hidden field
+          so searching does not silently reset the reader to "this year". */}
+      <form className={styles.search} action="/board" method="get" role="search">
+        <input type="hidden" name="window" value={window} />
+        <input
+          className={styles.searchInput}
+          type="search"
+          name="q"
+          defaultValue={query}
+          placeholder="find a developer by handle…"
+          aria-label="Find a developer by handle"
+          spellCheck={false}
+          autoComplete="off"
+          maxLength={39}
+        />
+        <button className={styles.searchGo} type="submit">
+          search
+        </button>
+        {query && (
+          <Link className={styles.searchClear} href={`/board?window=${window}`}>
+            clear
+          </Link>
+        )}
+      </form>
+
+      </div>
+
+      {found && <SearchResult found={found} window={window} query={query} />}
+
+      {/* Above the totals, not below them: the question a reader arrives with is who is winning,
+          and the four aggregate figures are context for that rather than the other way round.
+          The same three carry a medal edge in the table — see the row classes. */}
+      {!query && page === 1 && <Podium rows={rows} />}
 
       {summary.length > 0 && (
         <div className={styles.summary}>
@@ -194,10 +244,34 @@ export default async function BoardPage({
             </thead>
             <tbody>
               {rows.map((r) => {
+                /* Only past the threshold — see staleLabel. A fresh row shows nothing, which
+                   is what makes the marker mean something on the row that has one. */
+                const stale = staleLabel(r.lastPublished);
                 const mix = Object.entries(r.mix).sort((a, b) => b[1] - a[1]);
                 const mixTotal = mix.reduce((a, [, n]) => a + n, 0);
                 return (
-                  <tr key={r.handle} className={styles.row}>
+                  <tr
+                    key={r.handle}
+                    id={`u-${r.handle}`}
+                    /* The top three are marked in the table rather than lifted out above it.
+                       A separate podium showed the same three people twice — once as a card and
+                       again three rows later — and spent a chunk of the first screen doing it.
+                       Here the ranking is its own stage. Only on an unsearched first page: on
+                       page four these are not the top three of anything the reader can see. */
+                    className={[
+                      styles.row,
+                      !query && page === 1 && r.rank <= 3 ? styles.rowTop : "",
+                      !query && page === 1 && r.rank === 1 ? styles.rowFirst : "",
+                      hit === r.handle.toLowerCase() ? styles.rowHit : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    style={
+                      !query && page === 1 && r.rank <= 3
+                        ? ({ ["--medal" as string]: MEDALS[r.rank - 1] } as React.CSSProperties)
+                        : undefined
+                    }
+                  >
                     <td>
                       <span
                         className={styles.rank}
@@ -209,6 +283,23 @@ export default async function BoardPage({
                     </td>
                     <td>
                       <Link href={`/u/${r.handle}`} className={styles.dev}>
+                        {/* Only a proved handle has an id, so an unverified row simply has no
+                            avatar to draw — the safeguard is the absence of data rather than a
+                            condition somebody has to remember. Width and height are set because
+                            twenty-five images arriving late would reflow the whole table. */}
+                        {r.githubId ? (
+                          <img
+                            className={styles.avatar}
+                            src={`/api/avatar/${r.githubId}`}
+                            width={24}
+                            height={24}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className={styles.avatarBlank} aria-hidden="true" />
+                        )}
                         <span className={styles.handle}>@{r.handle}</span>
                         {r.tier === "verified" ? (
                           <span className={styles.verified} title="GitHub identity verified">
@@ -220,6 +311,14 @@ export default async function BoardPage({
                             title="Self-reported; the handle is unproven"
                           >
                             cli
+                          </span>
+                        )}
+                        {stale && (
+                          <span
+                            className={styles.stale}
+                            title={`Last published ${r.lastPublished?.slice(0, 10)} — streak, agent mix and models are from that submission`}
+                          >
+                            {stale}
                           </span>
                         )}
                       </Link>

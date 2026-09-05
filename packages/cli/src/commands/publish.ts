@@ -1,15 +1,15 @@
 import {
-  aggregate,
   buildPayload,
   formatTokens,
   sanitizeHandle,
   serializePayload,
   validatePayload,
 } from "@tokenchit/core";
-import { readAll } from "@tokenchit/core/adapters";
 
 import { resolveApi } from "../api.js";
 import { flag, has } from "../args.js";
+import { claudeContext, estimatedTotal } from "../claude-context.js";
+import { scan } from "../scan.js";
 import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { bold, dim, fail, green, grey, link, say, spin, warn, yellow } from "../ui.js";
@@ -63,15 +63,16 @@ export async function publish(argv: string[], version: string): Promise<number> 
   const reading = spin("reading local agent logs…");
   /* Named and counted, because a scan that reports nothing looks the same as one that has
      hung. On a large corpus this walks thousands of files over several seconds. */
-  const stats = await aggregate(
-    readAll(config.agents, ({ agent, events }) =>
+  const { stats } = await scan(config.agents, {
+    // A dry run prints the exact bytes and sends nothing; it must not bank anything either.
+    write: !dryRun,
+    onProgress: ({ agent, events }) =>
       reading.update(
         events === 0
           ? `reading ${agent}…`
           : `reading ${agent}… ${events.toLocaleString()} events`,
       ),
-    ),
-  );
+  });
   reading.stop();
 
   if (stats.tokens === 0) {
@@ -79,7 +80,12 @@ export async function publish(argv: string[], version: string): Promise<number> 
     return 1;
   }
 
+  /* The same estimate the card carries, so a profile shows the headline its card shows.
+     Ranked on `tokens` regardless — see the note on the field. */
+  const claude = await claudeContext(stats, config.agents);
   const payload = buildPayload(stats, { handle, clientVersion: version });
+  const estimated = estimatedTotal(stats, claude);
+  if (estimated != null) payload.estimatedTokens = estimated;
   const body = serializePayload(payload);
 
   // Validated here as well as on the server so that a rejection is explained on the machine

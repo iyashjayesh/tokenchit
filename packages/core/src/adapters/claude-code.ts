@@ -120,11 +120,31 @@ export function createClaudeCode(roots?: string[] | string): Adapter {
 
       for (const root of await resolve()) {
         for await (const file of walkFiles(root, ".jsonl")) {
-          const lines = createInterface({
-            input: createReadStream(file, { encoding: "utf8" }),
-            crlfDelay: Infinity,
-          });
+          /*
+           * One unreadable file is not a failed sync.
+           *
+           * A corrupt *line* was already tolerated — the JSON.parse below skips it — but an
+           * unreadable *file* threw out of the generator and aborted the whole scan, so every
+           * other transcript and every other agent went with it and the user got nothing. A
+           * root-owned transcript left by a `sudo` run is enough to trigger it: EACCES, and no
+           * card. The stats-cache reader beside this one already takes the other view, that a
+           * file we cannot read is an absent answer rather than an error, and it is the right
+           * one here too.
+           *
+           * The stream is opened inside the try because that is where the error surfaces —
+           * createReadStream defers the open, so the throw arrives on first read.
+           */
+          let lines;
+          try {
+            lines = createInterface({
+              input: createReadStream(file, { encoding: "utf8" }),
+              crlfDelay: Infinity,
+            });
+          } catch {
+            continue;
+          }
 
+          try {
           for await (const line of lines) {
             // Cheap prefilter. Most lines in a transcript are prompts, tool calls and tool
             // results; only assistant replies carry usage, and parsing the rest of a corpus
@@ -163,6 +183,11 @@ export function createClaudeCode(roots?: string[] | string): Adapter {
 
             const previous = best.get(key);
             if (!previous || total(event) > total(previous)) best.set(key, event);
+          }
+          } catch {
+            /* Unreadable partway through — keep whatever this file already yielded and move on
+               rather than discarding every other file's work. */
+            continue;
           }
         }
       }

@@ -4,6 +4,7 @@ import { Hero } from "@/components/hero";
 import { CardSection } from "@/components/card-section";
 import { Leaderboard } from "@/components/leaderboard";
 import { DEFAULT_WINDOW } from "@/lib/board";
+import { LANDING_ROWS } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
 import { readFeatured } from "@/lib/featured";
 import { Verification } from "@/components/verification";
@@ -25,8 +26,10 @@ import { SiteFooter } from "@/components/site-footer";
 export const revalidate = 300;
 
 export default async function Page() {
-  // Failing to read the board should cost the reader the table, not the whole page.
-  const rows = await readBoard(DEFAULT_WINDOW).catch(() => []);
+  /* Ten, not the default twenty-five. This is a marketing page whose job is to show that the
+     board is real and populated; the board's own page is where someone goes to read all of it.
+     A long table here pushes every section below it off the first two screens. */
+  const rows = await readBoard(DEFAULT_WINDOW, LANDING_ROWS).catch(() => []);
 
   const preview = await readFeatured(rows);
 
