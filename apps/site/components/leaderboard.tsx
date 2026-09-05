@@ -7,7 +7,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { useSiteState } from "@/components/site-state";
 import { formatTokens, formatUsd } from "@tokenchit/core";
 import type { BoardRow } from "@/lib/board";
-import { WINDOWS, type BoardWindow } from "@/lib/board";
+import { LANDING_ROWS, WINDOWS, type BoardWindow } from "@/lib/board";
 import styles from "./leaderboard.module.css";
 import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
 
@@ -46,7 +46,7 @@ export function Leaderboard({ initialRows, initialWindow }: {
 
     let cancelled = false;
 
-    fetch(`/api/submissions?window=${activeWindow}`)
+    fetch(`/api/submissions?window=${activeWindow}&limit=${LANDING_ROWS}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
       .then((data: { rows: BoardRow[] }) => {
         if (cancelled) return;
@@ -165,10 +165,16 @@ export function Leaderboard({ initialRows, initialWindow }: {
         </div>
       )}
 
-      <p className={styles.foot}>
-        <Link href="/board" className={styles.moreLink}>
+      {/* A link inside the footnote was there all along and nobody found it — the paragraph
+          reads as small print, so the one thing in it that goes somewhere looked like small
+          print too. Same destination, given the weight of the window buttons above. */}
+      <div className={styles.moreRow}>
+        <Link href="/board" className={styles.moreButton}>
           See the full board →
-        </Link>{" "}
+        </Link>
+      </div>
+
+      <p className={styles.foot}>
         Rank is total tokens over the selected window; cost and agent mix cover the same
         window. Streak is the current run of active days, which is not a windowed figure. A{" "}
         <span className={styles.strong}>cli</span> badge means the numbers were self-reported

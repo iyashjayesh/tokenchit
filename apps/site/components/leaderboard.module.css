@@ -226,6 +226,32 @@
   color: var(--text-dim);
 }
 
+.moreRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+/* The window filters' chrome, in the active treatment: this is the one action in the section,
+   and it should not read as quieter than the controls that only re-sort what is on screen. */
+.moreButton {
+  padding: 10px 18px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  box-shadow: 3px 3px 0 var(--lime);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.moreButton:hover {
+  background: var(--coral);
+  color: var(--surface);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
 .moreLink {
   font-weight: 700;
   color: var(--ink);

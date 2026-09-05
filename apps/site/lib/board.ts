@@ -60,3 +60,11 @@ export const WINDOW_DAYS: Record<BoardWindow, number> = {
 
 export const isWindow = (value: string | null): value is BoardWindow =>
   value !== null && value in WINDOW_DAYS;
+
+/**
+ * How many rows the landing page's preview shows.
+ *
+ * Shared so the server's first paint and the client's window refetch cannot disagree — asking
+ * for a different count in each was how the table silently grew when someone changed windows.
+ */
+export const LANDING_ROWS = 10;
