@@ -45,12 +45,30 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
   const handle = sanitizeHandle(decodeURIComponent((await params).handle));
   const profile = await readProfile(handle).catch(() => null);
 
-  const tokens = profile ? formatTokens(profile.tokens) : "—";
-  const cost = profile && profile.equivCostUsd > 0 ? formatUsd(profile.equivCostUsd) : "—";
-  const streak = profile ? `${profile.streakDays}d` : "—";
+  /*
+   * A held row's figures do not travel, here either.
+   *
+   * `api/card/[handle]/route.ts` blanks the card for a submission held for review, on the
+   * grounds that the point of holding is that nothing about the row circulates until somebody
+   * has looked at it. This file rendered the same three numbers unconditionally — and this is
+   * the image that unfurls in Slack, on X and on LinkedIn, so it circulates further than the
+   * card does. The gate was half a gate.
+   *
+   * Held reads as absent rather than as flagged: the same em dashes a handle with nothing
+   * published gets. The board does not announce who is under review, and neither does an image
+   * somebody may be about to post.
+   */
+  const held = profile?.underReview === true;
+  const shown = held ? null : profile;
+
+  const tokens = shown ? formatTokens(shown.tokens) : "—";
+  const cost = shown && shown.equivCostUsd > 0 ? formatUsd(shown.equivCostUsd) : "—";
+  const streak = shown ? `${shown.streakDays}d` : "—";
+  // Tier is an identity fact rather than a figure, so it survives the hold, as it does on the
+  // card: what is withheld is the unexamined numbers, not who the person is.
   const verified = profile?.tier === "verified";
 
-  const mix = Object.entries(profile?.mix ?? {}).sort((a, b) => b[1] - a[1]);
+  const mix = Object.entries(shown?.mix ?? {}).sort((a, b) => b[1] - a[1]);
   const mixTotal = mix.reduce((a, [, n]) => a + n, 0) || 1;
 
   const stats: [string, string][] = [
