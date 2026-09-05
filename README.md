@@ -1,5 +1,12 @@
 # tokenchit
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![npm](https://img.shields.io/npm/v/@tokenchit/cli.svg)](https://www.npmjs.com/package/@tokenchit/cli)
+![CI](https://github.com/iyashjayesh/tokenchit/actions/workflows/ci.yml/badge.svg)
+![Node](https://img.shields.io/node/v/@tokenchit/cli)
+![GitHub last commit](https://img.shields.io/github/last-commit/iyashjayesh/tokenchit)
+![Visitors](https://api.visitorbadge.io/api/visitors?path=iyashjayesh%2Ftokenchit&countColor=%23263759&style=flat)
+
 **Turn your local AI coding agent logs into a stat card you commit to your README.**
 
 [![tokenchit](./tokenchit.svg)](https://tokenchit.app/u/iyashjayesh)
@@ -12,11 +19,7 @@ npx -y @tokenchit/cli@latest generate
 ```
 
 One command: it finds your agents, shows your stats, writes the card, and puts you on the
-board — announcing each step before it happens. The scan names each agent and counts as it
-goes, so a slow disk looks like progress rather than a hang.
-
-Running it often? `npm i -g @tokenchit/cli` and then `tokenchit generate`, which skips npx's
-registry check on every run.
+board. Running it often? `npm i -g @tokenchit/cli`, then `tokenchit generate`.
 
 ```
   ┃ [1/3]  DETECT AGENTS
@@ -25,10 +28,10 @@ registry check on every run.
   ────────────────────────────────────────────────────────────
 
   ┃ [2/3]  YOUR STATS
-  ┃   10.6B    $7,140        25d      49
+  ┃   ~16.7B   $7,392        27d      51
   ┃   TOKENS   EQUIV. COST   STREAK   ACTIVE DAYS
   ┃
-  ┃   30d  ▅▁▁··▄▆▆▆▅▁▃▅█▃▂▄▂▁▅█▆▂█▇█▅▄█▇  3.4B in 7d
+  ┃   30d  ▁··▄▆▆▆▅▁▃▅█▃▂▄▂▁▅█▆▂█▇█▅▄█▇▆▃  3.07B in 7d
   ┃ ✓ wrote tokenchit.svg
   ────────────────────────────────────────────────────────────
 
@@ -38,28 +41,19 @@ registry check on every run.
 
 ## Why this one
 
-**The card is a file, not a URL.** Every comparable tool serves cards from a hosted endpoint,
-so the image in your README depends on someone else's uptime and rate limits. The canonical
-project in this genre says of its own service: *"best-effort and can be unreliable due to rate
-limits and traffic spikes"*, and clamps cards to 12–48 hour caches to survive its API budget.
-A committed SVG has none of that. GitHub serves it directly, it renders instantly, and it
-keeps working if this site goes away.
-
-**Nothing leaves your machine unless you ask.** `sync` and `recap` make no network request at
-all. `publish` is the only command that uploads, it sends daily totals and model names, and
-`--dry-run` prints the exact bytes so you can check that yourself rather than take our word.
-
-**The reading is honest about what it cannot see.** Agent logs get rotated, prices change, and
-some models have no public price at all. Where a number is incomplete, the tool says so
-instead of quietly rounding the gap away.
+- **The card is a file, not a URL.** Comparable tools serve cards from a hosted endpoint, so
+  your README depends on someone else's uptime and rate limits. A committed SVG has none of
+  that — GitHub serves it directly, and it keeps working if this site goes away.
+- **Nothing leaves your machine unless you ask.** `sync` and `recap` make no network request.
+  `publish` is the only command that uploads, and `--dry-run` prints the exact bytes.
+- **Honest about what it cannot see.** Logs get rotated, prices change, and some models have
+  no public price. Where a number is incomplete, the tool says so.
 
 ```bash
 npx -y @tokenchit/cli@latest recap    # the year in review, a second committable SVG
 ```
 
 [![tokenchit recap](./tokenchit-recap.svg)](https://tokenchit.app/u/iyashjayesh)
-
----
 
 ## What it reads
 
@@ -70,19 +64,13 @@ npx -y @tokenchit/cli@latest recap    # the year in review, a second committable
 | **OpenCode** | `~/.local/share/opencode/opencode.db` |
 
 Copilot CLI and Gemini CLI are detected and reported as unsupported: Copilot records only a
-live context gauge, and Gemini's transcripts carry no token counts at all. `init` says so
-rather than silently omitting them.
+live context gauge, and Gemini's transcripts carry no token counts.
 
-**Your numbers will not match Claude Code's Stats panel**, which reads a cumulative cache
-rather than the transcripts. It counts an API call once per streaming rewrite, and keeps
-totals for transcripts it has since deleted, so it reads roughly twice as high. `sync` prints
-both figures and the gap between them when they disagree. The measurements behind that are in
-[`docs/internals.md`](./docs/internals.md).
+**Your numbers will not match Claude Code's Stats panel.** It counts an API call once per
+streaming rewrite, so it reads roughly twice as high. `sync` prints both figures and the gap.
 
-**Equivalent cost is not what you paid.** It is what these tokens would cost at list API
-rates. Most agent usage runs under a subscription where no per-token charge happens, and a
-model with no public price contributes tokens but no cost — `sync` says what share of your
-tokens the figure covers.
+**Equivalent cost is not what you paid** — it is what these tokens would cost at list API
+rates. Most agent usage runs under a subscription. See [`docs/internals.md`](./docs/internals.md).
 
 ## Commands
 
@@ -94,6 +82,7 @@ tokenchit init           detect agents, write .tokenchit.json
 tokenchit sync           read your logs, show your stats, write the card
 tokenchit publish        put your row on the public board
 tokenchit recap          year in review, as a second committable SVG
+tokenchit ledger         show the local history bank, or rebuild it
 tokenchit schedule       print a cron or launchd entry; installs nothing
 tokenchit login          prove your GitHub handle (device flow, no password)
 tokenchit logout         forget this machine
@@ -104,51 +93,29 @@ tokenchit whoami         who this machine is signed in as
 Common flags: `--out`, `--theme auto|light|dark`, `--layout default|compact`, `--json`,
 `--dry-run`.
 
-`publish` signs you in on the way through, so `login` is rarely needed on its own. In CI or
-cron, where nobody can read a device code, it publishes unverified rather than hanging.
-
 ## Privacy
 
 `sync` and `recap` make no network request at all.
 
 `publish` is the only command that uploads anything. It sends daily token totals per agent,
-model names, and your handle. It does not send prompts, replies, file paths, branch names, or
-repository names — `--dry-run` prints the exact bytes so you can check rather than take our
-word.
+model names, and your handle — never prompts, replies, file paths, branch names, or repository
+names. `--dry-run` prints the exact bytes so you can check rather than take our word.
 
-Four tests in `packages/cli/test/privacy.test.js` enforce this on every push, including one
+Five tests in `packages/cli/test/privacy.test.js` enforce this on every push, including one
 that fails if any file outside `net.ts` can open a socket.
 
 ## The board
 
 Opt-in, and only `publish` puts you there. Verified rows rank above unverified ones: signing
-in is the only thing that ties a row to a GitHub account, so it is the only thing that can
-carry a position. An unverified row still appears with its figures.
+in is the only thing that ties a row to a GitHub account. An unverified row still appears.
 
-Submissions are self-reported. Two bands guard them:
-
-- **Rejected** — arithmetically impossible: negative figures, future dates, a headline that
-  disagrees with its own daily series, a cost-per-token outside what any real model produces.
-- **Held for review** — possible but far outside anything seen: above 100B tokens or $100,000
-  in a single day. The row is stored and returned to you, and kept off the public board until
-  a person looks. `publish` says so and names the day.
-
-Both thresholds have been raised twice after real users were refused, and the reasoning is in
+Submissions are self-reported, so two bands guard them — **rejected** for the arithmetically
+impossible, and **held for review** for the possible but far outside anything seen. A held row
+is stored and returned to you, and kept off the board until a person looks. Both thresholds
+have been raised after real users were refused; the reasoning is in
 [`docs/internals.md`](./docs/internals.md).
 
-## Repo layout
-
-```
-apps/site/          Next.js site + the board API
-packages/core/      adapters, aggregation, price table, SVG builder
-packages/cli/       the tokenchit binary
-docs/internals.md   how signing in, publishing and releasing actually work
-docs/research.md    positioning, competitive landscape, infrastructure
-scripts/            version bump, and QA for behaviours real data cannot reach
-tokenchit.svg       this project's own card, committed like anyone else's
-```
-
-The site and the CLI render through the same `buildCardSvg()`, so they cannot drift.
+## Development
 
 ```bash
 npm install
@@ -157,14 +124,8 @@ npm test          # core, cli and site suites
 npm run dev       # the site at http://localhost:3000
 ```
 
-Node 22 or newer — OpenCode support uses the built-in `node:sqlite`.
-
-## Not built, deliberately
-
-Spend-based tier ladders, pricing, a blog, a site dark-mode toggle, scheduled-Action
-automation, and a browser session. Identity exists to stamp a row on the board, and only the
-CLI can produce a row — browser OAuth would mean GitHub's web flow, the one flow that needs a
-client secret, in exchange for a header pill.
+Node 22 or newer — OpenCode support uses the built-in `node:sqlite`. The site and the CLI
+render through the same `buildCardSvg()`, so they cannot drift.
 
 ## Licence
 

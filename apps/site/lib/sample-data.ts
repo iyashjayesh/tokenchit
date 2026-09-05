@@ -33,6 +33,7 @@ export const PRIVACY_TESTS = [
   { name: "paths.absent",      desc: "no filesystem path is collected at all — not hashed, not truncated, absent",   ms: "35ms" },
   { name: "dryrun.exact",      desc: "--dry-run prints the byte-identical body that a real publish puts on the wire", ms: "90ms" },
   { name: "net.isolated",      desc: "no source file outside src/net.ts can open a socket",                          ms: "7ms" },
+  { name: "payload.noContent.everyAdapter", desc: "the same guarantee proved for Codex and OpenCode, not Claude Code alone", ms: "51ms" },
 ];
 
 export const AGENT_BREAKDOWN = [
