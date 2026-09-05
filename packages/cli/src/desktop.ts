@@ -75,9 +75,18 @@ export async function openBrowser(url: string): Promise<boolean> {
  * GitHub's device response carries no `verification_uri_complete` — RFC 8628 §3.2 makes that
  * field optional and GitHub omits it, so there is no protocol-blessed pre-filled URL to use.
  *
- * The verification page does accept a `user_code` query parameter that fills the box, which
- * is undocumented and therefore best-effort: it is used for the browser launch only, while
- * the bare URI GitHub actually returned is what gets printed.
+ * The verification page takes a `user_code` query parameter, and github.com ignores it. This
+ * was believed to fill the box; it does not — tested against a real sign-in, the parameter
+ * reaches the address bar and the form stays empty. It is kept because it costs nothing and an
+ * enterprise host may honour it, but nothing downstream may claim the code is already entered.
+ *
+ * `skip_account_picker=true` is deliberately absent. It works, and it removes the click that
+ * /login/device/select_account costs anyone with a GitHub session — and it also decides *which*
+ * account authorises, silently, by taking whichever one the browser happens to hold. This
+ * command exists to establish that a handle belongs to the person claiming it, and a board row
+ * published under the wrong one of somebody's two accounts is not obviously wrong until long
+ * afterwards. The picker is the one screen in the sequence that asks the question the command
+ * is for, so it stays.
  */
 export function prefilled(verificationUri: string, userCode: string): string {
   try {

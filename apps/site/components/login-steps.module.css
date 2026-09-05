@@ -1,0 +1,186 @@
+/* Capped, because this is a task rather than a page. At the container's full 1180px the two
+   cards were mostly empty to the right of a sentence, which reads as an unfinished layout
+   rather than as a focused one. */
+.steps {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 0;
+  max-width: 680px;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.num {
+  flex: 0 0 26px;
+  height: 26px;
+  border: 2px solid var(--ink);
+  background: var(--lime);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 22px;
+  text-align: center;
+}
+
+.body { min-width: 0; }
+
+.title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hint {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 52em;
+}
+
+/* The code and its button are one control, sharing an edge — the same treatment the board's
+   search field and its button get. `stretch` is what makes the button the code box's height;
+   without it CopyButton's "ink" variant, which is written for a parent that stretches it,
+   renders as a short unbordered rectangle floating beside a tall box. */
+.codeRow {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+/* Reaches past CopyButton's own class, which sets `border: 0` for the hero it was built for.
+   A descendant selector outranks the single class it carries. */
+.codeRow button {
+  margin-left: -2px;
+  padding: 0 18px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.codeRow button:hover {
+  background: var(--coral);
+  color: var(--surface);
+}
+
+/* The code is the one thing on this page somebody has to read character by character, so it
+   gets the size and the tracking that makes O and 0 tell each other apart. */
+.userCode {
+  display: flex;
+  align-items: center;
+  padding: 6px 18px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  /* Big and widely tracked: this is the one string on the page somebody has to read character
+     by character, and O against 0 is the whole job. */
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  /* The trailing letter-space would otherwise push the text off-centre inside the box. */
+  text-indent: 0.2em;
+}
+
+.go {
+  display: inline-block;
+  padding: 10px 18px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  box-shadow: 3px 3px 0 var(--lime);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.go:hover {
+  background: var(--coral);
+  color: var(--surface);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pulse {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border: 1.5px solid var(--ink);
+  background: var(--lime);
+  animation: blink 1.4s steps(2, end) infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0.25; }
+}
+
+/* The animation is the only thing saying "still going"; a reader who asked for less motion
+   gets a solid square rather than nothing to look at. */
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
+}
+
+.panel {
+  max-width: 680px;
+  padding: 20px;
+  border: 2px solid var(--ink);
+  border-left-width: 8px;
+  background: var(--surface);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.done { border-left-color: var(--lime); }
+.stale { border-left-color: var(--coral); }
+
+.doneTitle {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.doneBody {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.code {
+  padding: 1px 6px;
+  border: 1px solid var(--hairline);
+  background: var(--paper);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+
+/* Quieter than a hint and separated from the steps: it describes something that may not
+   happen, and only matters once it has. */
+.footnote {
+  max-width: 680px;
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}

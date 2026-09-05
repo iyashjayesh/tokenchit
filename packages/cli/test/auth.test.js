@@ -170,9 +170,12 @@ test("the banner degrades rather than wrapping or leaking into pipes", async () 
 
 test("the verification URL is offered pre-filled, without losing the plain one", async () => {
   // GitHub does not return verification_uri_complete — RFC 8628 makes it optional and GitHub
-  // omits it — but the verification page accepts a user_code parameter that fills the box.
-  // That is undocumented, so it is used for the browser launch only; what gets printed is
-  // whatever GitHub actually sent.
+  // omits it. The verification page takes a user_code parameter and ignores it: tested, the
+  // parameter reaches the address bar and the boxes stay empty. It is kept for enterprise
+  // hosts that may honour it; what gets printed is whatever GitHub actually sent.
+  //
+  // No skip_account_picker here. It would save a click and choose the account at the same
+  // time, and choosing which identity signs in is the one thing this flow is for.
   const { prefilled } = await import(join(HERE, "..", ".build", "desktop.js"));
 
   assert.equal(
