@@ -82,22 +82,29 @@
   text-wrap: pretty;
 }
 
+/* Wide enough for the command it holds. At 440px the string overflowed its own box and
+   scrolled under the copy button with no gap, which reads as the button covering the last
+   word rather than as a scrollable field — the one thing on the page somebody has to be able
+   to read in full. Sized to the content plus the button, and it still scrolls below that. */
 .install {
   display: flex;
   align-items: stretch;
   border: 2px solid var(--ink);
   box-shadow: 6px 6px 0 var(--lime);
   background: var(--surface);
-  max-width: 440px;
+  max-width: 540px;
 }
 
 .command {
-  padding: 15px 14px;
+  /* Extra on the right so the text and its cursor never touch the button, whatever the
+     viewport does to the clamped size above. */
+  padding: 15px 20px 15px 14px;
   /* <code> would otherwise fall back to the browser's default monospace face. */
   font-family: inherit;
   font-size: clamp(12.5px, 1.2vw, 15px);
   font-weight: 500;
   flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: auto;
 }
@@ -157,23 +164,7 @@
   color: var(--text-dim);
 }
 
-.handleRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-}
 
-.input {
-  flex: 1;
-  min-width: 90px;
-  padding: 8px 10px;
-  background: var(--surface);
-  border: 2px solid var(--ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  outline: none;
-}
 
 .input:focus {
   box-shadow: 3px 3px 0 var(--yellow);

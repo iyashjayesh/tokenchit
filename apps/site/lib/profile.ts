@@ -119,7 +119,7 @@ export async function readProfile(
        */
       pool.query<{ rank: string; total: string }>(
         `WITH eligible AS (
-           SELECT u.id
+           SELECT u.id, u.tier
            FROM users u
            LEFT JOIN LATERAL (
              SELECT flagged FROM submissions
@@ -127,13 +127,25 @@ export async function readProfile(
            ) l ON true
            WHERE COALESCE(l.flagged, false) = false
          ), totals AS (
-           SELECT d.user_id, SUM(d.tokens) AS tokens
+           SELECT d.user_id, e.tier, SUM(d.tokens) AS tokens
            FROM user_days d
            JOIN eligible e ON e.id = d.user_id
            WHERE d.day >= CURRENT_DATE - $2::int
-           GROUP BY d.user_id
+           GROUP BY d.user_id, e.tier
          ), ranked AS (
-           SELECT user_id, RANK() OVER (ORDER BY tokens DESC) AS rank,
+           /*
+            * The board's ordering, exactly: tier first, then tokens. This ranked on tokens
+            * alone, so a verified row that the board places above an unverified one with more
+            * tokens was told a different number on its own page — two ranks for one person,
+            * from two queries that disagreed about what ranking means.
+            *
+            * ROW_NUMBER rather than RANK for the same reason. RANK gives ties the same
+            * position and then skips, so the profile could say "4 of 23" where the board's
+            * ROW_NUMBER counted 5. Ranking is a position in a list here, not a competition
+            * classification, and two people on identical totals still occupy two rows.
+            */
+           SELECT user_id,
+                  ROW_NUMBER() OVER (ORDER BY (tier = 'verified') DESC, tokens DESC) AS rank,
                   COUNT(*) OVER () AS total
            FROM totals
          )

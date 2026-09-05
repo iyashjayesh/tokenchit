@@ -7,6 +7,8 @@ import { buildCardSvg, formatSynced, formatTokens, formatUsd, sanitizeHandle } f
 import { ContributionGraph } from "@/components/contribution-graph";
 import { CopyButton } from "@/components/copy-button";
 import { PageShell } from "@/components/page-shell";
+import { ShareRow } from "@/components/share-row";
+import { PRIMARY_COMMAND } from "@/lib/cli";
 import { isWindow, WINDOW_DAYS, WINDOWS, type BoardWindow } from "@/lib/board";
 import { cardFigures } from "@/lib/card-figures";
 import { readProfile } from "@/lib/profile";
@@ -28,7 +30,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!profile) return { title: "Not found · tokenchit" };
 
-  const summary = `${formatTokens(profile.tokens)} tokens across ${profile.activeDays} active days`;
+  /* The same hold the card and the OG image apply. This string is the unfurl's body text, so
+     leaving it unguarded would have put the withheld figures into the Slack preview of a page
+     whose image had just been blanked — half a gate again, one line further down. */
+  const summary = profile.underReview
+    ? "Held for review"
+    : `${formatTokens(profile.tokens)} tokens across ${profile.activeDays} active days`;
   return {
     title: `@${profile.handle} · tokenchit`,
     description: summary,
@@ -102,6 +109,49 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           )}
         </div>
       </header>
+
+      {/*
+        * The post, composed on the server.
+        *
+        * Server-side so every copy is identical, and so a held row's figures can be left out:
+        * the og:image and og:description are already blanked for one, and a share button
+        * handing the numbers over in plain text would be the third hole in the same gate.
+        *
+        * Third person throughout — "Card:", not "Mine:". This page has no session and cannot
+        * know whether the reader is the person it describes, so anything possessive is wrong
+        * half the time. Naming the handle reads correctly posted by its owner or by anybody
+        * else.
+        *
+        * Two links because they answer different questions: the profile is the receipt, the
+        * bare domain is the invitation. Roughly 275 characters as X counts them for a handle
+        * of ordinary length, which leaves the common case inside one post.
+        */}
+      <ShareRow
+        handle={profile.handle}
+        text={
+          profile.underReview
+            ? [
+                `@${profile.handle} on tokenchit.`,
+                ``,
+                `tokenchit reads your AI coding agent logs locally and renders a card you commit to your README. Set up in ~10s:`,
+                ``,
+                PRIMARY_COMMAND,
+                ``,
+                `Card: ${SITE_URL}/u/${profile.handle}`,
+                `Try it: ${SITE_URL}`,
+              ].join("\n")
+            : [
+                `@${profile.handle} · ${formatTokens(profile.tokens)} tokens · ${profile.activeDays} active days · ${profile.streakDays}-day streak`,
+                ``,
+                `tokenchit reads your AI coding agent logs locally and renders a card you commit to your README. Set up in ~10s:`,
+                ``,
+                PRIMARY_COMMAND,
+                ``,
+                `Card: ${SITE_URL}/u/${profile.handle}`,
+                `Try it: ${SITE_URL}`,
+              ].join("\n")
+        }
+      />
 
       <p className={styles.since}>
         {profile.firstDay ? `First activity ${profile.firstDay}.` : "No activity yet."}{" "}

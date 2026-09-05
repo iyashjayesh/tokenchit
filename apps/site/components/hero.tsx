@@ -3,7 +3,6 @@
 import { CopyButton } from "./copy-button";
 import type { Featured } from "@/lib/featured";
 import { StatCard } from "./stat-card";
-import { useSiteState } from "./site-state";
 import styles from "./hero.module.css";
 import { PRIMARY_COMMAND } from "@/lib/cli";
 
@@ -12,7 +11,7 @@ import { PRIMARY_COMMAND } from "@/lib/cli";
 const INSTALL = PRIMARY_COMMAND;
 
 export function Hero({ preview }: { preview: Featured }) {
-  const { handle, setHandle } = useSiteState();
+
 
   return (
     <section className={styles.hero}>
@@ -58,16 +57,6 @@ export function Hero({ preview }: { preview: Featured }) {
         </div>
 
         <StatCard preview={preview} />
-
-        <div className={styles.handleRow}>
-          <span className={styles.label}>handle</span>
-          <input
-            className={styles.input}
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            spellCheck={false}
-          />
-        </div>
       </div>
     </section>
   );

@@ -71,11 +71,38 @@ export function Analytics() {
     const query = searchParams.toString();
     const path = query ? `${pathname}?${query}` : pathname;
 
+    /*
+     * Where the visit came from, which nothing here has ever recorded.
+     *
+     * Every argument about where this project should put effort — a README backlink, an
+     * og:image, a share button — rests on a guess about how people arrive, and the guess has
+     * never been checked. One field turns it into a measurement.
+     *
+     * The origin only, never the full referring URL: the question is which surface sends
+     * people, and the path someone was reading when they clicked is not ours to collect on a
+     * site whose first claim is that it collects almost nothing.
+     *
+     * Empty on a direct visit, and empty on a client-side navigation within the site, where
+     * `document.referrer` is the page they came from here. Both are honestly "none".
+     */
+    let source = "";
+    try {
+      const ref = document.referrer;
+      if (ref) {
+        const url = new URL(ref);
+        if (url.host !== window.location.host) source = url.host;
+      }
+    } catch {
+      // An unparseable referrer is no referrer.
+    }
+
     void started.then((log) =>
       log?.("page_view", {
         page_path: path,
         page_location: window.location.href,
         page_title: document.title,
+        // "none" rather than absent, so a direct visit is countable instead of missing.
+        referrer_host: source || "none",
       }),
     );
   }, [pathname, searchParams]);
