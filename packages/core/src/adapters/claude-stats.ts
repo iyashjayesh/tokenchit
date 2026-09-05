@@ -25,8 +25,19 @@ import { walkFiles } from "./walk.js";
  * inflation factor varied between 1.15x and 2.18x across days on the same corpus.
  */
 export type ClaudeStatsPanel = {
-  /** Lifetime tokens as the panel reports them. */
+  /** Lifetime tokens as the panel reports them: the cache's rollup plus today's live work. */
   tokens: number;
+  /**
+   * The cache's own lifetime rollup, without the live top-up `tokens` carries.
+   *
+   * These were one number until the panel figure started including days the cache has not
+   * computed yet. That top-up is right for the figure a person compares against their Stats
+   * panel, and wrong for the residual: the residual asks what the rollup knows that the daily
+   * window no longer lists, and both sides of that question have to come from the same file.
+   * Measured against today's live work folded in, the estimate re-counted usage the verified
+   * total already held — 800 real tokens reported as 1100.
+   */
+  rollup: number;
   /** Which config directory it came from, for a message that has to name one. */
   root: string;
   /**
@@ -204,7 +215,7 @@ export async function readClaudeStatsPanels(
         typeof cache.firstSessionDate === "string" ? cache.firstSessionDate.slice(0, 10) : "";
       const firstDay = /^\d{4}-\d{2}-\d{2}$/.test(first) ? first : null;
 
-      if (tokens > 0) panels.push({ tokens, root: dir, days, daily, firstDay });
+      if (tokens > 0) panels.push({ tokens, rollup: total(cache), root: dir, days, daily, firstDay });
     } catch {
       /* absent, unreadable, or a shape we do not recognise — all mean "cannot say" */
     }
@@ -374,7 +385,9 @@ export function estimateUnseen(
   let unlisted = 0;
   for (const panel of panels) {
     const listed = panel.daily.reduce((a, d) => a + d.tokens, 0);
-    if (panel.tokens > listed) unlisted += panel.tokens - listed;
+    // `rollup`, not `tokens`: the latter now carries today's live work, which is not history
+    // the window has dropped — it is usage `ourDaily` already holds.
+    if (panel.rollup > listed) unlisted += panel.rollup - listed;
   }
 
   /*

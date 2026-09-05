@@ -615,7 +615,9 @@ test("the rollup residual is netted against days we already hold", async () => {
   const ours = new Map(daily.map((d) => [d.day, 100]));
 
   // The rollup carries 500 more than the window lists: ten pre-window days at 25, doubled.
-  const panel = { tokens: 1500, root: "/x", days: [], daily, firstDay: "2026-07-01" };
+  // `rollup` is the cache's own figure; `tokens` may also carry today's live work, which the
+  // residual must not price — see "priced off the cache, not off the live panel figure".
+  const panel = { tokens: 1500, rollup: 1500, root: "/x", days: [], daily, firstDay: "2026-07-01" };
 
   // Nothing banked yet: the pre-window stretch is genuinely unseen, so it is priced in full.
   const cold = estimateUnseen([panel], ours);
@@ -701,4 +703,47 @@ test("the payload's types are checked, not assumed", () => {
       `${field} must be an array before anything iterates it`,
     );
   }
+});
+
+test("the residual is priced off the cache, not off the live panel figure", async () => {
+  /*
+   * Two changes that were correct apart and wrong together.
+   *
+   * `panel.tokens` now carries the cache's rollup *plus* today's work, so the explainer quotes
+   * a figure someone can actually see in their Stats panel. The residual asks a different
+   * question — what does the rollup know that the rotating daily window no longer lists — and
+   * both sides of that have to come from the same file. Priced off the live figure, it charged
+   * today's usage as history the window had dropped, on top of the verified total that already
+   * held it: 800 real tokens reported as 1100.
+   *
+   * Neither change is wrong; only their product was, which is why this test exists at the seam.
+   */
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+
+  const daily = [1, 2, 3, 4, 5].map((n) => ({ day: `2026-08-0${n}`, tokens: 200 }));
+  const ours = new Map(daily.map((d) => [d.day, 100]));
+  ours.set("2026-09-04", 300); // today: after lastComputedDate, so only `tokens` carries it
+
+  // The rollup equals what the window lists, so there is no pre-window history at all.
+  const panel = {
+    tokens: 1000 + 600, // cache 1000 + today's 300 counted the panel's way
+    rollup: 1000,
+    root: "/x",
+    days: [],
+    daily,
+    firstDay: "2026-08-01",
+  };
+
+  assert.equal(
+    estimateUnseen([panel], ours),
+    null,
+    "nothing is missing, so nothing is estimated — the live top-up is not a deleted day",
+  );
+
+  // And a genuine pre-window gap is still priced, live top-up notwithstanding.
+  assert.equal(
+    estimateUnseen([{ ...panel, rollup: 1500 }], ours)?.residual,
+    250,
+    "500 records the window no longer lists, deflated by the 2x",
+  );
 });
