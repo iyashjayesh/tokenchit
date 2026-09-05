@@ -21,6 +21,37 @@ const LOGIN = PRIMARY_COMMAND;
  */
 const NAV = [{ href: "/board", label: "leader board" }];
 
+const REPO = "https://github.com/iyashjayesh/tokenchit";
+
+/**
+ * One pass of the ticker, rendered twice so the loop has no seam.
+ *
+ * The animation translates the track by half its width, which only reads as continuous if the
+ * second half is identical to the first. The copy is duplicated in the markup rather than in
+ * CSS because the links have to be real links in both halves — a reader whose eye lands on the
+ * second copy should be able to click it.
+ */
+function TickerRun() {
+  return (
+    <span className={styles.run}>
+      <span className={styles.item}>open source · MIT</span>
+      <span className={styles.dot} aria-hidden="true">◆</span>
+      <a className={styles.link} href={REPO} target="_blank" rel="noreferrer">
+        ★ star it on GitHub
+      </a>
+      <span className={styles.dot} aria-hidden="true">◆</span>
+      <span className={styles.item}>found a bug, or want an agent supported?</span>
+      <span className={styles.dot} aria-hidden="true">◆</span>
+      <a className={styles.link} href={`${REPO}/issues`} target="_blank" rel="noreferrer">
+        open an issue
+      </a>
+      <span className={styles.dot} aria-hidden="true">◆</span>
+      <span className={styles.item}>built in the open, receipts included</span>
+      <span className={styles.dot} aria-hidden="true">◆</span>
+    </span>
+  );
+}
+
 /**
  * The header's one action.
  *
@@ -50,6 +81,24 @@ export function SiteHeader() {
   };
 
   return (
+    <>
+      {/*
+       * A ticker rather than a dismissible bar, because there is nothing here to dismiss: it
+       * asks for a star and offers somewhere to report a bug, and both stay true. It pauses on
+       * hover and on keyboard focus, which is the only thing that makes a moving link
+       * clickable, and stops entirely for a reader who asked for less motion.
+       */}
+      <div className={styles.ticker}>
+        <div className={styles.track}>
+          <TickerRun />
+          {/* The seam-hiding copy. Hidden from assistive tech so the message is announced once
+              rather than twice, and its links are not a second set of tab stops. */}
+          <span aria-hidden="true">
+            <TickerRun />
+          </span>
+        </div>
+      </div>
+
     <header className={styles.header}>
       <div className={styles.brand}>
         {/* The wordmark is the way home, which is what every reader already assumes. It was
@@ -80,5 +129,6 @@ export function SiteHeader() {
         </button>
       </div>
     </header>
+    </>
   );
 }
