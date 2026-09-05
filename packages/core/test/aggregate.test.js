@@ -370,7 +370,12 @@ test("the stats-panel reader sums a cache the way the panel does, and is quiet w
   );
 
   const [panel] = await readClaudeStatsPanels([join(cfg, "projects")]);
-  assert.equal(panel?.tokens, 10015, "every numeric field across every model is summed");
+  assert.equal(
+    panel?.tokens,
+    10015,
+    "only the four token fields are summed — contextWindow, maxOutputTokens, costUSD and " +
+      "webSearchRequests are not tokens and must not reach the total",
+  );
   assert.equal(panel?.root, cfg, "the config directory is named, not the projects dir");
   assert.deepEqual(
     panel?.days,
@@ -405,8 +410,14 @@ test("a genuinely heavy day publishes instead of being refused", () => {
     tokens: 3_374_192_877,
     equivCostUsd: 2360.12,
     pricedShare: 1,
-    streakDays: 17,
-    activeDays: 50,
+    /* One day, so the counts say one day. This fixture is a single heavy day lifted out of a
+       real 50-day history, and it used to keep that history's `streakDays: 17` and
+       `activeDays: 50` beside a one-entry series — a shape `buildPayload` cannot produce, since
+       it fills `days` from the same `dayAgent` the counts are derived from. `reviewReason` now
+       reconciles the two, and the mismatch flagged it. The volume this test exists to check is
+       unchanged. */
+    streakDays: 1,
+    activeDays: 1,
     firstDay: "2026-09-02",
     lastDay: "2026-09-02",
     agents: [{ agent: "claude-code", tokens: 3_374_192_877 }],
@@ -584,4 +595,110 @@ test("a day worked on two accounts is one day, not two", async () => {
 
   assert.equal(readings?.days.theirs, 3, "four entries across two profiles, three days");
   assert.equal(readings?.panel, 10_000, "tokens still sum across profiles");
+});
+
+test("the rollup residual is netted against days we already hold", async () => {
+  /*
+   * `estimateUnseen` prices what the lifetime `modelUsage` rollup knows and the rotating daily
+   * window no longer lists. The first version added that whole difference, subtracting only
+   * `panel.daily` — never `ourDaily`. The day loop above it does subtract (`lost = deflated -
+   * ours`), and once the ledger began replaying banked days into `ourDaily`, every restored
+   * pre-window day was counted twice: once in `verified`, once here. Reproduced before the fix
+   * as 750 real tokens reported as 1000.
+   *
+   * Every panel fixture in this file uses `tokens: 0`, so none of them could reach this path.
+   */
+  const { estimateUnseen } = await import("@tokenchit/core/adapters");
+
+  // Five days the window still lists, at a clean 2x, so the ratio calibrates to exactly 2.
+  const daily = [1, 2, 3, 4, 5].map((n) => ({ day: `2026-08-0${n}`, tokens: 200 }));
+  const ours = new Map(daily.map((d) => [d.day, 100]));
+
+  // The rollup carries 500 more than the window lists: ten pre-window days at 25, doubled.
+  const panel = { tokens: 1500, root: "/x", days: [], daily, firstDay: "2026-07-01" };
+
+  // Nothing banked yet: the pre-window stretch is genuinely unseen, so it is priced in full.
+  const cold = estimateUnseen([panel], ours);
+  assert.equal(cold?.residual, 250, "500 records of pre-window usage, deflated by the 2x");
+
+  // The ledger has since restored those ten days, so they are already in `ourDaily` — and in
+  // the verified total the caller adds this to. Pricing them again is the double count.
+  const restored = new Map(ours);
+  for (let n = 1; n <= 10; n++) restored.set(`2026-07-${String(n).padStart(2, "0")}`, 25);
+
+  const warm = estimateUnseen([panel], restored);
+  assert.equal(
+    warm,
+    null,
+    "with every pre-window day already held there is nothing left to estimate, and the " +
+      "headline falls back to the verified total rather than adding it a second time",
+  );
+
+  /*
+   * Days *after* the cache was last computed must not be netted off. A sync sees transcripts the
+   * cache has not caught up with; those are absent from `panel.tokens` too, so subtracting them
+   * would push the estimate below what is already verified.
+   */
+  const withRecent = new Map(ours);
+  withRecent.set("2026-09-01", 9999);
+  assert.equal(
+    estimateUnseen([panel], withRecent)?.residual,
+    250,
+    "a day after the window is not pre-window usage and must not reduce the residual",
+  );
+});
+
+test("the payload's types are checked, not assumed", () => {
+  /*
+   * `validatePayload` is annotated to take a `Payload`, but its real input is `JSON.parse` of an
+   * HTTP body — the annotation is a compile-time promise about a runtime value the server does
+   * not control. Every bound below the type is written as if the promise held, so a wrong type
+   * cleared validation and failed later, at the database or on a string method, as a 500 from a
+   * route whose whole design is to answer 422 with reasons.
+   *
+   * Each case here was reproduced against the built module before the check existed.
+   */
+  /* A real day, because "no tokens and no days" is itself rejected now — the baseline has to be
+     valid for the type failures below to be the only thing each case is testing. */
+  const base = {
+    handle: "someone",
+    tokens: 100,
+    equivCostUsd: 0.05,
+    pricedShare: 1,
+    streakDays: 1,
+    activeDays: 1,
+    firstDay: "2026-09-01",
+    lastDay: "2026-09-01",
+    agents: [{ agent: "claude-code", tokens: 100 }],
+    models: [],
+    days: [{ day: "2026-09-01", agent: "claude-code", tokens: 100, equivCostUsd: 0.05 }],
+    clientVersion: "test",
+  };
+  assert.deepEqual(validatePayload(base), [], "the baseline is valid");
+
+  // Cleared validation, then threw an uncaught TypeError on `.toLowerCase()` in the route.
+  assert.ok(
+    validatePayload({ ...base, handle: 12345 }).some((e) => e.includes("string")),
+    "a non-string handle is refused here rather than throwing in the route",
+  );
+
+  // `NaN < 0` and `NaN > 1` are both false, so a NaN share passed every comparison and hit a
+  // CHECK constraint. Every other numeric field already used Number.isFinite.
+  assert.ok(
+    validatePayload({ ...base, pricedShare: NaN }).length > 0,
+    "NaN is not a share between 0 and 1",
+  );
+
+  // `value &&` skipped a missing day entirely, so it reached a NOT NULL column.
+  assert.ok(
+    validatePayload({ ...base, firstDay: undefined }).some((e) => e.includes("required")),
+    "firstDay is required, not merely well-formed when present",
+  );
+
+  for (const field of ["days", "models", "agents"]) {
+    assert.ok(
+      validatePayload({ ...base, [field]: "not an array" }).some((e) => e.includes(field)),
+      `${field} must be an array before anything iterates it`,
+    );
+  }
 });

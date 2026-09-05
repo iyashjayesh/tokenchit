@@ -29,7 +29,7 @@ const CODEX = 2000; // one rollout, 1000 -> 3000
  * tell "every agent" apart from "claude-code only", which is the difference two of these bugs
  * turned on.
  */
-async function fixtureHome({ codex = true } = {}) {
+async function fixtureHome({ codex = true, rollup = 1800, firstSession } = {}) {
   const home = await mkdtemp(join(tmpdir(), "tokenchit-est-home-"));
   const cfg = join(home, ".claude");
   await mkdir(join(cfg, "projects", "p"), { recursive: true });
@@ -57,8 +57,11 @@ async function fixtureHome({ codex = true } = {}) {
   await writeFile(
     join(cfg, "stats-cache.json"),
     JSON.stringify({
-      // Comfortably above verified, so the readings block has a difference worth showing.
-      modelUsage: { "claude-opus-5": { inputTokens: 3000 } },
+      /* Exactly the sum of the days below (6x200 + 600), so this fixture has no rollup
+         residual and the constants above stay about day attribution alone. The case where the
+         rollup outruns the daily window has its own test. */
+      modelUsage: { "claude-opus-5": { inputTokens: rollup } },
+      ...(firstSession ? { firstSessionDate: `${firstSession}T09:00:00.000Z` } : {}),
       dailyActivity: [1, 2, 3, 4, 5, 6, 20].map((n) => ({ date: day(n) })),
       dailyModelTokens: [
         ...[1, 2, 3, 4, 5, 6].map((n) => ({
@@ -201,4 +204,39 @@ test("a run with no bank and no logs still fails honestly", async () => {
   // The ledger must not turn "nothing here" into a silent success on a fresh machine.
   const home = await mkdtemp(join(tmpdir(), "tokenchit-est-bare-"));
   await assert.rejects(() => sync(home, []), /No usage found/);
+});
+
+test("usage from before the daily window is priced, not dropped", async () => {
+  /*
+   * `modelUsage` is cumulative for the life of the profile; `dailyModelTokens` is a rotating
+   * window. Once the window starts rotating the rollup outruns it, and that difference is real
+   * usage from before the window — which the day loop can never reach, because there is no day
+   * left to walk. On one real machine that was 1.11B records the headline simply omitted, and
+   * the gap grows every night as more days rotate out.
+   *
+   * Here the rollup carries 1200 more than its days list. Deflated by the 2x calibrated on the
+   * overlap, that is 600 of real work, on top of the 300 from the deleted day.
+   */
+  const home = await fixtureHome({ codex: false, rollup: 3000 });
+  const out = await sync(home, []);
+
+  const want = `~${formatTokens(CLAUDE_VERIFIED + CLAUDE_UNSEEN + 600)}`;
+  assert.ok(out.includes(want), `the headline should reach ${want}, got:\n${out}`);
+  assert.ok(
+    out.includes(formatTokens(600)),
+    "and the readings block should name the part with no day attached",
+  );
+});
+
+test("the readings block dates the history from the install, not the window", async () => {
+  /*
+   * The transcripts begin where retention last stopped and the daily window begins where it
+   * rotated, so neither can say when the profile was installed. `firstSessionDate` can, it is
+   * in every cache, and nothing read it — so a card covering five months implied five months
+   * of coverage it did not have.
+   */
+  const home = await fixtureHome({ codex: false, rollup: 3000, firstSession: "2026-06-02" });
+  const out = await sync(home, []);
+
+  assert.ok(out.includes("2026-06-02"), `the install date should appear, got:\n${out}`);
 });

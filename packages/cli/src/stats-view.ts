@@ -144,6 +144,19 @@ function readings(r: ClaudeReadings): string[] {
     rows.push(["estimated", "—", "not enough overlap to calibrate one"]);
   }
 
+  /* Sits with `verified` because both are parts of the headline, not of the panel below. Under
+     the panel row it read as a component of Claude Code's figure, which it is not: it is the
+     part of our own estimate that the rollup reaches and no day bucket can. */
+  if (r.residual > 0) {
+    rows.push([
+      "recovered",
+      formatTokens(r.residual),
+      r.installedOn
+        ? `also in that: usage from before the daily window, back to ${r.installedOn}`
+        : "also in that: usage from before the daily window opened",
+    ]);
+  }
+
   rows.push([
     "stats panel",
     formatTokens(r.panel),

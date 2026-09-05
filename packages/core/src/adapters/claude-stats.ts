@@ -45,9 +45,22 @@ export type ClaudeStatsPanel = {
   days: string[];
   /** Per-day totals, where the cache carries them. Oldest first. */
   daily: { day: string; tokens: number }[];
+  /**
+   * The day this profile was first used, as the cache recorded it.
+   *
+   * `modelUsage` is cumulative and never rotated, so it reaches back to here regardless of
+   * what retention has taken since. That makes this the honest start of "since installation"
+   * — the transcripts and the daily array both begin later, and saying so from either of them
+   * dates the history from the last cleanup instead of from the install.
+   *
+   * Null when the cache does not carry it, which is a reason to fall back to the observed
+   * first day rather than to invent one.
+   */
+  firstDay: string | null;
 };
 
 type StatsCache = {
+  firstSessionDate?: unknown;
   modelUsage?: Record<string, Record<string, unknown>>;
   dailyActivity?: { date?: unknown }[];
   dailyModelTokens?: { date?: unknown; tokensByModel?: Record<string, unknown> }[];
@@ -185,7 +198,13 @@ export async function readClaudeStatsPanels(
         }))
         .sort((a, b) => a.day.localeCompare(b.day));
 
-      if (tokens > 0) panels.push({ tokens, root: dir, days, daily });
+      /* An ISO timestamp in the cache, but only the calendar day is meaningful here — the
+         rest of the codebase keys history by local `YYYY-MM-DD`. */
+      const first =
+        typeof cache.firstSessionDate === "string" ? cache.firstSessionDate.slice(0, 10) : "";
+      const firstDay = /^\d{4}-\d{2}-\d{2}$/.test(first) ? first : null;
+
+      if (tokens > 0) panels.push({ tokens, root: dir, days, daily, firstDay });
     } catch {
       /* absent, unreadable, or a shape we do not recognise — all mean "cannot say" */
     }
@@ -229,6 +248,17 @@ export type UnseenEstimate = {
    * therefore a count of days the estimate draws on, not of days that vanished completely.
    */
   days: number;
+  /**
+   * The part of `tokens` that no day bucket could account for, already deflated.
+   *
+   * `modelUsage` is cumulative for the life of the profile while `dailyModelTokens` is a
+   * rotating window, so the lifetime rollup outruns the sum of the days it still lists. That
+   * difference is real usage from before the window starts, and walking the days can never
+   * reach it — there is no day left to walk. Carried separately because it is the one part of
+   * the estimate with no date attached, and a caller showing a date range should not imply it
+   * falls inside one.
+   */
+  residual: number;
 };
 
 /**
@@ -322,10 +352,56 @@ export function estimateUnseen(
     missingDays++;
   }
 
-  if (missingDays === 0 || missing <= 0) return null;
+  /*
+   * What the rollup knows and no day can say.
+   *
+   * `panel.tokens` comes from `modelUsage`, which is never rotated; `panel.daily` comes from
+   * `dailyModelTokens`, which is. Once the window starts rotating the first outruns the
+   * second, and the difference is usage from before the window — invisible to the loop above,
+   * because that loop can only price days `theirDaily` still lists. Deflated by the same
+   * ratio, since it is the same double-counted records.
+   *
+   * Then netted against what we already hold for that stretch, which is the step the first
+   * version missed. The day loop subtracts `ours` from every day it prices; this had no day to
+   * subtract against and so subtracted nothing, and once the ledger began replaying banked days
+   * into `ourDaily` those days were counted twice — in `verified` and again here. Measured on a
+   * synthetic corpus: 750 real tokens reported as 1000.
+   *
+   * The netting is deliberately not per profile. `unlisted` is per profile, but `ourDaily` is
+   * every profile at once, so subtracting it inside the loop would charge one profile's days
+   * against another's rollup. Both sides are therefore summed first and netted once.
+   */
+  let unlisted = 0;
+  for (const panel of panels) {
+    const listed = panel.daily.reduce((a, d) => a + d.tokens, 0);
+    if (panel.tokens > listed) unlisted += panel.tokens - listed;
+  }
+
+  /*
+   * Only the days before the window, not every day the window omits.
+   *
+   * `ourDaily` also holds days *after* the cache was last computed — a sync run today sees
+   * transcripts the cache has not caught up with. Those are absent from `panel.tokens` too, so
+   * netting them off would subtract usage the rollup never claimed and push the estimate below
+   * what is already verified.
+   */
+  const windowStart = [...theirDaily.keys()].sort()[0];
+  let oursBeforeWindow = 0;
+  if (windowStart !== undefined) {
+    for (const [day, tokens] of ourDaily) {
+      if (day < windowStart) oursBeforeWindow += tokens;
+    }
+  }
+
+  const residual = Math.max(0, unlisted / ratio - oursBeforeWindow);
+  missing += residual;
+
+  // A residual with no missing days is still an answer, so this can no longer require days.
+  if (missing <= 0) return null;
 
   return {
     tokens: Math.round(missing),
+    residual: Math.round(residual),
     ratio,
     spread: [ratios[0]!, ratios[ratios.length - 1]!],
     days: missingDays,
@@ -357,6 +433,21 @@ export type ClaudeReadings = {
   estimatedDays: number;
   /** The overlap ratio the estimate was calibrated on, and its range. */
   calibration: { ratio: number; spread: [number, number] } | null;
+  /**
+   * The part of `estimated` recovered from the lifetime rollup rather than from any day.
+   *
+   * Zero on a profile whose daily window has not rotated yet, which is why it was invisible
+   * until a machine had been running long enough to lose one.
+   */
+  residual: number;
+  /**
+   * The earliest first-session date across the profiles that record one.
+   *
+   * What "since installation" actually means on this machine. Distinct from the first day the
+   * transcripts show, which is only the first day retention has not yet reached, and from the
+   * card's own first day, which spans every agent and so can predate Claude entirely.
+   */
+  installedOn: string | null;
 };
 
 /**
@@ -388,5 +479,11 @@ export function claudeReadings(
     days: { ours: ourDaily.size, theirs },
     estimatedDays: unseen?.days ?? 0,
     calibration: unseen ? { ratio: unseen.ratio, spread: unseen.spread } : null,
+    residual: unseen?.residual ?? 0,
+    installedOn:
+      panels
+        .map((p) => p.firstDay)
+        .filter((d): d is string => d !== null)
+        .sort()[0] ?? null,
   };
 }
