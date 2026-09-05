@@ -1,0 +1,59 @@
+.row {
+  margin: 0 0 20px;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* The page's primary treatment — ink fill, lime shadow — the same weight the active window
+   filter and the board's call to action carry. One button can afford it; the four it replaced
+   could not, which is part of why they read as clutter under the handle. */
+.share {
+  padding: 9px 16px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  box-shadow: 3px 3px 0 var(--lime);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.share:hover {
+  background: var(--coral);
+  color: var(--surface);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* Quiet, and beside the button rather than over the page. It reports something that already
+   worked; it does not need to be read to carry on. */
+.status {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.fallback {
+  width: min(560px, 100%);
+  margin-top: 10px;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.fallback:focus {
+  outline: none;
+  box-shadow: 3px 3px 0 var(--lime);
+}
