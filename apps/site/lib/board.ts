@@ -9,6 +9,17 @@ export type BoardRow = {
   rank: number;
   handle: string;
   tier: string;
+  /**
+   * The GitHub account id, or null until somebody proves the handle.
+   *
+   * The avatar is sourced from this rather than from the handle, and that is the whole
+   * safeguard. `github.com/<handle>.png` resolves for any handle at all, verified or not, so
+   * an unverified row — which anyone can create for a name they do not own — would render a
+   * real person's face beside figures they never submitted. A null id has nothing to render.
+   *
+   * A string because it is a bigint: ids are past 2^53 and Number() would round them.
+   */
+  githubId: string | null;
   tokens: number;
   equivCostUsd: number;
   streakDays: number;

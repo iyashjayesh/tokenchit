@@ -253,6 +253,23 @@ export default async function BoardPage({
                     </td>
                     <td>
                       <Link href={`/u/${r.handle}`} className={styles.dev}>
+                        {/* Only a proved handle has an id, so an unverified row simply has no
+                            avatar to draw — the safeguard is the absence of data rather than a
+                            condition somebody has to remember. Width and height are set because
+                            twenty-five images arriving late would reflow the whole table. */}
+                        {r.githubId ? (
+                          <img
+                            className={styles.avatar}
+                            src={`/api/avatar/${r.githubId}`}
+                            width={24}
+                            height={24}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span className={styles.avatarBlank} aria-hidden="true" />
+                        )}
                         <span className={styles.handle}>@{r.handle}</span>
                         {r.tier === "verified" ? (
                           <span className={styles.verified} title="GitHub identity verified">

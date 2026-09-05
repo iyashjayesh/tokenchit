@@ -442,3 +442,26 @@
   background: color-mix(in srgb, var(--lime) 18%, transparent);
   box-shadow: inset 4px 0 0 var(--lime);
 }
+
+/* Avatars ----------------------------------------------------------------- */
+
+.avatar,
+.avatarBlank {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border: 1.5px solid var(--ink);
+  /* Behind the image, so a transparent PNG or a slow load shows a neutral square rather than
+     the page's grid showing through. */
+  background: #d9d7cd;
+}
+
+.avatar {
+  object-fit: cover;
+}
+
+/* Unverified rows keep the column's width so handles stay on one left edge. */
+.avatarBlank {
+  border-style: dashed;
+  opacity: 0.45;
+}
