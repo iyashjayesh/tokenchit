@@ -105,3 +105,40 @@ test("dark recaps swap the coldest ramp step so empty cells are not near-white",
   assert.ok(!dark.includes(RAMP[0]), "dark must not paint near-white cells");
   assert.ok(dark.includes("#1C1C18"));
 });
+
+test("the streak tile is the year's longest run, not the current one", async () => {
+  /*
+   * The tile has always been named `longestStreak` and rendered as STREAK on the card, and it
+   * was assigned `stats.streakDays` — which aggregate documents as "consecutive local days
+   * with activity, ending today or yesterday", the *current* run. In a year in review the two
+   * are barely related: a recap read in January reports a day or two while the year's best may
+   * have been thirty in June. The name was right and the value was wrong.
+   */
+  const day = (month, date, hour = 10) => ({
+    agent: "claude-code",
+    ts: new Date(2026, month - 1, date, hour, 0, 0),
+    model: "claude-opus-5",
+    input: 1000,
+    output: 0,
+    cacheWrite: 0,
+    cacheRead: 0,
+  });
+
+  const events = [];
+  for (let d = 1; d <= 5; d++) events.push(day(3, d)); //  5 days in March
+  for (let d = 10; d <= 21; d++) events.push(day(6, d)); // 12 days in June — the longest
+  for (let d = 24; d <= 25; d++) events.push(day(5, d)); //  2 days ending "now"
+
+  const now = new Date(2026, 4, 25, 18, 0, 0);
+  const stats = await aggregate(events, { now });
+
+  assert.equal(stats.streakDays, 2, "the current run is the two days ending today");
+  assert.equal(
+    buildRecap(stats, { year: 2026, now }).tiles.longestStreak,
+    "12d",
+    "but the tile reports June's run, which is what a year in review is about",
+  );
+
+  // A run belonging to another year is not this year's achievement.
+  assert.equal(buildRecap(stats, { year: 2025, now }).tiles.longestStreak, "0d");
+});

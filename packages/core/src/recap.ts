@@ -69,6 +69,41 @@ export function scaleOf(values: number[]): number[] {
  * Day totals come from the raw counts, never the quantised level. Quantising first collapses
  * several days onto the same figure, which reads as a rendering bug rather than a fact.
  */
+/**
+ * The longest unbroken run of active days inside a year.
+ *
+ * `stats.streakDays` is the *current* run — "consecutive local days with activity, ending
+ * today or yesterday", per aggregate.ts — and this tile has always been labelled
+ * `longestStreak`, rendered as STREAK on the recap card and printed by `tokenchit recap`. In a
+ * year in review the two are barely related: read it in January and the current run is a day
+ * or two, while the year's best might have been thirty in June. The field name was right and
+ * the value was wrong.
+ *
+ * Counted over the calendar year the recap is about, not over all of history, for the same
+ * reason: a run that ended in a previous year is not this year's achievement.
+ */
+function longestRun(byDay: Map<string, number>, year: number): number {
+  const days = [...byDay.entries()]
+    .filter(([day, tokens]) => tokens > 0 && day.startsWith(`${year}-`))
+    .map(([day]) => day)
+    .sort();
+
+  let best = 0;
+  let run = 0;
+  let previous: number | null = null;
+
+  for (const day of days) {
+    // Parsed as UTC noon: the keys are local YYYY-MM-DD, and midnight in a zone that shifts
+    // for daylight saving can land a day either side of itself.
+    const at = Date.parse(`${day}T12:00:00Z`);
+    run = previous !== null && at - previous === 86_400_000 ? run + 1 : 1;
+    if (run > best) best = run;
+    previous = at;
+  }
+
+  return best;
+}
+
 export function buildRecap(stats: Stats, opts: { year?: number; now?: Date } = {}): Recap {
   const year = opts.year ?? (opts.now ?? new Date()).getFullYear();
 
@@ -100,7 +135,7 @@ export function buildRecap(stats: Stats, opts: { year?: number; now?: Date } = {
       totalTokens: formatTokens(stats.tokens),
       equivCost: stats.pricedShare > 0 ? formatUsd(stats.equivCostUsd, true) : "—",
       topModel,
-      longestStreak: `${stats.streakDays}d`,
+      longestStreak: `${longestRun(stats.byDay, year)}d`,
     },
     rows,
     peak: peakWindow(stats.byHour),
