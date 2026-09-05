@@ -171,3 +171,48 @@ test("a written ledger reads back as itself", async () => {
   // Written whole, through a rename, so a reader never sees a half-file.
   assert.match(await readFile(path, "utf8"), /^\{.*\}\n$/s);
 });
+
+test("a scoped rebuild clears only the agents it will re-derive", async () => {
+  /*
+   * `scan({ fresh: true })` handed `recordAndReplay` a wholly empty `days`, but that function
+   * re-banks only the agents in `only` — and `only` comes from the repo's `.tokenchit.json`
+   * while the bank is global to the machine. So `tokenchit ledger --rebuild --yes`, run in a
+   * repo configured for claude-code alone, destroyed every banked Codex and OpenCode day on the
+   * machine and re-derived none of them. That is the one piece of state here that cannot be read
+   * back off disk, which is the entire reason the file exists.
+   */
+  const { withoutAgents, ledgerSummary, bank } = await import("@tokenchit/core/adapters");
+
+  const ledger = { version: 1, since: "2026-01-01", updatedAt: "2026-01-01", days: {} };
+  bank(ledger, "2026-08-01", "claude-code", "opus", [10, 10, 0, 0]);
+  bank(ledger, "2026-08-01", "codex", "gpt", [1, 1, 0, 0]);
+  bank(ledger, "2026-08-02", "opencode", "local", [2, 2, 0, 0]);
+
+  assert.equal(ledgerSummary(ledger).tokens, 26, "40 banked across three agents");
+
+  const rebuilt = withoutAgents(ledger, ["claude-code"]);
+  assert.equal(
+    ledgerSummary(rebuilt).tokens,
+    6,
+    "claude-code's 20 is cleared for re-derivation; codex and opencode keep their 6",
+  );
+  assert.deepEqual(
+    ledgerSummary(rebuilt).agents,
+    ["codex", "opencode"],
+    "the agents this rebuild will never re-read are untouched",
+  );
+
+  // A day left with no agents at all is dropped, not kept as an empty husk that would still
+  // count toward `days` and report history that is no longer there.
+  const onlyClaude = { version: 1, since: "x", updatedAt: "x", days: {} };
+  bank(onlyClaude, "2026-08-01", "claude-code", "opus", [5, 5, 0, 0]);
+  assert.equal(ledgerSummary(withoutAgents(onlyClaude, ["claude-code"])).days, 0);
+
+  // An unscoped rebuild genuinely is the whole bank, and must still clear all of it.
+  assert.equal(ledgerSummary(withoutAgents(ledger, [])).tokens, 0);
+
+  /* And the warning the command prints must describe the same scope it is about to act on: it
+     quoted the whole bank while clearing a subset, naming history it would in fact leave. */
+  assert.equal(ledgerSummary(ledger, ["claude-code"]).tokens, 20, "scoped summary sees only its own");
+  assert.equal(ledgerSummary(ledger, ["claude-code"]).days, 1);
+});

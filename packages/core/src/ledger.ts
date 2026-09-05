@@ -95,7 +95,10 @@ export async function writeLedger(ledger: Ledger, path = ledgerPath()): Promise<
   await mkdir(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
   const body = JSON.stringify({ ...ledger, updatedAt: new Date().toISOString() });
-  await writeFile(tmp, `${body}\n`, "utf8");
+  /* 0600 like auth.json beside it, and set at create time rather than chmod'ed after, so the
+     contents are never briefly world-readable. This is a record of when this machine works and
+     how hard; the default 0644 published that to every account on a shared box. */
+  await writeFile(tmp, `${body}\n`, { encoding: "utf8", mode: 0o600 });
   await rename(tmp, path);
   return path;
 }
@@ -222,23 +225,63 @@ function noon(day: string): Date | null {
 }
 
 /** What the bank holds, for `tokenchit ledger` and the line `sync` prints. */
-export function ledgerSummary(ledger: Ledger): {
+/**
+ * The bank with one set of agents emptied, for a rebuild that only re-derives those agents.
+ *
+ * `scan({ fresh: true })` used to hand `recordAndReplay` a wholly empty `days`, but that
+ * function only re-banks the agents in `only` — and `only` comes from the *repo's*
+ * `.tokenchit.json` while the bank is global to the machine. Rebuilding in a repo configured
+ * for claude-code alone therefore destroyed every banked Codex and OpenCode day on the machine
+ * and re-derived none of them: the one piece of state here that cannot be read back off disk.
+ *
+ * An empty or absent `only` still clears everything, because that genuinely is the whole scope.
+ */
+export function withoutAgents(ledger: Ledger, only?: readonly AgentId[]): Ledger {
+  if (!only?.length) return { ...ledger, days: {} };
+
+  const days: Ledger["days"] = {};
+  for (const [day, byAgent] of Object.entries(ledger.days)) {
+    const kept: Record<string, Record<string, Bucket>> = {};
+    for (const [agent, models] of Object.entries(byAgent)) {
+      if (!only.includes(agent as AgentId)) kept[agent] = models;
+    }
+    // A day with every agent cleared is dropped, not left as an empty husk that would count
+    // toward `ledgerSummary().days` and report history that is no longer there.
+    if (Object.keys(kept).length > 0) days[day] = kept;
+  }
+  return { ...ledger, days };
+}
+
+export function ledgerSummary(
+  ledger: Ledger,
+  /* Narrow the summary to the agents a caller is about to act on. `ledger --rebuild` quotes
+     this before destroying anything, and quoting the whole bank there told the user they were
+     discarding history the rebuild would in fact leave alone — or, worse, understated nothing
+     while the command silently took more than it named. */
+  only?: readonly AgentId[],
+): {
   days: number;
   tokens: number;
   agents: string[];
   first: string | null;
   last: string | null;
 } {
-  const days = Object.keys(ledger.days).sort();
+  const scoped = (agent: string): boolean => !only?.length || only.includes(agent as AgentId);
   const agents = new Set<string>();
+  const days: string[] = [];
   let tokens = 0;
 
-  for (const byAgent of Object.values(ledger.days)) {
+  for (const [day, byAgent] of Object.entries(ledger.days)) {
+    let present = false;
     for (const [agent, models] of Object.entries(byAgent)) {
+      if (!scoped(agent)) continue;
+      present = true;
       agents.add(agent);
       for (const b of Object.values(models)) tokens += sum(b);
     }
+    if (present) days.push(day);
   }
+  days.sort();
 
   return { days: days.length, tokens, agents: [...agents].sort(), first: days[0] ?? null, last: days.at(-1) ?? null };
 }

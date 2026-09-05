@@ -2,6 +2,7 @@ import {
   readAll,
   readLedger,
   recordAndReplay,
+  withoutAgents,
   writeLedger,
   type Ledger,
   type Recovered,
@@ -39,7 +40,12 @@ export type ScanOptions = {
  * but only a run that is allowed to touch the disk adds to it.
  */
 export async function scan(agents: AgentId[], opts: ScanOptions = {}): Promise<Scan> {
-  const ledger = opts.fresh ? { ...(await readLedger()), days: {} } : await readLedger();
+  /* Scoped to the agents this run will actually re-derive. Clearing the whole bank here while
+     `recordAndReplay` re-banks only `agents` destroyed every other agent's history — see
+     `withoutAgents`. */
+  const ledger = opts.fresh
+    ? withoutAgents(await readLedger(), agents)
+    : await readLedger();
   const recovered: Recovered = { days: 0, tokens: 0 };
 
   const stats = await aggregate(

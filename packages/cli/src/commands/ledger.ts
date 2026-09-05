@@ -58,19 +58,36 @@ export async function ledger(argv: string[]): Promise<number> {
  */
 async function rebuild(argv: string[]): Promise<number> {
   const path = ledgerPath();
-  const before = ledgerSummary(await readLedger());
+
+  /* Read the config before the warning, not after. The rebuild only re-derives the agents this
+     repo's config names, so those are the only agents it may clear — and the warning has to
+     quote that same scope or it describes a different operation than the one about to run. */
+  const config = (await readConfig()) ?? DEFAULT_CONFIG;
+  const ledger = await readLedger();
+  const before = ledgerSummary(ledger, config.agents);
+  const whole = ledgerSummary(ledger);
 
   if (!has(argv, "--yes")) {
+    const scoped = config.agents.length > 0 && before.agents.length < whole.agents.length;
     say();
-    warn(`This discards ${formatTokens(before.tokens)} across ${before.days} banked days.`);
+    warn(
+      scoped
+        ? `This discards ${formatTokens(before.tokens)} across ${before.days} banked days for ${before.agents.join(", ")}.`
+        : `This discards ${formatTokens(before.tokens)} across ${before.days} banked days.`,
+    );
     say(dim(`  Days your logs no longer cover cannot be recovered afterwards.`));
+    if (scoped) {
+      // Naming what survives is as important as naming what goes: the bank is global to the
+      // machine while this config is not, and that mismatch is the whole hazard here.
+      const safe = whole.agents.filter((a) => !before.agents.includes(a));
+      say(dim(`  ${safe.join(", ")} ${safe.length === 1 ? "is" : "are"} not in this repo's config and will be left alone.`));
+    }
     say();
     say(`  ${grey("If that is what you want:")} ${bold("tokenchit ledger --rebuild --yes")}`);
     say();
     return 1;
   }
 
-  const config = (await readConfig()) ?? DEFAULT_CONFIG;
   const reading = spin("re-reading local agent logs…");
   const { stats } = await scan(config.agents, {
     fresh: true,
@@ -80,14 +97,29 @@ async function rebuild(argv: string[]): Promise<number> {
   reading.stop();
 
   if (stats.tokens === 0) {
-    // Nothing was read, so nothing was banked. Leaving a stale file would be worse than an
-    // empty one, but so would silently reporting success.
-    await rm(path, { force: true }).catch(() => {});
-    fail("No usage found — the ledger is now empty.");
+    /*
+     * Nothing was read, so nothing was banked. Leaving a stale file would be worse than an
+     * empty one, but so would silently reporting success.
+     *
+     * Only remove the file when the bank is empty for every agent. A scoped rebuild that reads
+     * nothing must not delete the days it deliberately preserved for the agents it never
+     * touched — that would undo the scoping this command now does and lose exactly the history
+     * the warning above promised to leave alone.
+     */
+    const remaining = ledgerSummary(await readLedger());
+    if (remaining.tokens === 0) {
+      await rm(path, { force: true }).catch(() => {});
+      fail("No usage found — the ledger is now empty.");
+    } else {
+      fail(
+        `No usage found for ${config.agents.length ? config.agents.join(", ") : "any configured agent"} — ` +
+          `${formatTokens(remaining.tokens)} banked for ${remaining.agents.join(", ")} is untouched.`,
+      );
+    }
     return 1;
   }
 
-  const after = ledgerSummary(await readLedger());
+  const after = ledgerSummary(await readLedger(), config.agents);
   say();
   say(`${green("✓")} rebuilt from the logs on disk`);
   say(
