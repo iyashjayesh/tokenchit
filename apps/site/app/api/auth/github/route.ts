@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
+import { avatarDataUri } from "@/lib/avatar";
 import { transaction } from "@/lib/db";
 import { clientIp, hit, limitHeaders, LIMITS } from "@/lib/rate-limit";
 
@@ -143,12 +144,24 @@ export async function POST(req: Request) {
       return { userId, takenOver };
     });
 
+    /*
+     * The avatar rides back with the sign-in rather than being fetched by the CLI.
+     *
+     * `sync` writes the committed card and `sync` makes no network request — that is the
+     * claim the README leads with, and `net.isolated` fails the build if any file outside
+     * net.ts can open a socket. So the bytes have to arrive some other way, and this request
+     * is already happening, already talks to GitHub, and already proves who the caller is.
+     * The CLI stores what comes back and reads it off disk forever after.
+     */
+    const avatar = await avatarDataUri(String(ghUser.id));
+
     return NextResponse.json({
       ok: true,
       handle: ghUser.login,
       tier: "verified",
       token: apiKey,
       takenOver: result.takenOver,
+      avatar,
     });
   } catch (err) {
     // A github_id already bound to a different handle lands here: someone renamed their

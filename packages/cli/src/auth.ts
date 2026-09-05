@@ -21,6 +21,15 @@ export type Auth = {
   handle: string;
   api: string;
   createdAt: string;
+  /**
+   * The account's avatar as a `data:` URI, from the sign-in response.
+   *
+   * Stored so `sync` can put a face on the committed card without making a network request —
+   * the guarantee that `sync` reads only local files is enforced by a test, and this is how
+   * the bytes get here without breaking it. Absent for anyone who has not signed in, which is
+   * the same gate the board uses: no proved handle, no face.
+   */
+  avatar?: string;
 };
 
 export async function readAuth(): Promise<Auth | null> {

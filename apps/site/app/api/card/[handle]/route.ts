@@ -7,6 +7,7 @@ import {
   type Theme,
 } from "@tokenchit/core";
 import { DEFAULT_WINDOW } from "@/lib/board";
+import { avatarDataUri } from "@/lib/avatar";
 import { cardFigures, EMPTY_FIGURES } from "@/lib/card-figures";
 import { readProfile } from "@/lib/profile";
 
@@ -86,6 +87,10 @@ export async function GET(
   const held = profile?.underReview === true;
   const figures = profile && !held ? cardFigures(profile) : EMPTY_FIGURES;
 
+  /* Held rows get no face either: the point of holding is that nothing about the row
+     circulates until somebody has looked, and a face is the most circulating part of it. */
+  const avatar = profile && !held ? await avatarDataUri(profile.githubId) : undefined;
+
   const svg = buildCardSvg({
     handle,
     tokens: figures.tokens,
@@ -96,6 +101,7 @@ export async function GET(
     layout,
     theme,
     hide,
+    avatar,
   });
 
   /* A failed lookup must not be cached: the next request should try the database again

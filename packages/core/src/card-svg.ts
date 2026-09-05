@@ -38,7 +38,22 @@ export type CardOptions = {
   layout?: Layout;
   theme?: Theme;
   hide?: HideKey[];
+  /**
+   * The account's avatar, as a complete `data:image/...;base64,` URI.
+   *
+   * A data URI and nothing else. The card's whole premise is that it is a file rather than a
+   * URL — an `<image href>` pointing at avatars.githubusercontent.com would make every render
+   * depend on a third party being up, and would announce each viewer to them. Anything that is
+   * not a data URI is dropped rather than trusted, so a caller cannot reintroduce that by
+   * passing the wrong string.
+   *
+   * Omitted for an unverified handle, which has no proved account to take a face from.
+   */
+  avatar?: string;
 };
+
+/** Only an inline image is embeddable; see `CardOptions.avatar`. */
+const DATA_URI = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/;
 
 
 
@@ -153,6 +168,14 @@ const GEO = {
 
 export function buildCardSvg(opts: CardOptions): string {
   const layout: Layout = opts.layout === "compact" ? "compact" : "default";
+
+  /* Validated here rather than at the call sites, so there is one place that decides what may
+     go into the document and no way for a caller to widen it. */
+  const avatar = opts.avatar && DATA_URI.test(opts.avatar) ? opts.avatar : undefined;
+  const avatarSize = layout === "compact" ? 22 : 26;
+  // What the handle gives up to make room. Zero when there is no avatar, so a card without one
+  // is byte-identical to the card this builder produced before avatars existed.
+  const handleShift = avatar ? avatarSize + 10 : 0;
   const theme: Theme = opts.theme ?? "light";
   const hide = new Set(opts.hide ?? []);
   const auto = theme === "auto";
@@ -203,16 +226,47 @@ export function buildCardSvg(opts: CardOptions): string {
       tag: "text",
       attrs: {
         ...cls("hd"),
-        x: g.handle.x,
+        x: g.handle.x + handleShift,
         y: g.handle.y,
         "font-family": FONT,
-        "font-size": handleSize(handle, g.handle.size, g.bar.track),
+        "font-size": handleSize(handle, g.handle.size, g.bar.track - handleShift),
         "font-weight": 800,
         fill: pal.text,
       },
       text: `@${handle}`,
     }),
   );
+
+  /* Drawn after the handle so it cannot be painted over, and clipped to a square rather than a
+     circle: the rest of the card is hard corners and a round avatar reads as a different
+     design. The border matches the frame so a light avatar on a light theme still has an edge. */
+  if (avatar) {
+    parts.push(
+      render({
+        tag: "image",
+        attrs: {
+          x: g.handle.x,
+          y: g.handle.y - avatarSize + 6,
+          width: avatarSize,
+          height: avatarSize,
+          preserveAspectRatio: "xMidYMid slice",
+          href: avatar,
+        },
+      }),
+      render({
+        tag: "rect",
+        attrs: {
+          x: g.handle.x,
+          y: g.handle.y - avatarSize + 6,
+          width: avatarSize,
+          height: avatarSize,
+          fill: "none",
+          stroke: pal.text,
+          "stroke-width": 1.5,
+        },
+      }),
+    );
+  }
 
   // hairline under the handle
   parts.push(

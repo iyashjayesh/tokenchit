@@ -12,6 +12,7 @@ import {
 } from "@tokenchit/core";
 
 import { flag, has, oneOf } from "../args.js";
+import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { claudeContext, estimatedTotal } from "../claude-context.js";
 import { scan } from "../scan.js";
@@ -98,12 +99,23 @@ export async function sync(argv: string[], chained = false): Promise<number> {
      has already fixed twice — which is why both read the one helper rather than each doing
      the arithmetic. */
   const estimated = estimatedTotal(stats, claude);
+
+  /* Read off disk, banked by `login`, never fetched here: this command promises to make no
+     network request and a test enforces it. Absent until somebody signs in, which is the same
+     gate the board uses — an unproved handle gets no face. Only used when the card is being
+     written for the handle it belongs to, so a `--handle` override cannot put one person's
+     face on another's card. */
+  const auth = await readAuth().catch(() => null);
+  const avatar =
+    auth?.avatar && auth.handle.toLowerCase() === handle.toLowerCase() ? auth.avatar : undefined;
+
   const svg = buildCardSvg(
     toCardOptions(stats, {
       handle,
       layout,
       theme,
       ...(estimated != null ? { tokens: `~${formatTokens(estimated)}` } : {}),
+      ...(avatar ? { avatar } : {}),
     }),
   );
   const target = resolve(process.cwd(), out);
