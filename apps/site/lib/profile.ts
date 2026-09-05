@@ -36,10 +36,17 @@ export type Profile = {
   rank: number | null;
   /** How many people are on the board, so a rank reads as "3 of 40". */
   totalRanked: number;
+  /**
+   * The newest submission is held back from the board pending a look.
+   *
+   * Distinguishes "not ranked because held back" from "not ranked because nothing published",
+   * which both arrive as `rank: null`. Without it a reviewed profile looks broken to its owner.
+   */
+  underReview: boolean;
 };
 
 /**
- * Everything one profile page needs, in three queries.
+ * Everything one profile page needs, in five queries.
  *
  * Kept separate from the board query even though they overlap: the board wants one row per
  * person and nothing else, while a profile wants a full daily series for one person. Serving
@@ -60,7 +67,7 @@ export async function readProfile(
   const user = userRows[0];
   if (!user) return null;
 
-  const [{ rows: agg }, { rows: series }, { rows: latest }, { rows: ranking }] =
+  const [{ rows: agg }, { rows: series }, { rows: latest }, { rows: ranking }, { rows: review }] =
     await Promise.all([
       pool.query(
         `WITH d AS (
@@ -94,13 +101,34 @@ export async function readProfile(
          ORDER BY received_at DESC LIMIT 1`,
         [user.id],
       ),
-      // Rank is computed over the same window as everything else, so a profile and the board
-      // never disagree about where somebody sits.
+      /*
+       * Ranked over the same population as the board, not merely the same window.
+       *
+       * This used to rank over every user in `user_days` while board-query.ts excluded users
+       * whose newest submission is flagged — so the two ranks were computed over different
+       * populations and the comment here claiming they could not disagree was false. A held-back
+       * user counted toward everyone's denominator and carried a rank of their own on a page the
+       * board was hiding.
+       *
+       * A flagged user now falls out of `eligible` and matches no row, so `rank` comes back null
+       * and the profile says "under review" instead of a position. Held back from the board
+       * means held back from the ranking that board is of.
+       */
       pool.query<{ rank: string; total: string }>(
-        `WITH totals AS (
-           SELECT user_id, SUM(tokens) AS tokens
-           FROM user_days WHERE day >= CURRENT_DATE - $2::int
-           GROUP BY user_id
+        `WITH eligible AS (
+           SELECT u.id
+           FROM users u
+           LEFT JOIN LATERAL (
+             SELECT flagged FROM submissions
+             WHERE user_id = u.id ORDER BY received_at DESC LIMIT 1
+           ) l ON true
+           WHERE COALESCE(l.flagged, false) = false
+         ), totals AS (
+           SELECT d.user_id, SUM(d.tokens) AS tokens
+           FROM user_days d
+           JOIN eligible e ON e.id = d.user_id
+           WHERE d.day >= CURRENT_DATE - $2::int
+           GROUP BY d.user_id
          ), ranked AS (
            SELECT user_id, RANK() OVER (ORDER BY tokens DESC) AS rank,
                   COUNT(*) OVER () AS total
@@ -109,11 +137,20 @@ export async function readProfile(
          SELECT rank::text, total::text FROM ranked WHERE user_id = $1`,
         [user.id, days],
       ),
+      /* Whether the newest submission is held back, which the `latest` query above cannot say:
+         it filters flagged rows out, so a flagged user is indistinguishable there from one who
+         has never submitted. The page needs to tell those two apart to explain a missing rank. */
+      pool.query<{ flagged: boolean }>(
+        `SELECT flagged FROM submissions WHERE user_id = $1
+         ORDER BY received_at DESC LIMIT 1`,
+        [user.id],
+      ),
     ]);
 
   const a = agg[0];
   const l = latest[0];
   const r = ranking[0];
+  const underReview = review[0]?.flagged === true;
 
   const mixRaw = (a?.mix ?? {}) as Record<string, string | number>;
   const mix: Record<string, number> = {};
@@ -139,6 +176,7 @@ export async function readProfile(
     days: series.map((s) => ({ day: s.day, tokens: Number(s.tokens) })),
     rank: r ? Number(r.rank) : null,
     totalRanked: r ? Number(r.total) : 0,
+    underReview,
   };
 }
 
