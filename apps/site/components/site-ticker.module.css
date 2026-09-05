@@ -1,0 +1,79 @@
+/* Edge to edge, so no width and no side margins: this element is a sibling of the page
+   container rather than a child of it, and takes the viewport's width by simply being a block.
+   A rule underneath instead of a box, because a border on all four sides of a full-bleed strip
+   draws two edges nobody can see and an offset shadow has nothing to sit against. */
+.ticker {
+  overflow: hidden;
+  border-bottom: 2px solid var(--ink);
+  background: var(--lime);
+  /* Contains the animated track without letting it widen the page: the track is twice the
+     content width by construction. */
+  contain: paint;
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  /* Half the track is one full copy, so translating by exactly -50% lands the second copy
+     where the first began and the loop has no visible seam. */
+  animation: ticker-scroll 42s linear infinite;
+}
+
+/* Pause on hover and on keyboard focus. Without this the links are decoration — a target that
+   moves out from under the pointer is not clickable, and one that cannot be stopped is not
+   reachable by keyboard either. */
+.ticker:hover .track,
+.ticker:focus-within .track {
+  animation-play-state: paused;
+}
+
+.run {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 7px 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.item {
+  padding: 0 16px;
+  color: var(--ink);
+}
+
+.link {
+  padding: 0 16px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  color: var(--coral);
+}
+
+.dot {
+  font-size: 7px;
+  opacity: 0.45;
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Asked for less motion: the strip stops entirely and becomes a normal, scrollable row. The
+   message and both links are still there — reduced motion is not reduced information. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    overflow-x: auto;
+  }
+
+  .track {
+    animation: none;
+  }
+}
