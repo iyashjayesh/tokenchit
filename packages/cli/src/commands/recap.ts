@@ -2,17 +2,17 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 
 import {
-  aggregate,
   buildRecap,
   buildRecapSvg,
+  formatTokens,
   sanitizeHandle,
   type Theme,
 } from "@tokenchit/core";
-import { readAll } from "@tokenchit/core/adapters";
 
 import { flag, has, oneOf } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
-import { bold, dim, green, say, warn } from "../ui.js";
+import { scan } from "../scan.js";
+import { bold, dim, green, note, say, spin, warn } from "../ui.js";
 
 const THEMES = ["auto", "light", "dark"] as const satisfies readonly Theme[];
 
@@ -35,13 +35,42 @@ export async function recap(argv: string[]): Promise<number> {
     throw new Error(`--year must be a whole number (got "${yearFlag}")`);
   }
 
-  const stats = await aggregate(readAll(config.agents));
+  /*
+   * Through `scan`, like `sync` and `publish`, rather than straight from the logs.
+   *
+   * This read `aggregate(readAll(...))` directly, so it saw only what is still on disk while
+   * every other command sees the logs merged with the ledger. Once retention deletes a day the
+   * two answers diverge and stay diverged, and the recap — the one view whose whole subject is
+   * a year of history — was the command least able to afford it. `scan` is the single place
+   * that turns "what is on this machine" into a Stats precisely so this cannot happen; this was
+   * the last caller that had not been moved onto it.
+   */
+  const reading = spin("reading local agent logs…");
+  const { stats, recovered } = await scan(config.agents, {
+    // A dry run promises to write nothing, and the ledger is a file like any other.
+    write: !dryRun,
+    onProgress: ({ agent, events }) =>
+      reading.update(
+        events === 0 ? `reading ${agent}…` : `reading ${agent}… ${events.toLocaleString()} events`,
+      ),
+  });
+  reading.stop();
+
   if (stats.tokens === 0) {
     warn("No usage found. Run `tokenchit init` to see which agents were detected.");
     return 1;
   }
 
   const r = buildRecap(stats, year !== undefined ? { year } : {});
+
+  /* Said out loud here as in `sync`: a recap that silently includes days the transcripts no
+     longer hold invites the reader to check it against their logs and find it wrong. */
+  if (recovered.days > 0 && !json) {
+    note(
+      `ledger restored ${recovered.days} ${recovered.days === 1 ? "day" : "days"} ` +
+        `the logs no longer hold (${formatTokens(recovered.tokens)})`,
+    );
+  }
 
   if (json) {
     say(JSON.stringify(r, null, 2));
