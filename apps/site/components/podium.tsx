@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { formatTokens, formatUsd } from "@tokenchit/core";
-import type { BoardRow } from "@/lib/board";
+import { staleLabel, type BoardRow } from "@/lib/board";
 import styles from "./podium.module.css";
 
 /** Gold, silver, bronze — the same three the table's rank chips use, so the two agree. */
@@ -55,6 +55,16 @@ export function Podium({ rows }: { rows: BoardRow[] }) {
             )}
 
             <span className={styles.handle}>@{r.handle}</span>
+            {/* Most needed here, of all places: a podium celebrates a row, and the streak and
+                agent mix on it come from a submission that may be months old. */}
+            {staleLabel(r.lastPublished) && (
+              <span
+                className={styles.stale}
+                title={`Last published ${r.lastPublished?.slice(0, 10)}`}
+              >
+                {staleLabel(r.lastPublished)}
+              </span>
+            )}
             <span className={styles.tokens}>{formatTokens(r.tokens)}</span>
             <span className={styles.cost}>{formatUsd(r.equivCostUsd)}</span>
           </Link>

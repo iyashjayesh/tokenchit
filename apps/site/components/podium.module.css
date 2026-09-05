@@ -173,3 +173,13 @@
     display: none;
   }
 }
+
+.stale {
+  padding: 1px 5px;
+  border: 1px solid var(--hairline);
+  color: var(--text-faint);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

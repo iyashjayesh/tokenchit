@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatTokens, formatUsd } from "@tokenchit/core";
 
 import { PageShell } from "@/components/page-shell";
-import { isWindow, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board";
+import { isWindow, staleLabel, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
 import { findOnBoard } from "@/lib/board-search";
 import { SearchResult } from "@/components/search-result";
@@ -244,6 +244,9 @@ export default async function BoardPage({
             </thead>
             <tbody>
               {rows.map((r) => {
+                /* Only past the threshold — see staleLabel. A fresh row shows nothing, which
+                   is what makes the marker mean something on the row that has one. */
+                const stale = staleLabel(r.lastPublished);
                 const mix = Object.entries(r.mix).sort((a, b) => b[1] - a[1]);
                 const mixTotal = mix.reduce((a, [, n]) => a + n, 0);
                 return (
@@ -308,6 +311,14 @@ export default async function BoardPage({
                             title="Self-reported; the handle is unproven"
                           >
                             cli
+                          </span>
+                        )}
+                        {stale && (
+                          <span
+                            className={styles.stale}
+                            title={`Last published ${r.lastPublished?.slice(0, 10)} — streak, agent mix and models are from that submission`}
+                          >
+                            {stale}
                           </span>
                         )}
                       </Link>

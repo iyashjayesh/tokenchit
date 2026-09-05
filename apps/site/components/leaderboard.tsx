@@ -7,7 +7,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { useSiteState } from "@/components/site-state";
 import { formatTokens, formatUsd } from "@tokenchit/core";
 import type { BoardRow } from "@/lib/board";
-import { LANDING_ROWS, WINDOWS, type BoardWindow } from "@/lib/board";
+import { LANDING_ROWS, staleLabel, WINDOWS, type BoardWindow } from "@/lib/board";
 import styles from "./leaderboard.module.css";
 import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
 
@@ -111,6 +111,7 @@ export function Leaderboard({ initialRows, initialWindow }: {
             </thead>
             <tbody>
               {rows.map((r, i) => {
+                const stale = staleLabel(r.lastPublished);
                 const own = r.handle.toLowerCase() === handle.toLowerCase();
                 // Medals outrank the own-row lime; both outrank the default white fill.
                 const medalBg = i < 3 ? MEDALS[i] : own ? "var(--lime)" : "var(--surface)";
@@ -143,6 +144,11 @@ export function Leaderboard({ initialRows, initialWindow }: {
                           <span className={styles.avatarBlank} aria-hidden="true" />
                         )}
                         <span className={styles.handle}>@{r.handle}</span>
+                        {stale && (
+                          <span className={styles.stale} title={`Last published ${r.lastPublished?.slice(0, 10)}`}>
+                            {stale}
+                          </span>
+                        )}
                         {/* Tier-driven. Marking an unverified row with the same tick as a
                             verified one is the single thing this board must never do. */}
                         {r.tier === "verified" ? (

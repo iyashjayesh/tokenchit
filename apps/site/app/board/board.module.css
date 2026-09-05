@@ -571,3 +571,19 @@
 .rowHit.rowFirst {
   background: color-mix(in srgb, var(--lime) 22%, transparent);
 }
+
+/* A row that has gone quiet ------------------------------------------------ */
+
+/* Deliberately faint. The ranking already decays on its own as days age out of the window, so
+   this is not a warning about the position — it says the streak, agent mix and models beside it
+   come from a submission that is now old. Shown only past the threshold, so it carries weight. */
+.stale {
+  padding: 1px 5px;
+  border: 1px solid var(--hairline);
+  color: var(--text-faint);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
