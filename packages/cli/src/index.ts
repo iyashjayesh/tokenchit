@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 
 import { DEFAULT_API } from "./api.js";
+import { unknownFlags } from "./args.js";
 import { banner } from "./banner.js";
 import { generate } from "./commands/generate.js";
 import { init } from "./commands/init.js";
@@ -225,6 +226,40 @@ async function main(): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
     say(commandHelp(command));
     return 0;
+  }
+
+  /*
+   * A flag this command does not read is a mistake, not a no-op.
+   *
+   * `oneOf` already refuses an unrecognised flag value; nothing refused an unrecognised flag
+   * name, so `publish --dry-runn` published for real and exited 0. Checked centrally because
+   * the hazard is uniform and a per-command check is a per-command thing to forget.
+   *
+   * `generate` runs init, sync and publish in turn and forwards its argv to each, so it
+   * accepts the union of their flags.
+   */
+  const SYNC_FLAGS = ["--handle", "--layout", "--theme", "--out", "--json", "--dry-run"];
+  const PUBLISH_FLAGS = ["--api", "--dry-run", "--anonymous", "--handle"];
+  const VALUED = ["--handle", "--layout", "--theme", "--out", "--api", "--year", "--cron"];
+
+  const ALLOWED: Record<string, readonly string[]> = {
+    generate: [...new Set([...SYNC_FLAGS, ...PUBLISH_FLAGS, "--no-publish"])],
+    init: ["--handle"],
+    sync: SYNC_FLAGS,
+    recap: ["--handle", "--theme", "--out", "--json", "--dry-run", "--year"],
+    publish: PUBLISH_FLAGS,
+    schedule: ["--cron"],
+    ledger: ["--rebuild", "--yes"],
+    login: ["--api"],
+    logout: [],
+    whoami: [],
+  };
+
+  const stray = unknownFlags(argv, ALLOWED[command] ?? [], VALUED);
+  if (stray.length > 0) {
+    fail(`unknown ${stray.length === 1 ? "flag" : "flags"}: ${stray.join(", ")}`);
+    say(commandHelp(command));
+    return 1;
   }
 
   switch (command) {
