@@ -112,31 +112,9 @@ test("the help text names the same API the CLI actually posts to", async () => {
   );
 });
 
-test("every command in the help table can actually be run", async () => {
-  // A command listed but not dispatched, or dispatched but not listed, is a help page that
-  // lies. Neither direction is obvious by reading and both are cheap to check.
-  const box = await sandbox();
-  const { stdout: usage } = await cli(["help"], box);
-
-  for (const name of [
-    "generate",
-    "init",
-    "sync",
-    "publish",
-    "recap",
-    "schedule",
-    "login",
-    "logout",
-    "whoami",
-  ]) {
-    assert.ok(usage.includes(name), `${name} is missing from the summary help`);
-    const { stdout } = await cli(["help", name], box);
-    assert.ok(
-      stdout.includes(`tokenchit ${name}`),
-      `\`tokenchit help ${name}\` printed no page for it`,
-    );
-  }
-});
+// The command/help round-trip that used to live here is now in args.test.js, where it walks
+// Object.keys(COMMANDS) instead of a hardcoded list — the list here had gone stale and was
+// missing `ledger`, which is exactly the drift it existed to catch.
 
 test("the banner degrades rather than wrapping or leaking into pipes", async () => {
   // A wall of block letters is right in a terminal someone is watching and wrong in a CI

@@ -1,12 +1,27 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import { type AgentId } from "@tokenchit/core";
+import { sanitizeHandle, type AgentId } from "@tokenchit/core";
 import { adapters, unsupported } from "@tokenchit/core/adapters";
 
 import { flag } from "../args.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig, writeConfig, type Config } from "../config.js";
+import { ask } from "../prompt.js";
 import { bold, dim, green, say, under, warn, yellow } from "../ui.js";
+
+/**
+ * Say so when sanitisation changed the handle, rather than quietly using a different name.
+ *
+ * `sanitizeHandle` strips everything outside `[A-Za-z0-9_-]`, so `my.name` becomes `myname` —
+ * which may well be somebody else's real GitHub account. Nothing reported that, so the card
+ * carried an identity the user never typed.
+ */
+export function warnIfCoerced(raw: string): string {
+  if (!raw) return "";
+  const clean = sanitizeHandle(raw);
+  if (clean !== raw) warn(`handle "${raw}" is not a valid GitHub handle — using "${clean}"`);
+  return clean;
+}
 
 const run = promisify(execFile);
 
@@ -72,7 +87,24 @@ export async function init(argv: string[], chained = false): Promise<number> {
   }
 
   const existing = await readConfig();
-  const handle = handleFlag ?? existing?.handle ?? (await guessHandle()) ?? "";
+
+  /*
+   * Ask, rather than write a card belonging to nobody.
+   *
+   * The guess is the *owner* of the origin remote, which for a fork or a work repo is the
+   * organisation — `github.com/acme-corp/service` yields `acme-corp` — and it used to be
+   * written into the committed config with no confirmation, so the user ended up committing a
+   * card branded with their employer. Offering it as an editable default is the fix: the
+   * common case is still one keypress, and the wrong case is now visible before it is written.
+   */
+  const guessed = await guessHandle();
+  let handle = handleFlag ?? existing?.handle ?? "";
+
+  if (!handle) {
+    handle = (await ask("GitHub handle", guessed ?? "")) ?? guessed ?? "";
+  }
+
+  handle = warnIfCoerced(handle);
 
   const config: Config = {
     ...DEFAULT_CONFIG,
@@ -86,7 +118,11 @@ export async function init(argv: string[], chained = false): Promise<number> {
 
   if (!handle) {
     say();
-    warn(`No handle set. Add one to ${CONFIG_FILE}, or run: tokenchit init --handle <you>`);
+    // Names the command the reader is actually running, which the old wording did not when
+    // `generate` was driving.
+    warn(
+      `No handle set. Add one to ${CONFIG_FILE}, or re-run with --handle <you>`,
+    );
   }
 
   if (!chained) {

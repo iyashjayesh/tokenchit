@@ -26,6 +26,8 @@ export type ScanOptions = {
   onProgress?: (p: { agent: string; events: number }) => void;
   /** Start from an empty bank. `ledger --rebuild` is the only caller. */
   fresh?: boolean;
+  /** Report on one calendar year only. `recap --year` is the only caller. */
+  year?: number;
 };
 
 /**
@@ -48,8 +50,11 @@ export async function scan(agents: AgentId[], opts: ScanOptions = {}): Promise<S
     : await readLedger();
   const recovered: Recovered = { days: 0, tokens: 0 };
 
+  /* The year filter belongs to the aggregation, not the read: the ledger must still bank
+     every day it sees, or asking for one year's recap would prune the bank to that year. */
   const stats = await aggregate(
     recordAndReplay(readAll(agents, opts.onProgress), ledger, agents, recovered),
+    opts.year === undefined ? {} : { year: opts.year },
   );
 
   if (opts.write !== false) await writeLedger(ledger);

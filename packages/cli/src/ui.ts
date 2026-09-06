@@ -5,17 +5,50 @@
  * meant to run in CI as readily as in a shell, and escape codes in an Actions log help
  * nobody.
  *
- * Anything decorative — spinners, rules, panels — goes to stderr. stdout carries only what a
- * caller might parse: the JSON from `--json`, the payload bytes from `--dry-run`. That split
- * is what lets `tokenchit sync --json | jq` stay usable while the same command draws a
- * progress line for a human.
+ * Progress — spinners and the step gutter — goes to stderr, so `tokenchit sync --json | jq`
+ * stays usable while the same command draws a live line for a human. Everything else,
+ * including the help pages and the result panels, goes to stdout: they are what a person ran
+ * the command to read, and a pager should get them. (This comment used to claim every
+ * decoration went to stderr, which was never true of the panels.)
  */
 const ESC = "\u001b";
 
-const colour = Boolean(process.stdout.isTTY) && !process.env["NO_COLOR"];
+/**
+ * Auto by default, overridable in both directions.
+ *
+ * There was no way to ask for colour back when piping into a pager that renders it, and no
+ * way to drop it for one run without exporting an environment variable. `--color=always|
+ * never|auto` is what rg, fd, eza and gh all take, and FORCE_COLOR is what the ecosystem
+ * sets — the test suite here already set `FORCE_COLOR: "0"` as though it were honoured.
+ *
+ * Precedence runs most-specific first: the flag, then NO_COLOR (which the standard says wins
+ * over any other environment signal), then FORCE_COLOR, then the terminal.
+ */
+function wantsColour(stream: { isTTY?: boolean }): boolean {
+  const argv = process.argv;
+  const i = argv.findIndex((a) => a === "--color" || a.startsWith("--color="));
+  if (i !== -1) {
+    const arg = argv[i]!;
+    // Both spellings, because both are typed: `--color=never` and `--color never`.
+    const value = arg.includes("=") ? arg.slice("--color=".length) : (argv[i + 1] ?? "always");
+    if (value === "always") return true;
+    if (value === "never") return false;
+    // "auto" and anything unrecognised fall through to the terminal check below.
+  }
+  if (argv.includes("--no-color")) return false;
+
+  if (process.env["NO_COLOR"]) return false;
+
+  const force = process.env["FORCE_COLOR"];
+  if (force !== undefined && force !== "") return force !== "0" && force !== "false";
+
+  return Boolean(stream.isTTY);
+}
+
+const colour = wantsColour(process.stdout);
 
 /** Animation needs a TTY to erase what it drew; a pipe or a CI log gets static text. */
-export const animated = Boolean(process.stderr.isTTY) && !process.env["NO_COLOR"];
+export const animated = wantsColour(process.stderr) && Boolean(process.stderr.isTTY);
 
 const wrap = (code: string) => (s: string) => (colour ? `${ESC}[${code}m${s}${ESC}[0m` : s);
 

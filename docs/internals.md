@@ -72,10 +72,29 @@ cannot outrank a verified one. A `tier` that is displayed but never affects the 
 decoration — it told you nothing about the ranking you were reading.
 
 Submissions far outside the range of real usage are **held for review**: stored, returned to
-their owner, and kept off the board until a person looks. The threshold is half the hard
-rejection limit — about 1.6x the busiest day in the corpus these figures were measured
-against — and `publish` says so out loud rather than leaving someone refreshing a board they
-will never appear on.
+their owner, and kept off the board until a person looks. `publish` says so out loud rather
+than leaving someone refreshing a board they will never appear on.
+
+The band sits well below the hard rejection limits, not beside them — a false positive should
+be a delay, and a rejection is a locked door:
+
+| | held for review | rejected outright |
+|---|---|---|
+| tokens in one day | 100B | 1T |
+| cost in one day | $100,000 | $500,000 |
+| tokens in one submission | 1T | — |
+| cost in one submission | $250,000 | $182M (500k × 365) |
+
+Both thresholds have been recalibrated twice, each time because a real person was refused; the
+reasoning is written out in `packages/core/src/validate.ts`, which is the file to trust if this
+table ever drifts from it again. The review band currently sits about four times above the
+heavier of the two busiest real days seen.
+
+Two honest limits on the promise. There is **no operator tooling** for the "until a person
+looks" half — no queue, no review UI, no notification — so a held row waits on somebody running
+SQL by hand. And the gate reads only the *newest* submission's flag, which is why
+`validatePayload` refuses a submission carrying no days at all: without that, a second, empty
+submission could clear the flag while the flagged daily series stayed in place.
 
 The `flagged` column has existed since the first migration and, until this was added, nothing
 ever wrote to it. The board query already refused to show flagged rows; there was simply no

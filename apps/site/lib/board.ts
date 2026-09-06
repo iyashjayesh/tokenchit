@@ -115,3 +115,26 @@ export function staleLabel(lastPublished: string | null, now: Date = new Date())
   if (days < 365) return `${Math.floor(days / 30)}mo`;
   return `${Math.floor(days / 365)}y`;
 }
+
+/**
+ * The agents a board can be filtered to.
+ *
+ * `user_days` has carried `(user_id, day, agent, tokens, cost_usd)` since the first migration
+ * and every board query already groups by agent, so this is a `WHERE` clause and a row of
+ * chips rather than new data. It is also the more interesting ranking at this size: with a few
+ * dozen people "the top Codex user" is a category somebody can plausibly win, where "the top
+ * overall" is settled.
+ *
+ * Kept as a fixed list rather than read from the table so an unrecognised `?agent=` cannot
+ * reach SQL, and so the chips do not reshuffle as people publish.
+ */
+export const BOARD_AGENTS = [
+  { key: "claude-code", label: "claude code" },
+  { key: "codex", label: "codex" },
+  { key: "opencode", label: "opencode" },
+] as const;
+
+export type BoardAgent = (typeof BOARD_AGENTS)[number]["key"];
+
+export const isBoardAgent = (value: string | null): value is BoardAgent =>
+  value !== null && BOARD_AGENTS.some((a) => a.key === value);

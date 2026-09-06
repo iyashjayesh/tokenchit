@@ -1,9 +1,6 @@
-"use client";
-
-import { agentMark, CARD_HOST, formatShare, ICON_VIEWBOX } from "@tokenchit/core";
+import { agentColour, agentMark, CARD_HOST, formatShare, ICON_VIEWBOX } from "@tokenchit/core";
 
 import type { Featured } from "@/lib/featured";
-import { useSiteState } from "./site-state";
 import styles from "./stat-card.module.css";
 
 /**
@@ -17,16 +14,17 @@ import styles from "./stat-card.module.css";
  * different legend from the thing it is previewing — which it did, silently, when the marks
  * were added to the builder and this hand-written copy was missed.
  */
-const MIX_FILLS = ["var(--lime)", "var(--ink)", "var(--seg-2)", "var(--seg-3)"];
 
-
+/*
+ * A server component again.
+ *
+ * The handle came from a context whose setter nothing ever called — there used to be a live
+ * input in the hero and it is gone — so `handle` could only ever be `preview.handle`, and the
+ * `borrowed` guard that existed to catch the mismatch was unreachable. Reading the prop
+ * directly says the same thing with nothing left to drift.
+ */
 export function StatCard({ preview }: { preview: Featured }) {
-  const { handle } = useSiteState();
-
-  /* The figures belong to whoever the server featured. Typing another name changes whose card
-     this looks like but not whose numbers these are, and saying so is the difference between
-     a preview and a false claim about somebody. */
-  const borrowed = preview.real && handle !== preview.handle;
+  const handle = preview.handle;
 
   return (
     <div className={styles.card}>
@@ -48,9 +46,16 @@ export function StatCard({ preview }: { preview: Featured }) {
         </div>
       </div>
 
-      <div className={styles.mix}>
-        {preview.mix.map((m, i) => (
-          <span key={m.agent} style={{ flex: m.pct, background: MIX_FILLS[i] }} />
+      {/* The fourth palette for this one fact, now the same as the other three. */}
+      <div
+        className={styles.mix}
+        role="img"
+        aria-label={`Agent mix: ${preview.mix
+          .map((m) => `${m.agent} ${formatShare(m.pct)}`)
+          .join(", ")}`}
+      >
+        {preview.mix.map((m) => (
+          <span key={m.agent} style={{ flex: m.pct, background: agentColour(m.agent) }} />
         ))}
       </div>
 
@@ -71,7 +76,7 @@ export function StatCard({ preview }: { preview: Featured }) {
       </div>
 
       <div className={styles.footer}>
-        <span>{borrowed ? `@${preview.handle}'S FIGURES` : CARD_HOST}</span>
+        <span>{CARD_HOST}</span>
         <span>{preview.syncedAt}</span>
       </div>
     </div>

@@ -1,9 +1,23 @@
 .ink,
 .lime,
-.yellow {
+.yellow,
+.failed {
   cursor: pointer;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+/* The clipboard write was refused — an insecure origin, a denied permission, no API. Says so
+   rather than lying, and stays long enough to be read and acted on. */
+.failed {
+  flex: none;
+  padding: 0 12px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  color: var(--coral-text);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 /* Full-height button inside the hero install block. */
@@ -18,7 +32,9 @@
 }
 .ink:hover {
   background: var(--coral);
-  color: #fff;
+  /* Ink, not white: #fff on --coral is 3.07:1 and fails AA at every size here.
+     #101010 on the same fill is 6.2:1 and keeps the colour the design is built from. */
+  color: var(--ink);
 }
 
 /* Snippet panel headers: inverted fill on hover. */

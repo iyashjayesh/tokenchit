@@ -1,6 +1,9 @@
-"use client";
+import Link from "next/link";
+
+import { formatTokens, formatUsd } from "@tokenchit/core";
 
 import { CopyButton } from "./copy-button";
+import type { BoardTotals } from "@/lib/board-totals";
 import type { Featured } from "@/lib/featured";
 import { StatCard } from "./stat-card";
 import styles from "./hero.module.css";
@@ -10,9 +13,7 @@ import { PRIMARY_COMMAND } from "@/lib/cli";
 // and unpublished within a fortnight, and npm never lets an unpublished name be reused.
 const INSTALL = PRIMARY_COMMAND;
 
-export function Hero({ preview }: { preview: Featured }) {
-
-
+export function Hero({ preview, totals }: { preview: Featured; totals: BoardTotals | null }) {
   return (
     <section className={styles.hero}>
       <div className={styles.left}>
@@ -49,6 +50,20 @@ export function Hero({ preview }: { preview: Featured }) {
             copiedLabel="copied"
           />
         </div>
+
+        {/* Proof that the board is a place rather than a demo. The figures already existed
+            and only /board showed them, so the page invited people to join something whose
+            size it never mentioned. Absent rather than zeroed when the query fails — "0
+            developers" is a worse claim than no claim. */}
+        {totals && totals.developers > 0 && (
+          <p className={styles.proof}>
+            <Link href="/board" className={styles.proofLink}>
+              {totals.developers} {totals.developers === 1 ? "developer" : "developers"}
+            </Link>{" "}
+            on the board · {formatTokens(totals.tokens)} tokens ·{" "}
+            {formatUsd(totals.equivCostUsd)} equiv. cost
+          </p>
+        )}
       </div>
 
       <div className={styles.right}>

@@ -136,14 +136,22 @@ export async function POST(req: Request) {
       const review = reviewReason(payload);
 
       const { rows: subRows } = await client.query<{ id: string; received_at: Date }>(
+        /* `estimated_tokens` was the one field the CLI computed, sent and had validated, and
+           that this INSERT then dropped on the floor — which left the committed card and the
+           profile showing figures ~40% apart for the same person, the exact disagreement the
+           field exists to prevent. */
         `INSERT INTO submissions
-           (user_id, tokens, equiv_cost_usd, priced_share, streak_days, active_days,
-            first_day, last_day, agents, models, client_version, flagged)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+           (user_id, tokens, estimated_tokens, equiv_cost_usd, priced_share, streak_days,
+            active_days, first_day, last_day, agents, models, client_version, flagged)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          RETURNING id, received_at`,
         [
           user.id,
           payload.tokens,
+          // Null rather than a fallback to `tokens`: "no estimate was made" and "the estimate
+          // equals the verified figure" are different claims, and only one of them is true
+          // for a machine with no Claude Code rollup to calibrate against.
+          payload.estimatedTokens ?? null,
           payload.equivCostUsd,
           payload.pricedShare,
           payload.streakDays,
@@ -160,31 +168,30 @@ export async function POST(req: Request) {
       // Replaced wholesale rather than merged. A user who deletes local history and re-syncs
       // should see their board row shrink to match; merging would make the board a high-water
       // mark that can only ever grow.
-      /* Inside the guard, not before it. The DELETE was unconditional while the re-insert was
-         gated, so a payload carrying `days: []` — which passed validation — erased the row's
-         entire series and wrote nothing back: board row, sparkline, rank movement and card,
-         gone in one request. Replacing wholesale is still the intent; replacing with nothing
-         is not a replacement. */
-      if (payload.days.length > 0) {
-        await client.query("DELETE FROM user_days WHERE user_id = $1", [user.id]);
-        await client.query(
-          `INSERT INTO user_days (user_id, day, agent, tokens, cost_usd)
-           SELECT $1, d.day::date, d.agent, d.tokens::bigint, d.cost::numeric
-           FROM jsonb_to_recordset($2::jsonb)
-                AS d(day text, agent text, tokens bigint, cost numeric)`,
-          [
-            user.id,
-            JSON.stringify(
-              payload.days.map((d) => ({
-                day: d.day,
-                agent: d.agent,
-                tokens: d.tokens,
-                cost: d.equivCostUsd,
-              })),
-            ),
-          ],
-        );
-      }
+      /* Unconditional again, and safe to be: `validatePayload` now refuses `days: []`
+         outright, so there is no payload that reaches here with nothing to write.
+         It was guarded because an empty payload used to erase the whole series and write
+         nothing back — but guarding the write while the flag was still recomputed left a
+         worse hole: a flagged series survived an unflagged empty submission and returned to
+         the board. Rejecting the shape fixes both ends. */
+      await client.query("DELETE FROM user_days WHERE user_id = $1", [user.id]);
+      await client.query(
+        `INSERT INTO user_days (user_id, day, agent, tokens, cost_usd)
+         SELECT $1, d.day::date, d.agent, d.tokens::bigint, d.cost::numeric
+         FROM jsonb_to_recordset($2::jsonb)
+              AS d(day text, agent text, tokens bigint, cost numeric)`,
+        [
+          user.id,
+          JSON.stringify(
+            payload.days.map((d) => ({
+              day: d.day,
+              agent: d.agent,
+              tokens: d.tokens,
+              cost: d.equivCostUsd,
+            })),
+          ),
+        ],
+      );
 
       return { submissionId: subRows[0]!.id, tier: user.tier, review };
     });

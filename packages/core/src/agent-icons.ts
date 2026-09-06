@@ -58,3 +58,32 @@ export const agentMark = (agent: string): AgentMark => AGENT_MARKS[agent] ?? GEN
 
 /** Icons are drawn against this box; the caller scales to the size it needs. */
 export const ICON_VIEWBOX = 24;
+
+/**
+ * A fixed colour per agent, so the same agent is the same colour everywhere.
+ *
+ * The mix bars used to assign colours by position — segments sorted largest-first, then
+ * `SEGMENTS[index]` — so the colour encoded rank within the row rather than which agent it
+ * was: claude-code appeared lime on a row where it led and coral on the row below where codex
+ * did. Reading down the column, which is exactly what a column invites, taught a mapping that
+ * was not true. Three surfaces then used three different palettes for the same fact.
+ *
+ * Anchored to the brand marks above where one exists, so the bar, the icon and the card agree.
+ * Chosen to stay separable by lightness as well as hue, which is what keeps them apart under
+ * the common colour-vision deficiencies and in greyscale.
+ */
+export const AGENT_COLOURS: Record<string, { light: string; dark: string }> = {
+  /* Relative luminance on the light side: 0.286, 0.005, 0.163, and 0.252 for the neutral —
+     spread widely enough that the segments stay separable in greyscale and under deuteranopia,
+     not only by hue. The first pick for opencode was a brighter green at 0.309, which sat on
+     top of claude-code's orange the moment colour was removed. */
+  "claude-code": { light: "#D97757", dark: "#D97757" },
+  codex: { light: "#101010", dark: "#FFFFFF" },
+  opencode: { light: "#5C7A1E", dark: "#C6FF3D" },
+};
+
+/** Neutral for anything not yet known, matching GENERIC's mark. */
+const NEUTRAL = { light: "#8A8A82", dark: "#6E6E66" };
+
+export const agentColour = (agent: string, theme: "light" | "dark" = "light"): string =>
+  (AGENT_COLOURS[agent] ?? NEUTRAL)[theme];

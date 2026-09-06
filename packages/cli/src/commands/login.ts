@@ -4,7 +4,7 @@ import { resolveApi } from "../api.js";
 import { flag } from "../args.js";
 import { readAuth, writeAuth, clearAuth, authFile } from "../auth.js";
 import { copyToClipboard, openBrowser, prefilled } from "../desktop.js";
-import { post, postForm } from "../net.js";
+import { authed, post, postForm } from "../net.js";
 import { bold, cyan, dim, fail, green, grey, say, spin, warn } from "../ui.js";
 
 /**
@@ -249,8 +249,36 @@ export async function login(argv: string[]): Promise<number> {
 }
 
 export async function logout(): Promise<number> {
+  /*
+   * Revoked with the server, not just forgotten locally.
+   *
+   * This used to delete `auth.json` and stop, which left a non-expiring key valid forever —
+   * so a key that had reached a CI log, a shared machine or a synced dotfile could still
+   * rewrite that user's row long after they thought they had signed out. The endpoint
+   * authenticates by the key being given up, so this needs nothing else.
+   *
+   * Best-effort, and in this order: a server that cannot be reached must not leave the key
+   * sitting on the machine, which is the half the user can actually see.
+   */
+  const auth = await readAuth().catch(() => null);
+  let revoked = false;
+  if (auth) {
+    const res = await authed(`${auth.api}/api/auth/tokens`, auth.token, "DELETE");
+    revoked = res.ok;
+  }
+
   const had = await clearAuth();
-  say(had ? `${green("✓")} signed out (${authFile()} removed)` : "Not signed in.");
+  if (!had) {
+    say("Not signed in.");
+    return 0;
+  }
+
+  say(`${green("✓")} signed out (${authFile()} removed)`);
+  if (auth && !revoked) {
+    // Said plainly: the local half succeeded and the remote half did not, and the user is the
+    // only one who can decide whether that matters enough to retry.
+    warn("could not reach the server to revoke this key — run `tokenchit logout` again later");
+  }
   return 0;
 }
 
@@ -260,7 +288,37 @@ export async function whoami(): Promise<number> {
     say("Not signed in. Run `tokenchit login`.");
     return 1;
   }
-  say(`@${auth.handle} ${dim(`· ${auth.api} · since ${auth.createdAt.slice(0, 10)}`)}`);
+
+  const line = `@${auth.handle} ${dim(`· ${auth.api} · since ${auth.createdAt.slice(0, 10)}`)}`;
+
+  /* Checked with the server rather than asserted from the file. `whoami` is an account
+     command, not one of the two the help promises make no network request, and a confident
+     "signed in" for a revoked key is exactly the answer that wastes someone's afternoon. */
+  const res = await authed(`${auth.api}/api/auth/tokens`, auth.token);
+
+  if (res.status === 401) {
+    say(line);
+    fail("this key is no longer valid — run `tokenchit login` to sign in again");
+    return 1;
+  }
+
+  if (!res.ok) {
+    say(line);
+    warn("could not reach the server, so this is what is on disk rather than what is live");
+    return 0;
+  }
+
+  const keys = typeof res.body["keys"] === "number" ? res.body["keys"] : 1;
+  const server = typeof res.body["handle"] === "string" ? res.body["handle"] : auth.handle;
+
+  // A handle that has been renamed on GitHub is the one case where the file and the server
+  // disagree while both are working, and it is worth saying out loud.
+  if (server.toLowerCase() !== auth.handle.toLowerCase()) {
+    say(`@${server} ${dim(`· ${auth.api} · this machine has it saved as @${auth.handle}`)}`);
+  } else {
+    say(line);
+  }
+  say(dim(`  verified · ${keys} ${keys === 1 ? "key" : "keys"} on this account`));
   return 0;
 }
 

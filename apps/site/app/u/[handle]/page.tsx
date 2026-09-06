@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { buildCardSvg, formatSynced, formatTokens, formatUsd, sanitizeHandle } from "@tokenchit/core";
+import {
+  agentColour,
+  buildCardSvg,
+  formatSynced,
+  formatTokens,
+  formatUsd,
+  sanitizeHandle,
+} from "@tokenchit/core";
 
 import { ContributionGraph } from "@/components/contribution-graph";
 import { CopyButton } from "@/components/copy-button";
@@ -10,7 +17,7 @@ import { PageShell } from "@/components/page-shell";
 import { ShareRow } from "@/components/share-row";
 import { PRIMARY_COMMAND } from "@/lib/cli";
 import { isWindow, WINDOW_DAYS, WINDOWS, type BoardWindow } from "@/lib/board";
-import { cardFigures } from "@/lib/card-figures";
+import { cardFigures, EMPTY_FIGURES } from "@/lib/card-figures";
 import { readProfile } from "@/lib/profile";
 import { SITE_URL } from "@/lib/site";
 
@@ -26,6 +33,8 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const handle = sanitizeHandle(decodeURIComponent((await params).handle));
+  /* Metadata is the one place a throw is worse than a wrong title: it would take down the
+     page render too. A null here means "cannot say", which is what the generic title says. */
   const profile = await readProfile(handle).catch(() => null);
 
   if (!profile) return { title: "Not found · tokenchit" };
@@ -57,24 +66,73 @@ export default async function ProfilePage({ params, searchParams }: Props) {
   const requested = (await searchParams).window ?? null;
   const window: BoardWindow = isWindow(requested) ? requested : "year";
 
-  const profile = await readProfile(handle, window).catch(() => null);
+  /*
+   * A failed query is not a missing person.
+   *
+   * This used to be `.catch(() => null)` followed by `notFound()`, so a transient database
+   * error served the 404 page — whose copy reads "they may not have published yet" — for a
+   * real, published profile. That URL is the one people share, and it is cached. Letting the
+   * error propagate reaches error.tsx instead, which says the true thing and does not cache.
+   */
+  const profile = await readProfile(handle, window);
   if (!profile) notFound();
 
-  const mix = Object.entries(profile.mix).sort((a, b) => b[1] - a[1]);
+  /*
+   * The same hold the card, the OG image and the metadata already apply.
+   *
+   * Three surfaces blanked a flagged row and the page body did not, so `/u/x` rendered four
+   * populated tiles, a full contribution graph, the agent mix, the models table and an inline
+   * card with real numbers — while `/api/card/x.svg`, the endpoint that page is previewing,
+   * served zeroes for the same person. The page contradicted its own preview.
+   */
+  const held = profile.underReview;
+
+  const mix = held ? [] : Object.entries(profile.mix).sort((a, b) => b[1] - a[1]);
+  const models = held ? [] : profile.models;
+
+  /*
+   * The graph's own span, which is not always the window's.
+   *
+   * `WINDOW_DAYS.all` is 3650, so "all time" built 522 week-columns — roughly 8,350px of
+   * horizontally scrolling squares, nine years of which are guaranteed empty for a project
+   * that shipped this year. "last 7d" was as odd in the other direction: a two-column graph.
+   * A contribution graph is a year-shaped object; clamping it to something between a quarter
+   * and a year keeps it readable at both ends without pretending the window did not change.
+   */
+  const graphDays = Math.min(365, Math.max(90, WINDOW_DAYS[window]));
+  const graphLabel =
+    WINDOW_DAYS[window] > 365
+      ? "last 12 months"
+      : WINDOW_DAYS[window] < 90
+        ? "last 90 days"
+        : (WINDOWS.find((w) => w.key === window)?.label ?? "this year");
   const mixTotal = mix.reduce((a, [, n]) => a + n, 0);
 
-  const card = buildCardSvg({ handle: profile.handle, ...cardFigures(profile), theme: "light" });
+  const card = buildCardSvg({
+    handle: profile.handle,
+    ...(held ? EMPTY_FIGURES : cardFigures(profile)),
+    theme: "light",
+  });
 
   const embed =
-    `[![tokenchit](${SITE_URL}/api/card/${profile.handle}.svg)]` +
+    // Real alt text: this is what a screen reader announces on GitHub, where the card is an
+    // <img> through camo and the SVG's own aria-label is unreachable.
+    `[![tokenchit — @${profile.handle} AI coding agent usage](${SITE_URL}/api/card/${profile.handle}.svg)]` +
     `(${SITE_URL}/u/${profile.handle})`;
 
-  const tiles: [string, string][] = [
-    ["tokens", formatTokens(profile.tokens)],
-    ["equiv. cost", profile.equivCostUsd > 0 ? formatUsd(profile.equivCostUsd) : "—"],
-    ["streak", `${profile.streakDays}d`],
-    ["active days", String(profile.activeDays)],
-  ];
+  const tiles: [string, string][] = held
+    ? [
+        ["tokens", "—"],
+        ["equiv. cost", "—"],
+        ["streak", "—"],
+        ["active days", "—"],
+      ]
+    : [
+        ["tokens", formatTokens(profile.tokens)],
+        ["equiv. cost", profile.equivCostUsd > 0 ? formatUsd(profile.equivCostUsd) : "—"],
+        ["streak", `${profile.streakDays}d`],
+        ["active days", String(profile.activeDays)],
+      ];
 
   return (
     <PageShell crumbs={[{ href: "/board", label: "board" }, { href: `/u/${profile.handle}`, label: `@${profile.handle}` }]}>
@@ -109,6 +167,17 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           )}
         </div>
       </header>
+
+      {/* Where the rank chip would be. `underReview` exists, by its own comment, so a held
+          profile does not look broken to its owner — but nothing in the body said anything,
+          so the owner saw four dashes and no reason for them. */}
+      {held && (
+        <p className={styles.held}>
+          <span className={styles.heldMark}>hold</span>
+          This submission is held for review, so the figures are not shown. Nothing was
+          deleted — they return once someone has looked at it.
+        </p>
+      )}
 
       {/*
         * The post, composed on the server.
@@ -167,6 +236,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             key={w.key}
             href={`/u/${profile.handle}${w.key === "year" ? "" : `?window=${w.key}`}`}
             className={w.key === window ? styles.windowActive : styles.window}
+            /* The active window differed only by background colour, so which one was
+               selected was invisible to assistive tech on all three surfaces. */
+            aria-current={w.key === window ? "true" : undefined}
           >
             {w.label}
           </Link>
@@ -182,9 +254,34 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         ))}
       </div>
 
+      {/*
+        * The card's headline, said out loud where the two would otherwise disagree.
+        *
+        * `tokens` is what the daily series proves; the committed card shows the estimate,
+        * which adds back what Claude Code's transcripts no longer hold. On a machine with real
+        * retention the two are ~40% apart, and until now the profile showed one while the card
+        * in the same person's README showed the other, with nothing anywhere explaining it.
+        *
+        * Shown only on the lifetime view, because the estimate is lifetime: putting it beside
+        * a seven-day figure would invent a comparison neither number supports.
+        */}
+      {!held && profile.estimatedTokens !== null && window === "all" && (
+        <p className={styles.estimate}>
+          The card for this profile reads{" "}
+          <span className={styles.strong}>{formatTokens(profile.estimatedTokens)}</span> — the
+          verified {formatTokens(profile.tokens)} above, plus what Claude Code&rsquo;s own
+          rollup counted after retention deleted the transcripts behind it. Only the verified
+          figure is ranked.
+        </p>
+      )}
+
       <section className={styles.block}>
-        <h2 className={styles.h2}>Activity</h2>
-        <ContributionGraph days={profile.days} windowDays={WINDOW_DAYS[window]} />
+        {/* Says which window it follows, because the graph changing shape when the selector
+            moves otherwise reads as a bug. */}
+        <h2 className={styles.h2}>
+          Activity <span className={styles.h2Note}>· {graphLabel}</span>
+        </h2>
+        <ContributionGraph days={held ? [] : profile.days} windowDays={graphDays} />
       </section>
 
       <div className={styles.split}>
@@ -194,7 +291,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
             <p className={styles.empty}>No activity in this window.</p>
           ) : (
             <ul className={styles.agents}>
-              {mix.map(([agent, tokens], i) => {
+              {mix.map(([agent, tokens]) => {
                 const pct = mixTotal > 0 ? (tokens / mixTotal) * 100 : 0;
                 return (
                   <li key={agent} className={styles.agent}>
@@ -207,10 +304,15 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                     </div>
                     <div className={styles.agentTrack}>
                       <span
-                        className={styles[`agentFill${Math.min(i, 2)}` as keyof typeof styles]}
-                        // Percentages this small round to a hairline; a floor keeps a real
-                        // agent visible rather than rendering as nothing.
-                        style={{ width: `${Math.max(pct, 0.6)}%` }}
+                        className={styles.agentFill}
+                        style={{
+                          // Percentages this small round to a hairline; a floor keeps a real
+                          // agent visible rather than rendering as nothing.
+                          width: `${Math.max(pct, 0.6)}%`,
+                          // Per agent rather than by list position, so this bar is the same
+                          // colour as the same agent's segment on the board.
+                          background: agentColour(agent),
+                        }}
                       />
                     </div>
                   </li>
@@ -224,20 +326,23 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           <h2 className={styles.h2}>
             Models <span className={styles.h2Note}>lifetime</span>
           </h2>
-          {profile.models.length === 0 ? (
+          {models.length === 0 ? (
             <p className={styles.empty}>Nothing published yet.</p>
           ) : (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
+                {/* Named for screen readers, which announce a table by its caption; visually
+                    hidden because the heading above already says this to everyone else. */}
+                <caption className={styles.srOnly}>Models used, with tokens and equivalent cost</caption>
                 <thead>
                   <tr>
-                    <th>model</th>
-                    <th className={styles.num}>tokens</th>
-                    <th className={styles.num}>equiv. cost</th>
+                    <th scope="col">model</th>
+                    <th scope="col" className={styles.num}>tokens</th>
+                    <th scope="col" className={styles.num}>equiv. cost</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {profile.models.map((m) => (
+                  {models.map((m) => (
                     <tr key={m.model}>
                       <td className={styles.model}>{m.model}</td>
                       <td className={styles.num}>{formatTokens(m.tokens)}</td>

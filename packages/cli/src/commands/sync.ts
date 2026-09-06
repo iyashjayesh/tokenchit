@@ -5,7 +5,6 @@ import {
   buildCardSvg,
   formatTokens,
   PRICES_GENERATED,
-  sanitizeHandle,
   toCardOptions,
   type Layout,
   type Theme,
@@ -13,6 +12,7 @@ import {
 
 import { flag, has, oneOf } from "../args.js";
 import { readAuth } from "../auth.js";
+import { warnIfCoerced } from "./init.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { claudeContext, estimatedTotal } from "../claude-context.js";
 import { scan } from "../scan.js";
@@ -30,11 +30,22 @@ const THEMES = ["auto", "light", "dark"] as const satisfies readonly Theme[];
 export async function sync(argv: string[], chained = false): Promise<number> {
   const config = (await readConfig()) ?? DEFAULT_CONFIG;
 
+  /*
+   * Read once, here, because the card, the avatar gate and the published row all have to name
+   * the same person.
+   *
+   * This used to resolve `flag ?? config.handle` while `publish` resolved
+   * `flag ?? auth.handle ?? config.handle`, so a signed-in user in an organisation repo — where
+   * the guessed handle is the org — got a card reading `@acme-corp` with no avatar (the gate
+   * below requires the two to match) and a board row reading their real handle.
+   */
+  const signedIn = await readAuth().catch(() => null);
+
   // Checked before sanitising: `sanitizeHandle` falls back to "dev" on empty input, which
   // is the right default for the site's preview but would silently publish the wrong name
   // from someone's repo.
-  const rawHandle = flag(argv, "--handle") ?? config.handle;
-  const handle = sanitizeHandle(rawHandle);
+  const rawHandle = flag(argv, "--handle") ?? signedIn?.handle ?? config.handle;
+  const handle = warnIfCoerced(rawHandle);
   const layout = oneOf(flag(argv, "--layout"), LAYOUTS, "layout") ?? config.layout;
   const theme = oneOf(flag(argv, "--theme"), THEMES, "theme") ?? config.theme;
   const out = flag(argv, "--out") ?? config.output;
@@ -64,6 +75,16 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   }
 
   if (json) {
+    /*
+     * The estimate is read here too, so the machine-readable answer matches the card.
+     *
+     * `--json` used to report only the verified figure while the terminal panel, the SVG and
+     * the published row all showed the estimate — four consumers of one command's data, two
+     * different answers, and the one meant for scripts was the odd one out. Both are carried
+     * rather than one replaced: they mean different things and the difference is the point.
+     */
+    const claudeForJson = await claudeContext(stats, config.agents);
+
     // Maps do not survive JSON.stringify, and the day series is the interesting part for
     // anyone piping this into their own chart.
     say(
@@ -71,6 +92,7 @@ export async function sync(argv: string[], chained = false): Promise<number> {
         {
           handle,
           tokens: stats.tokens,
+          estimatedTokens: estimatedTotal(stats, claudeForJson),
           equivCostUsd: Number(stats.equivCostUsd.toFixed(2)),
           pricedShare: Number(stats.pricedShare.toFixed(4)),
           streakDays: stats.streakDays,
@@ -105,9 +127,10 @@ export async function sync(argv: string[], chained = false): Promise<number> {
      gate the board uses — an unproved handle gets no face. Only used when the card is being
      written for the handle it belongs to, so a `--handle` override cannot put one person's
      face on another's card. */
-  const auth = await readAuth().catch(() => null);
   const avatar =
-    auth?.avatar && auth.handle.toLowerCase() === handle.toLowerCase() ? auth.avatar : undefined;
+    signedIn?.avatar && signedIn.handle.toLowerCase() === handle.toLowerCase()
+      ? signedIn.avatar
+      : undefined;
 
   const svg = buildCardSvg(
     toCardOptions(stats, {
@@ -131,7 +154,10 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   if (recovered.days > 0) {
     note(
       `ledger restored ${recovered.days} ${recovered.days === 1 ? "day" : "days"} ` +
-        `the logs no longer hold (${formatTokens(recovered.tokens)})`,
+        `the logs no longer hold (${formatTokens(recovered.tokens)})` +
+        // Named here because this line is the moment somebody wonders where the extra days
+        // came from, and the command that answers that was otherwise undiscoverable.
+        dim(" — tokenchit ledger"),
     );
     say();
   }
@@ -156,19 +182,40 @@ export async function sync(argv: string[], chained = false): Promise<number> {
     return 0;
   }
 
-  // `--out docs/card.svg` is a reasonable thing to ask for before docs/ exists.
-  await mkdir(dirname(target), { recursive: true });
-  await writeFile(target, svg, "utf8");
+  /*
+   * Wrapped, because the bare errno is unhelpful in the one place it surfaces.
+   *
+   * `sync --out /proc/nope/x.svg` reported `ENOENT: no such file or directory, mkdir '/proc'`
+   * — a path the user never typed (the recursive mkdir's first failure point), with no mention
+   * of `--out`, no mention of what they asked for, and no next step. A read-only checkout read
+   * the same way.
+   */
+  try {
+    // `--out docs/card.svg` is a reasonable thing to ask for before docs/ exists.
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, svg, "utf8");
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    const why =
+      code === "EACCES" || code === "EPERM"
+        ? "no permission to write there"
+        : code === "ENOENT"
+          ? "that directory does not exist and could not be created"
+          : ((err as Error).message ?? String(err));
+    throw new Error(`could not write --out ${target}: ${why}`);
+  }
   const rel = relative(process.cwd(), target);
   say(`${green("✓")} wrote ${bold(rel)} ${dim(`(${svg.length} bytes)`)}`);
 
   say();
-  say(`  ${grey("embed")}     ![tokenchit](./${rel})`);
+  say(`  ${grey("embed")}     ![tokenchit — @${handle} AI coding agent usage](./${rel})`);
   // Committing on the user's behalf is not ours to decide — a tool that reads your logs
   // should not also decide what lands in your history on its first run.
   say(`  ${grey("commit")}    git add ${rel} && git commit -m "chore: update tokenchit"`);
   if (!chained) {
     say(`  ${grey("share")}     ${bold("tokenchit publish")} ${dim("— put this on the board")}`);
+    // Offered where the manual step is being shown, which is the moment it becomes relevant.
+    say(`  ${grey("automate")}  ${bold("tokenchit hook install")} ${dim("— stage the card on every commit")}`);
   }
   say();
 

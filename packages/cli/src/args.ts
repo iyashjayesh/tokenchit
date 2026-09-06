@@ -5,13 +5,34 @@
  * code to audit than it saves — and "reads your logs, depends on nothing" is a claim worth
  * keeping literally true.
  */
+/**
+ * Every caller of this reads a flag that takes a value, so a flag present with no value is a
+ * mistake rather than an absence — and it used to be silently indistinguishable from one.
+ *
+ * `publish --api` with a truncated value resolved to `undefined`, fell through `resolveApi`
+ * to TOKENCHIT_API and then to the production default, so a rehearsal aimed at a local server
+ * put a real row on the public board. That is the accident the unknown-flag guard exists to
+ * prevent, arriving through the other door. `--out`, `--theme`, `--layout` and `--handle`
+ * failed the same way, more quietly.
+ *
+ * Throwing is enough plumbing: main() catches and prints, exactly as `oneOf` already relies on.
+ */
 export function flag(argv: string[], name: string): string | undefined {
   const i = argv.indexOf(name);
-  const next = argv[i + 1];
-  if (i !== -1 && next !== undefined && !next.startsWith("-")) return next;
+  if (i !== -1) {
+    const next = argv[i + 1];
+    // A value may legitimately begin with a dash, but a *flag* following this one means the
+    // value was left out; guessing which is impossible, and guessing wrong publishes.
+    if (next === undefined || next.startsWith("-")) throw new Error(`${name} needs a value`);
+    return next;
+  }
 
   const inline = argv.find((a) => a.startsWith(`${name}=`));
-  return inline?.slice(name.length + 1);
+  if (inline === undefined) return undefined;
+
+  const value = inline.slice(name.length + 1);
+  if (value === "") throw new Error(`${name} needs a value`);
+  return value;
 }
 
 export const has = (argv: string[], name: string): boolean => argv.includes(name);

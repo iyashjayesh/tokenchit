@@ -2,6 +2,10 @@ import { SectionHeading } from "@/components/section-heading";
 import { PRIVACY_TESTS } from "@/lib/sample-data";
 import styles from "./privacy.module.css";
 
+/** Sum the per-test durations, so the total cannot drift from the rows above it. */
+const totalMs = (tests: typeof PRIVACY_TESTS): number =>
+  tests.reduce((sum, t) => sum + Number.parseInt(t.ms, 10), 0);
+
 /** Section 04 — the privacy guarantees rendered as literal `npm test` output. */
 export function Privacy() {
   return (
@@ -24,8 +28,13 @@ export function Privacy() {
               <span className={styles.ms}>{t.ms}</span>
             </div>
           ))}
+          {/* Counted from the list rather than typed beside it. This said "4 passing (201ms)"
+              under five rendered ticks whose durations sum to 227ms — a visibly wrong total in
+              the one section whose entire argument is that it shows real output rather than a
+              policy page, and the first thing a sceptical reader counts. */}
           <div className={styles.summary}>
-            4 passing <span className={styles.pass}>(201ms)</span> · 0 failing
+            {PRIVACY_TESTS.length} passing{" "}
+            <span className={styles.pass}>({totalMs(PRIVACY_TESTS)}ms)</span> · 0 failing
           </div>
         </div>
       </div>

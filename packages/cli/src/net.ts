@@ -100,3 +100,41 @@ export async function postForm(
     clearTimeout(timer);
   }
 }
+
+/**
+ * An authenticated request that expects JSON back, for the two account endpoints.
+ *
+ * `whoami` needs to ask the server whether a key is still good, and `logout` needs to tell the
+ * server to stop accepting it — neither of which existed, so a revoked key still read as
+ * "signed in" locally and a `logout` left the key working for anyone who had a copy.
+ *
+ * A network failure is reported as `ok: false` with no status rather than thrown: both callers
+ * have a sensible answer for "cannot reach the server" and neither should crash.
+ */
+export async function authed(
+  url: string,
+  token: string,
+  method: "GET" | "DELETE" = "GET",
+): Promise<{ ok: boolean; status: number; body: Record<string, unknown> }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { accept: "application/json", authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+
+    const text = await res.text();
+    try {
+      return { ok: res.ok, status: res.status, body: JSON.parse(text) as Record<string, unknown> };
+    } catch {
+      return { ok: false, status: res.status, body: { error: text.slice(0, 200) } };
+    }
+  } catch {
+    return { ok: false, status: 0, body: {} };
+  } finally {
+    clearTimeout(timer);
+  }
+}

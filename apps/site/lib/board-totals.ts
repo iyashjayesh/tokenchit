@@ -1,7 +1,7 @@
 import "server-only";
 
 import { pool } from "@/lib/db";
-import { WINDOW_DAYS, type BoardWindow } from "@/lib/board";
+import { WINDOW_DAYS, type BoardAgent, type BoardWindow } from "@/lib/board";
 
 export type BoardTotals = {
   developers: number;
@@ -16,12 +16,17 @@ export type BoardTotals = {
  * Computed rather than summed from the returned rows because the table is capped at 100 and
  * the headline should describe everyone, not the page you can see.
  */
-export async function readBoardTotals(window: BoardWindow): Promise<BoardTotals> {
+export async function readBoardTotals(
+  window: BoardWindow,
+  /** Scoped to one agent when the board is, so the tiles describe the table below them. */
+  agent: BoardAgent | null = null,
+): Promise<BoardTotals> {
   const { rows } = await pool.query(
     `WITH windowed AS (
        SELECT d.user_id, SUM(d.tokens) AS tokens, SUM(d.cost_usd) AS cost
        FROM user_days d
        WHERE d.day >= CURRENT_DATE - $1::int
+         AND ($2::text IS NULL OR d.agent = $2)
        GROUP BY d.user_id
      ),
      latest AS (
@@ -36,7 +41,7 @@ export async function readBoardTotals(window: BoardWindow): Promise<BoardTotals>
      JOIN users u ON u.id = w.user_id
      LEFT JOIN latest l ON l.user_id = w.user_id
      WHERE COALESCE(l.flagged, false) = false`,
-    [WINDOW_DAYS[window]],
+    [WINDOW_DAYS[window], agent],
   );
 
   const r = rows[0];

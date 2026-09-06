@@ -31,7 +31,17 @@ const gridRight = GRID.x + GRID.cols * GRID.pitch - 1;
  * dark cards swap it for the frame's own colour. The four warm steps carry across unchanged
  * — they are the data, and recolouring them per theme would make two cards incomparable.
  */
-const darkRamp = (): readonly string[] => ["#1C1C18", ...RAMP.slice(1)];
+/*
+ * The dark ramp is its own scale, not the light one with a new floor.
+ *
+ * It used to be `["#1C1C18", ...RAMP.slice(1)]`, which worked only because the old light ramp
+ * was uniformly bright. A ramp that darkens as it climbs — which is what a readable light ramp
+ * must do — disappears into a #101010 card at its top end, so the dark side has to climb
+ * instead. Same hue, same five steps, mirrored: 2.00, 2.46, 2.09, 1.37.
+ */
+export const DARK_RAMP = ["#1C1C18", "#3A5411", "#6E9622", "#A8D93C", "#D8F58A"] as const;
+
+const darkRamp = (): readonly string[] => DARK_RAMP;
 
 export type RecapCardOptions = {
   handle: string;

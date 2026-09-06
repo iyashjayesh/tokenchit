@@ -29,10 +29,18 @@ export async function recap(argv: string[]): Promise<number> {
   const json = has(argv, "--json");
   const dryRun = has(argv, "--dry-run");
   const yearFlag = flag(argv, "--year");
-  const year = yearFlag ? Number(yearFlag) : undefined;
+  /* Always a real year, never "all time under this year's heading". A recap that totals every
+     year and stamps the current one on it is wrong for anybody with more than one year of
+     history, and the flag is read as scoping by everyone who types it. */
+  const year = yearFlag ? Number(yearFlag) : new Date().getFullYear();
 
   if (yearFlag && !Number.isInteger(year)) {
     throw new Error(`--year must be a whole number (got "${yearFlag}")`);
+  }
+  // `--year=-5` used to render a card headed "· -5". Bounded at the low end by the year the
+  // first of these agents existed, and at the high end by the machine's own clock.
+  if (year < 2020 || year > new Date().getFullYear()) {
+    throw new Error(`--year must be between 2020 and ${new Date().getFullYear()} (got ${year})`);
   }
 
   /*
@@ -49,6 +57,9 @@ export async function recap(argv: string[]): Promise<number> {
   const { stats, recovered } = await scan(config.agents, {
     // A dry run promises to write nothing, and the ledger is a file like any other.
     write: !dryRun,
+    // Scoped at the aggregation so every tile, the grid and the model table describe the year
+    // in the heading — the flag used to reach the streak and nothing else.
+    year,
     onProgress: ({ agent, events }) =>
       reading.update(
         events === 0 ? `reading ${agent}…` : `reading ${agent}… ${events.toLocaleString()} events`,
@@ -57,11 +68,17 @@ export async function recap(argv: string[]): Promise<number> {
   reading.stop();
 
   if (stats.tokens === 0) {
-    warn("No usage found. Run `tokenchit init` to see which agents were detected.");
+    // Distinguished, because "no usage in 2025" and "no agents on this machine" are different
+    // problems and the second suggestion is useless for the first.
+    warn(
+      yearFlag
+        ? `No usage found in ${year}. Try \`tokenchit recap\` for the current year.`
+        : "No usage found. Run `tokenchit init` to see which agents were detected.",
+    );
     return 1;
   }
 
-  const r = buildRecap(stats, year !== undefined ? { year } : {});
+  const r = buildRecap(stats, { year });
 
   /* Said out loud here as in `sync`: a recap that silently includes days the transcripts no
      longer hold invites the reader to check it against their logs and find it wrong. */
@@ -112,9 +129,13 @@ export async function recap(argv: string[]): Promise<number> {
   }
 
   say();
+  /* Width from the longest name rather than a hardcoded 22, which real model ids exceed —
+     `claude-haiku-4-5-20251001` is 25 — shunting the token and cost columns right and
+     visibly breaking the table mid-list. `stats-view.ts` already did it this way. */
+  const nameW = Math.max(...r.models.map((m) => m.model.length));
   for (const m of r.models) {
     say(
-      `  ${m.model.padEnd(22)} ${m.tokens.padStart(8)} ${m.cost.padStart(12)}` +
+      `  ${m.model.padEnd(nameW)} ${m.tokens.padStart(8)} ${m.cost.padStart(12)}` +
         (m.priced ? "" : dim("  no public price")),
     );
   }
@@ -137,7 +158,7 @@ export async function recap(argv: string[]): Promise<number> {
   await writeFile(target, svg, "utf8");
   say(`${green("✓")} wrote ${bold(rel)} ${dim(`(${svg.length} bytes)`)}`);
   say();
-  say(`  ![tokenchit recap](./${rel})`);
+  say(`  ![tokenchit — @${handle} ${r.year} AI coding agent recap](./${rel})`);
   say();
 
   return 0;

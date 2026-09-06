@@ -1,4 +1,6 @@
 .header {
+  /* So the skip link, which is absolutely positioned, has this to anchor to. */
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -78,7 +80,9 @@
   background: var(--coral);
   border: 2px solid var(--ink);
   box-shadow: 4px 4px 0 var(--ink);
-  color: #fff;
+  /* Ink, not white: #fff on --coral is 3.07:1 and fails AA at every size here.
+     #101010 on the same fill is 6.2:1 and keeps the colour the design is built from. */
+  color: var(--ink);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -97,3 +101,24 @@
 
 
 
+
+/* Off-screen until focused, then a normal-looking button in the corner. Not `display: none`,
+   which would take it out of the tab order and defeat the point. */
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: var(--lime);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.skip:focus-visible {
+  left: 8px;
+  top: 8px;
+}

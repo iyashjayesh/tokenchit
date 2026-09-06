@@ -98,6 +98,9 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-faint);
+  /* "equiv. cost" was wrapping to two lines, which made one tile taller than the other three
+     and knocked the whole row off a shared baseline. */
+  white-space: nowrap;
 }
 
 .statValue {
@@ -175,7 +178,7 @@
 }
 
 .dev:hover .handle {
-  color: var(--coral);
+  color: var(--coral-text);
   border-bottom-color: var(--coral);
 }
 
@@ -220,9 +223,9 @@
   border: 1px solid var(--hairline);
 }
 
-.seg0 { background: var(--lime); }
-.seg1 { background: var(--coral); }
-.seg2 { background: var(--yellow); }
+/* The fill comes from `agentColour` per segment now, so the same agent is the same colour on
+   every row and on every surface. This class carries only the shape. */
+.seg { display: block; }
 
 .num {
   text-align: right;
@@ -235,7 +238,7 @@
 }
 
 .streak {
-  color: var(--coral);
+  color: var(--coral-text);
 }
 
 .empty {
@@ -411,8 +414,9 @@
   opacity: 0.5;
 }
 
+/* Typing focus keeps its own quieter treatment; the global :focus-visible ring still applies
+   when the field is reached by keyboard, which is what it is for. */
 .searchInput:focus {
-  outline: none;
   box-shadow: 3px 3px 0 var(--lime);
 }
 
@@ -449,7 +453,7 @@
 
 .searchClear:hover {
   opacity: 1;
-  color: var(--coral);
+  color: var(--coral-text);
 }
 
 /* The searched row, when this page happens to hold it. A left bar and a tint rather than a
@@ -491,19 +495,40 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  /* One row: the windows narrow the board and the search finds a name in it — both are ways of
-     asking "show me less", and stacking them spent a second line saying so twice. The search
-     goes right, where it reads as a separate question rather than a fifth filter. */
+  /* A row per filter axis, stacked. This was one row of window chips with the search pushed
+     right, and adding the agent chips to it produced eight identically-styled buttons in a
+     single run — four-and-four reading as one group of eight, with a black active chip in
+     each half implying the same choice had been made twice. The search then wrapped and
+     stranded itself against the right edge with a hole beside it. */
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   margin: 0 -8px 16px;
   padding: 12px 8px 10px;
   background: var(--paper);
   /* The page has a printed grid behind it; without a hairline the pinned bar looks like it is
      floating rather than sitting on top of what scrolls beneath it. */
   border-bottom: 2px solid var(--ink);
+}
+
+/* One axis: its name, its chips, and — on the first row only — the search. */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+/* Named, because two rows of identical chips are still a guess without it. Fixed width so the
+   two rows of chips start on the same vertical line. */
+.filterLabel {
+  flex: 0 0 46px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 
 .controls .windows,
@@ -519,11 +544,17 @@
 }
 
 /* Narrow enough that the four window buttons and a usable field cannot share a line, so stop
-   pretending and let the search have its own. */
+   pretending and let the search have its own — full width and left-aligned, rather than
+   stranded against the right edge with the gap the auto margin leaves behind. */
 @media (max-width: 860px) {
   .controls .search {
     margin-left: 0;
     width: 100%;
+  }
+
+  .controls .searchInput {
+    flex: 1 1 auto;
+    width: auto;
   }
 }
 
@@ -587,3 +618,53 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+/* Available to a screen reader, absent from the page. The clip-rect form rather than
+   `display:none`, which removes it from the accessibility tree as well. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The agent-mix key. Only meaningful because `agentColour` fixes a colour per agent. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--ink);
+}
+
+/* The swatch on an agent filter chip, tying the chip to its colour in the mix bars. */
+.agentDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border: 1px solid currentColor;
+  vertical-align: baseline;
+}
+
+

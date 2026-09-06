@@ -1,10 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { formatTokens, formatUsd } from "@tokenchit/core";
+import { agentColour, formatTokens, formatUsd } from "@tokenchit/core";
 
 import { PageShell } from "@/components/page-shell";
-import { isWindow, staleLabel, WINDOWS, type BoardRow, type BoardWindow } from "@/lib/board";
+import {
+  BOARD_AGENTS,
+  isBoardAgent,
+  isWindow,
+  staleLabel,
+  WINDOWS,
+  type BoardAgent,
+  type BoardRow,
+  type BoardWindow,
+} from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
 import { findOnBoard } from "@/lib/board-search";
 import { SearchResult } from "@/components/search-result";
@@ -23,7 +32,6 @@ export const metadata: Metadata = {
 
 /** Gold, silver, bronze. Only the top three; everyone else takes the default fill. */
 const MEDALS = ["#FFD23D", "#E4E2D8", "#F0B37E"] as const;
-const SEGMENTS = [styles.seg0, styles.seg1, styles.seg2] as const;
 
 /**
  * How a row has moved since a week ago.
@@ -108,11 +116,17 @@ const PER_PAGE = 25;
 export default async function BoardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ window?: string; page?: string; q?: string }>;
+  searchParams: Promise<{ window?: string; page?: string; q?: string; agent?: string }>;
 }) {
   const params = await searchParams;
   const requested = params.window ?? null;
   const window: BoardWindow = isWindow(requested) ? requested : "year";
+
+  /* Validated against the fixed list rather than trusted, so an arbitrary `?agent=` never
+     reaches the query — and an unrecognised one falls back to the combined board instead of
+     silently returning nothing. */
+  const agentParam = params.agent ?? null;
+  const agent = isBoardAgent(agentParam) ? agentParam : null;
 
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const offset = (page - 1) * PER_PAGE;
@@ -120,8 +134,8 @@ export default async function BoardPage({
   const query = (params.q ?? "").trim();
 
   const [rows, totals, found] = await Promise.all([
-    readBoard(window, PER_PAGE, offset).catch(() => []),
-    readBoardTotals(window).catch(() => null),
+    readBoard(window, PER_PAGE, offset, agent).catch(() => []),
+    readBoardTotals(window, agent).catch(() => null),
     query ? findOnBoard(query, window, PER_PAGE).catch(() => null) : Promise.resolve(null),
   ]);
 
@@ -133,8 +147,20 @@ export default async function BoardPage({
   const lastPage = Math.max(1, Math.ceil(total / PER_PAGE));
   const from = total === 0 ? 0 : offset + 1;
   const to = offset + rows.length;
-  const href = (p: number) =>
-    `/board?window=${window}${p > 1 ? `&page=${p}` : ""}${query ? `&q=${encodeURIComponent(query)}` : ""}`;
+  /** Every internal link carries the whole filter state; dropping one silently resets it. */
+  const boardHref = (over: { window?: BoardWindow; agent?: BoardAgent | null; page?: number } = {}) => {
+    const w = over.window ?? window;
+    const a = over.agent === undefined ? agent : over.agent;
+    const p = over.page ?? 1;
+    const qs = new URLSearchParams();
+    if (w !== "year") qs.set("window", w);
+    if (a) qs.set("agent", a);
+    if (p > 1) qs.set("page", String(p));
+    if (query) qs.set("q", query);
+    const s = qs.toString();
+    return s ? `/board?${s}` : "/board";
+  };
+  const href = (p: number) => boardHref({ page: p });
 
   const summary: [string, string][] = totals
     ? [
@@ -162,14 +188,26 @@ export default async function BoardPage({
 
       {/* Filters and search travel together and pin on scroll: on a long board the controls
           were a screen and a half behind the rows they govern. Sticky rather than a sidebar,
-          because the table needs 720px of width more than the page needs a second column. */}
+          because the table needs 720px of width more than the page needs a second column.
+
+          One row per axis, each named. Both sets of chips share a style, so putting eight of
+          them in a single run read as one group of eight rather than four-and-four — and with
+          an active chip in each half, two black chips in one line implied one choice had been
+          made twice. The label also stops the second row being a guess. */}
       <div className={styles.controls}>
-      <nav className={styles.windows} aria-label="Time window">
+      <div className={styles.controlsRow}>
+      <span className={styles.filterLabel} id="filter-window">
+        window
+      </span>
+      <nav className={styles.windows} aria-labelledby="filter-window">
         {WINDOWS.map((w) => (
           <Link
             key={w.key}
-            href={`/board${w.key === "year" ? "" : `?window=${w.key}`}`}
+            href={boardHref({ window: w.key, page: 1 })}
             className={w.key === window ? styles.windowActive : styles.window}
+            /* The active window differed only by background colour, so which one was
+               selected was invisible to assistive tech on all three surfaces. */
+            aria-current={w.key === window ? "true" : undefined}
           >
             {w.label}
           </Link>
@@ -177,10 +215,11 @@ export default async function BoardPage({
       </nav>
 
       {/* A GET form, so a search is a URL: shareable, reloadable, and back-button-able, and it
-          keeps this page free of client JavaScript. The window rides along in a hidden field
-          so searching does not silently reset the reader to "this year". */}
+          keeps this page free of client JavaScript. Both filters ride along in hidden fields so
+          searching does not silently reset the reader to "this year, all agents". */}
       <form className={styles.search} action="/board" method="get" role="search">
         <input type="hidden" name="window" value={window} />
+        {agent && <input type="hidden" name="agent" value={agent} />}
         <input
           className={styles.searchInput}
           type="search"
@@ -196,12 +235,45 @@ export default async function BoardPage({
           search
         </button>
         {query && (
-          <Link className={styles.searchClear} href={`/board?window=${window}`}>
+          <Link className={styles.searchClear} href={boardHref({ page: 1 })}>
             clear
           </Link>
         )}
       </form>
+      </div>
 
+      {/* The second axis. `user_days` has carried the agent since the first migration and every
+          board query already grouped by it, so this is a WHERE clause rather than new data —
+          and at this size "the top Codex user" is a title someone can still win. */}
+      <div className={styles.controlsRow}>
+      <span className={styles.filterLabel} id="filter-agent">
+        agent
+      </span>
+      <nav className={styles.windows} aria-labelledby="filter-agent">
+        <Link
+          href={boardHref({ agent: null, page: 1 })}
+          className={agent === null ? styles.windowActive : styles.window}
+          aria-current={agent === null ? "true" : undefined}
+        >
+          all agents
+        </Link>
+        {BOARD_AGENTS.map((a) => (
+          <Link
+            key={a.key}
+            href={boardHref({ agent: a.key, page: 1 })}
+            className={a.key === agent ? styles.windowActive : styles.window}
+            aria-current={a.key === agent ? "true" : undefined}
+          >
+            <span
+              className={styles.agentDot}
+              style={{ background: agentColour(a.key) }}
+              aria-hidden="true"
+            />
+            {a.label}
+          </Link>
+        ))}
+      </nav>
+      </div>
       </div>
 
       {found && <SearchResult found={found} window={window} query={query} />}
@@ -222,6 +294,7 @@ export default async function BoardPage({
         </div>
       )}
 
+
       {rows.length === 0 ? (
         <p className={styles.empty}>
           Nobody has published in this window yet.{" "}
@@ -231,15 +304,18 @@ export default async function BoardPage({
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
+            {/* Named for screen readers, which announce a table by its caption; visually
+                hidden because the heading above already says this to everyone else. */}
+            <caption className={styles.srOnly}>Developers on the board, ranked by tokens</caption>
             <thead>
               <tr className={styles.headRow}>
-                <th className={styles.wRank}>rank</th>
-                <th>developer</th>
-                <th className={styles.wMix}>agent mix</th>
-                <th className={styles.wSpark}>last 30d</th>
-                <th className={`${styles.wNum} ${styles.num}`}>tokens</th>
-                <th className={`${styles.wNum} ${styles.num}`}>equiv. cost</th>
-                <th className={`${styles.wStreak} ${styles.num}`}>streak</th>
+                <th scope="col" className={styles.wRank}>rank</th>
+                <th scope="col">developer</th>
+                <th scope="col" className={styles.wMix}>agent mix</th>
+                <th scope="col" className={styles.wSpark}>last 30d</th>
+                <th scope="col" className={`${styles.wNum} ${styles.num}`}>tokens</th>
+                <th scope="col" className={`${styles.wNum} ${styles.num}`}>equiv. cost</th>
+                <th scope="col" className={`${styles.wStreak} ${styles.num}`}>streak</th>
               </tr>
             </thead>
             <tbody>
@@ -316,7 +392,7 @@ export default async function BoardPage({
                         {stale && (
                           <span
                             className={styles.stale}
-                            title={`Last published ${r.lastPublished?.slice(0, 10)} — streak, agent mix and models are from that submission`}
+                            title={`Last published ${r.lastPublished?.slice(0, 10)} — agent mix and models are from that submission; tokens and streak are computed from the daily series`}
                           >
                             {stale}
                           </span>
@@ -324,13 +400,22 @@ export default async function BoardPage({
                       </Link>
                     </td>
                     <td>
-                      <div className={styles.bar}>
-                        {mix.map(([agent, tokens], si) => (
+                      {/* Coloured per agent, not per position: `SEGMENTS[si]` made the colour
+                          mean "biggest in this row", so the same agent changed colour down the
+                          column. An accessible name too — the bar carried its meaning only in
+                          `title`, which never reaches a screen reader or a touch device. */}
+                      <div
+                        className={styles.bar}
+                        role="img"
+                        aria-label={`Agent mix: ${mix
+                          .map(([a, t]) => `${a} ${((t / mixTotal) * 100).toFixed(0)}%`)
+                          .join(", ")}`}
+                      >
+                        {mix.map(([agent, tokens]) => (
                           <span
                             key={agent}
-                            className={SEGMENTS[Math.min(si, SEGMENTS.length - 1)]}
-                            style={{ flex: tokens }}
-                            title={`${agent} · ${((tokens / mixTotal) * 100).toFixed(1)}%`}
+                            className={styles.seg}
+                            style={{ flex: tokens, background: agentColour(agent) }}
                           />
                         ))}
                       </div>
@@ -349,6 +434,24 @@ export default async function BoardPage({
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Worth having only now that the colours mean something. While they were assigned by
+          position a legend would have been a lie with a swatch next to it. Built from the
+          agents actually present on this page rather than a fixed list. */}
+      {rows.length > 0 && (
+        <ul className={styles.legend}>
+          {[...new Set(rows.flatMap((r) => Object.keys(r.mix)))].sort().map((agent) => (
+            <li key={agent} className={styles.legendItem}>
+              <span
+                className={styles.legendSwatch}
+                style={{ background: agentColour(agent) }}
+                aria-hidden="true"
+              />
+              {agent}
+            </li>
+          ))}
+        </ul>
       )}
 
       {rows.length > 0 && (

@@ -6,6 +6,7 @@ import {
   MOVEMENT_DAYS,
   SPARK_DAYS,
   WINDOW_DAYS,
+  type BoardAgent,
   type BoardRow,
   type BoardWindow,
 } from "@/lib/board";
@@ -29,6 +30,15 @@ export async function readBoard(
   window: BoardWindow,
   limit = 25,
   offset = 0,
+  /**
+   * Rank by one agent's tokens only, or null for the combined board.
+   *
+   * Applied to every aggregate that feeds a row — the window totals, the shifted window that
+   * produces movement, and the sparkline — so a filtered board is internally consistent rather
+   * than one agent's tokens beside everyone's trend. The value is checked against
+   * `BOARD_AGENTS` by the caller; it is still bound as a parameter, never interpolated.
+   */
+  agent: BoardAgent | null = null,
 ): Promise<BoardRow[]> {
   const { rows } = await pool.query(
     `WITH eligible AS (
@@ -49,6 +59,7 @@ export async function readBoard(
               SUM(d.cost_usd) AS cost
        FROM user_days d
        WHERE d.day >= CURRENT_DATE - $1::int
+         AND ($6::text IS NULL OR d.agent = $6)
        GROUP BY d.user_id, d.agent
      ),
      totals AS (
@@ -67,12 +78,38 @@ export async function readBoard(
        FROM user_days d
        WHERE d.day >= CURRENT_DATE - $1::int - $4::int
          AND d.day <  CURRENT_DATE - $4::int
+         AND ($6::text IS NULL OR d.agent = $6)
        GROUP BY d.user_id
      ),
-     latest AS (
-       SELECT DISTINCT ON (user_id) user_id, streak_days
-       FROM submissions
-       ORDER BY user_id, received_at DESC
+     streaks AS (
+       /*
+        * Computed here rather than taken from the submission that reported it.
+        *
+        * Every other column on this board is derived server-side from user_days; streak was
+        * the one figure carried verbatim from whatever the client last said, which made it the
+        * only column that could not be checked and the only one that never moved. It froze - a
+        * 120-day streak stayed 120 forever once someone stopped publishing, because nothing
+        * recomputed it - and it was bounded only by "a finite non-negative number".
+        *
+        * user_days already holds the complete daily series, so the answer was always here.
+        * The classic gaps-and-islands shape: subtract a dense row number from the date, and
+        * consecutive days collapse to a constant group key.
+        */
+       SELECT user_id, len
+       FROM (
+         SELECT user_id, COUNT(*) AS len, MAX(day) AS last_day
+         FROM (
+           SELECT user_id, day,
+                  day - (ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY day))::int AS grp
+           FROM (SELECT DISTINCT user_id, day FROM user_days
+                 WHERE ($6::text IS NULL OR agent = $6)) a
+         ) g
+         GROUP BY user_id, grp
+       ) r
+       /* Today or yesterday, so a streak is current rather than historical: somebody who has
+          not worked today at 9am still has their streak, and somebody who stopped a week ago
+          does not. longestRun in the recap is the other question and has its own answer. */
+       WHERE last_day >= CURRENT_DATE - 1
      ),
      spark_rolled AS (
        SELECT user_id, array_agg(t ORDER BY dt) AS days, array_agg(dt ORDER BY dt) AS dates
@@ -80,6 +117,7 @@ export async function readBoard(
          SELECT user_id, day AS dt, SUM(tokens) AS t
          FROM user_days
          WHERE day > CURRENT_DATE - $5::int
+           AND ($6::text IS NULL OR agent = $6)
          GROUP BY user_id, day
        ) x
        GROUP BY user_id
@@ -101,17 +139,17 @@ export async function readBoard(
        WHERE b.tokens > 0
      )
      SELECT r.handle, r.tier, r.github_id, r.received_at, r.tokens, r.cost, r.mix, r.rank,
-            COALESCE(l.streak_days, 0) AS streak_days,
+            COALESCE(st.len, 0) AS streak_days,
             rb.rank AS previous_rank,
             sp.days AS spark_days,
             sp.dates AS spark_dates
      FROM ranked_now r
-     LEFT JOIN latest l  ON l.user_id = r.id
+     LEFT JOIN streaks st ON st.user_id = r.id
      LEFT JOIN ranked_before rb ON rb.user_id = r.id
      LEFT JOIN spark_rolled sp ON sp.user_id = r.id
      ORDER BY r.rank
      LIMIT $2 OFFSET $3`,
-    [WINDOW_DAYS[window], limit, offset, MOVEMENT_DAYS, SPARK_DAYS],
+    [WINDOW_DAYS[window], limit, offset, MOVEMENT_DAYS, SPARK_DAYS, agent],
   );
 
   return rows.map((r) => ({

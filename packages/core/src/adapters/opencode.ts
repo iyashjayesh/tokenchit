@@ -39,8 +39,37 @@ export function createOpenCode(dbPath = defaultDb()): Adapter {
       const file = await stat(dbPath).catch(() => null);
       if (!file?.isFile()) return "absent";
 
-      for await (const _ of this.read()) return "ready";
-      return "installed-no-data";
+      /*
+       * Asked of sqlite rather than by draining `read()`.
+       *
+       * `for await (const _ of this.read()) return "ready"` looks like an early exit and is
+       * not: `.all()` materialises every row of the message table before the first iteration,
+       * so the early return saved nothing. `readAll` calls `detect()` and then `read()`, which
+       * meant the whole table was loaded twice on every sync, publish, recap and rebuild —
+       * the memory ceiling of the tool for anyone with a large OpenCode history.
+       *
+       * `LIMIT 1` answers the same question in constant memory.
+       */
+      const { DatabaseSync } = await import("node:sqlite");
+
+      let handle;
+      try {
+        handle = new DatabaseSync(dbPath, { readOnly: true });
+      } catch {
+        return "absent"; // Locked, or newer than this Node's sqlite: nothing to contribute.
+      }
+
+      try {
+        const row = handle
+          .prepare("SELECT 1 FROM message WHERE json_extract(data, '$.role') = 'assistant' LIMIT 1")
+          .get();
+        return row ? "ready" : "installed-no-data";
+      } catch {
+        // No `message` table, or a schema this build does not understand.
+        return "installed-no-data";
+      } finally {
+        handle.close();
+      }
     },
 
     async *read(): AsyncIterable<UsageEvent> {

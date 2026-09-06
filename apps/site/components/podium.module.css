@@ -15,7 +15,12 @@
 }
 
 /* DOM order stays 1, 2, 3 — for screen readers, and so the stacked layout below needs no
-   special case — while `order` puts first place in the middle where a podium puts it. */
+   special case — while `order` puts first place in the middle where a podium puts it.
+   The cost is real and documented in the flexbox spec's own accessibility note: keyboard
+   focus then moves centre → left → right, so a sighted keyboard user sees the ring jump
+   backwards. Nothing here can have it both ways, and reading order is the one that affects
+   more people; the visual order is restored below the breakpoint where the staircase is
+   flattened anyway. */
 .place1 { order: 2; }
 .place2 { order: 1; }
 .place3 { order: 3; }
@@ -101,7 +106,7 @@
 }
 
 .card:hover .handle {
-  color: var(--coral);
+  color: var(--coral-text);
 }
 
 .tokens {

@@ -51,6 +51,17 @@ export function SiteHeader() {
 
   return (
     <header className={styles.header}>
+      {/*
+       * The first tab stop on every page, and invisible until it is one.
+       *
+       * Before the table on /board a keyboard user passed two ticker links, the wordmark, the
+       * nav link, this button, two breadcrumbs, four window links and the search field — about
+       * fourteen stops, repeated on every page load, and every one of the 25 rows below is
+       * itself a link, so paging meant traversing the whole preamble again.
+       */}
+      <a href="#content" className={styles.skip}>
+        skip to content
+      </a>
       <div className={styles.brand}>
         {/* The wordmark is the way home, which is what every reader already assumes. It was
             inert on /board and /u/<handle> — the two pages where someone most needs it. */}

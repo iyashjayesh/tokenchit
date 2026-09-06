@@ -1,15 +1,22 @@
-"use client";
-
 import { CopyButton } from "@/components/copy-button";
 import { SectionHeading } from "@/components/section-heading";
-import { useSiteState } from "@/components/site-state";
 import type { Featured } from "@/lib/featured";
 import { QUERY_OPTIONS } from "@/lib/sample-data";
 import { SITE_URL } from "@/lib/site";
 import styles from "./card-section.module.css";
 
+/*
+ * A placeholder, because the reader has no handle yet and the alternative was somebody else's.
+ *
+ * These snippets were built from the featured board member's handle, so the two most
+ * prominent copy buttons on the landing page put a stranger's card and profile URL on a
+ * first-time visitor's clipboard — ready to paste into their own README. A template that
+ * obviously needs editing is the honest thing to hand someone who has not signed up yet.
+ */
+const PLACEHOLDER = "your-handle";
+
 export function CardSection({ preview }: { preview: Featured }) {
-  const { handle } = useSiteState();
+  const handle = PLACEHOLDER;
 
   /* Built on the server from a real board member, not here from a sample. These illustrated
      the layout with invented figures under whatever handle was set, which was a false claim
@@ -20,7 +27,8 @@ export function CardSection({ preview }: { preview: Featured }) {
   // whole growth loop. The plain-image form is still what `tokenchit sync` prints, because
   // a committed SVG has no hosted page to guarantee.
   const markdown =
-    `[![tokenchit](${SITE_URL}/api/card/${handle}.svg)](${SITE_URL}/u/${handle})`;
+    `[![tokenchit — @${handle} AI coding agent usage](${SITE_URL}/api/card/${handle}.svg)]` +
+    `(${SITE_URL}/u/${handle})`;
 
   /* The panel shows the origin elided so the two tags fit without scrolling; the
      clipboard gets the full URLs, which is what a README actually needs. */
@@ -28,12 +36,12 @@ export function CardSection({ preview }: { preview: Featured }) {
     `<img height="195" src="…/card/${handle}.svg">\n` +
     `<img height="195" src="…/card/${handle}.svg?layout=compact">`;
   const htmlCopied =
-    `<img height="195" src="${SITE_URL}/api/card/${handle}.svg">\n` +
-    `<img height="195" src="${SITE_URL}/api/card/${handle}.svg?layout=compact">`;
+    `<img height="195" alt="tokenchit — @${handle} AI coding agent usage" src="${SITE_URL}/api/card/${handle}.svg">\n` +
+    `<img height="195" alt="tokenchit — @${handle}, compact" src="${SITE_URL}/api/card/${handle}.svg?layout=compact">`;
 
   return (
     <section id="card" className={styles.section}>
-      <SectionHeading n={1} title="The card, up close" />
+      <SectionHeading n={2} title="The card, up close" />
 
       <p className={styles.intro}>
         SVG from the embed endpoint, shown at actual size. Default is 495 × 195;{" "}
@@ -43,27 +51,31 @@ export function CardSection({ preview }: { preview: Featured }) {
         hours.
       </p>
 
+      {/* `figure`/`figcaption` rather than a loose div above an image. All three cards come
+          from `buildCardSvg`, so all three carry the identical root aria-label — a screen
+          reader met the same announcement three times with nothing to tell them apart, while
+          the captions that distinguish them were unrelated text floating above. */}
       <div className={styles.rowA}>
-        <div className={styles.cardCol}>
-          <div className={styles.label}>variant / light</div>
+        <figure className={styles.cardCol}>
+          <figcaption className={styles.label}>variant / light</figcaption>
           {/* Builder output, not user content: the handle is sanitised and XML-escaped
               inside buildCardSvg. */}
           <div className={styles.card} dangerouslySetInnerHTML={{ __html: light }} />
-        </div>
-        <div className={styles.cardCol}>
-          <div className={styles.label}>variant / dark</div>
+        </figure>
+        <figure className={styles.cardCol}>
+          <figcaption className={styles.label}>variant / dark</figcaption>
           <div className={styles.card} dangerouslySetInnerHTML={{ __html: dark }} />
-        </div>
+        </figure>
       </div>
 
       <div className={styles.rowB}>
-        <div className={styles.compactCol}>
-          <div className={styles.label}>layout=compact · 340px</div>
+        <figure className={styles.compactCol}>
+          <figcaption className={styles.label}>layout=compact · 340px</figcaption>
           <div
             className={styles.compactCard}
             dangerouslySetInnerHTML={{ __html: compact }}
           />
-        </div>
+        </figure>
 
         <div className={styles.optionsPanel}>
           <div className={styles.strip}>query options</div>
