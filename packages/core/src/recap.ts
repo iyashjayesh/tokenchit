@@ -2,7 +2,21 @@ import type { Stats } from "./aggregate.js";
 import { formatTokens, formatUsd } from "./format.js";
 
 /** The design's five-step ramp, coldest first. */
-export const RAMP = ["#F5F4EE", "#E7F5BE", "#C6FF3D", "#FFD23D", "#FF5C3D"] as const;
+/*
+ * Five levels that are actually five levels.
+ *
+ * The old ramp — #F5F4EE #E7F5BE #C6FF3D #FFD23D #FF5C3D — ran lime to yellow to coral, which
+ * looks like a scale and does not behave as one. Its relative luminances were 0.903, 0.860,
+ * 0.839, 0.677, 0.293: the first three steps were 1.05:1, 1.02:1 and 1.22:1, a band narrower
+ * than the difference between #FFFFFF and #FCFCFC. Nothing, a little and a fair amount were
+ * separated almost entirely by hue, which is what a monochrome screen, a bright room or a
+ * colour-vision deficiency removes — and under deuteranopia levels 2 and 3 merged as well, so
+ * five encoded levels delivered about two readable ones.
+ *
+ * Single hue, monotonically darkening: steps of 1.33, 1.37, 2.23 and 2.37, ordered the same
+ * way in greyscale as in colour. This is why GitHub's own graph is one hue and not three.
+ */
+export const RAMP = ["#F0EFE9", "#BEDD6E", "#8CC42B", "#568018", "#2E420C"] as const;
 
 export const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 

@@ -64,6 +64,22 @@ export const LIMITS = {
   minCostPerToken: 5e-9,
   maxCostPerToken: 0.1,
   maxHandleLength: 39,
+
+  /*
+   * Shape ceilings, as opposed to the volume ceilings above.
+   *
+   * Nothing bounded these, so a payload could carry an arbitrary number of entries and
+   * arbitrarily long names — and those names are rendered verbatim on the board, the profile
+   * and the card, where one long one breaks the layout for everybody looking at the page.
+   *
+   * Generous on purpose. `days` is one row per day per agent, so a decade of five agents is
+   * about 18,000; the cap sits above that and well below anything that indicates a client.
+   */
+  days: 40_000,
+  models: 500,
+  agents: 50,
+  /** Long enough for any real model id; short enough not to break a table. */
+  maxNameLength: 120,
 } as const;
 
 /**
@@ -166,8 +182,11 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
  * can be acted on; one that says "400" sends someone to read our source.
  */
 export function validatePayload(p: Payload, now: Date = new Date()): string[] {
-  const errors: string[] = [];
-  const fail = (msg: string) => errors.push(msg);
+  /* A Set, because the same fault is reachable from more than one check — a too-long agent
+     name is found once in `agents` and again on every day that uses it — and telling somebody
+     the same thing eleven times is not eleven pieces of help. */
+  const errors = new Set<string>();
+  const fail = (msg: string) => errors.add(msg);
 
   /*
    * Types first, bounds second.
@@ -196,13 +215,68 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
    * zeroed an unverified user's streak while their token history sat untouched behind it.
    * Verified against a live board: bob kept 200 tokens and dropped to a 0-day streak.
    */
-  if (Array.isArray(p.days) && p.days.length === 0 && !(p.tokens > 0)) {
-    fail("nothing to publish — no tokens and no days");
+  /*
+   * Tightened from "no days AND no tokens" to "no days", which closes a full bypass of the
+   * review gate.
+   *
+   * The old condition needed both halves, so `days: [], tokens: 1` passed. That was enough to
+   * launder a flagged row: publish a huge payload (stored `flagged`, `user_days` replaced with
+   * the huge series, row disappears from the board), then publish `days: []` with `tokens: 1`.
+   * The second payload skipped every per-day check, every activeDays/streakDays consistency
+   * check and the cost-ratio check — all of which are gated on there being days — so it was
+   * stored `flagged = false`; and because the route only rewrites `user_days` when days are
+   * present, the huge series survived untouched. `eligible` reads only the newest submission's
+   * flag, so the row returned to the board carrying the figures it had been held for.
+   *
+   * No honest client sends this: `publish` refuses to run at all when there is no usage, and
+   * the payload is lifetime. Refusing it here also restores the route's ability to replace
+   * `user_days` unconditionally, which is what "replaced wholesale" was supposed to mean.
+   */
+  if (Array.isArray(p.days) && p.days.length === 0) {
+    fail("nothing to publish — no days");
   }
 
   if (!Array.isArray(p.days)) fail("days must be an array");
   if (!Array.isArray(p.models)) fail("models must be an array");
   if (!Array.isArray(p.agents)) fail("agents must be an array");
+
+  /*
+   * Size and shape, which the arithmetic checks never covered.
+   *
+   * Agent and model names are rendered verbatim on the board's mix bars, the profile's agent
+   * list and model table, and the card legend. React escapes them and `render()` XML-escapes
+   * them, so this is not injection — but a 2,000-character agent name breaks the board table
+   * and the SVG for every reader, not just the person who sent it. The arrays were unbounded
+   * too: `days` is one row per day per agent, so a decade of three agents is ~11,000 entries
+   * and anything beyond that is not a client that exists.
+   */
+  if (Array.isArray(p.days) && p.days.length > LIMITS.days) {
+    fail(`days has ${p.days.length} entries (max ${LIMITS.days})`);
+  }
+  if (Array.isArray(p.models) && p.models.length > LIMITS.models) {
+    fail(`models has ${p.models.length} entries (max ${LIMITS.models})`);
+  }
+  if (Array.isArray(p.models)) for (const m of p.models) checkName("model", m?.model);
+  if (Array.isArray(p.agents)) for (const a of p.agents) checkName("agent", a?.agent);
+  if (Array.isArray(p.agents) && p.agents.length > LIMITS.agents) {
+    fail(`agents has ${p.agents.length} entries (max ${LIMITS.agents})`);
+  }
+  if (typeof p.clientVersion === "string") checkName("clientVersion", p.clientVersion);
+
+  /** A name that has to survive being rendered in a table cell, a legend and an SVG. */
+  function checkName(field: string, value: unknown): void {
+    if (typeof value !== "string") {
+      fail(`${field} must be a string`);
+      return;
+    }
+    if (value.length > LIMITS.maxNameLength) {
+      fail(`${field} is ${value.length} characters (max ${LIMITS.maxNameLength})`);
+    }
+    // Control characters would survive escaping and land in a table cell, a legend or an SVG
+    // text node; nothing legitimate uses them in an agent or model id.
+    // eslint-disable-next-line no-control-regex
+    if (/[\u0000-\u001F\u007F]/.test(value)) fail(`${field} contains control characters`);
+  }
 
   for (const [name, value] of [
     ["tokens", p.tokens],
@@ -219,6 +293,44 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
     fail("pricedShare must be a number between 0 and 1");
   }
 
+  /*
+   * `pricedShare` checked against the payload's own model table.
+   *
+   * The cost/token ratio is the primary guard against an inflated token count, and it divides
+   * claimed cost by `tokens * pricedShare` — a denominator the sender chooses. Shrinking the
+   * share shrinks what the claim has to justify: at `pricedShare: 1` a trillion-token claim
+   * needs roughly $5,000 of matching cost to clear the floor; at `1e-6` it needs half a cent.
+   * The guard was only ever as strong as a number the client picked.
+   *
+   * Nothing new has to be uploaded to check it. `models[]` already carries per-model tokens
+   * and a `priced` flag, so the honest share is exactly the priced fraction of model tokens.
+   * A tolerance rather than an equality: `models` is rounded and truncated to a top-N list on
+   * some paths, and the point is to catch an order of magnitude, not a rounding difference.
+   */
+  if (Array.isArray(p.models) && p.models.length > 0 && p.tokens > 0) {
+    let priced = 0;
+    let all = 0;
+    for (const m of p.models) {
+      const t = Number(m?.tokens);
+      if (!Number.isFinite(t) || t < 0) continue;
+      all += t;
+      if (m?.priced) priced += t;
+    }
+
+    if (all > 0) {
+      const implied = priced / all;
+      // Generous: a fifth either way, and only when the claim is materially lower than the
+      // model table supports — overstating the priced share makes the guard stricter, not
+      // weaker, so there is nothing to catch in that direction.
+      if (p.pricedShare < implied - 0.2) {
+        fail(
+          `pricedShare ${p.pricedShare.toFixed(3)} disagrees with models ` +
+            `(${implied.toFixed(3)} of model tokens are priced)`,
+        );
+      }
+    }
+  }
+
   // Tomorrow in UTC, so that every timezone offset is covered without needing to know the
   // submitter's. Someone in UTC+14 legitimately has a "tomorrow" by UTC reckoning.
   const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
@@ -228,6 +340,10 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
   // whole. Comparing each agent row on its own would let three agents each sit just under
   // the limit while the day together sits far above it.
   const perDay = new Map<string, number>();
+  /* `(day, agent)` is the primary key of `user_days`, so a duplicate pair aborts the insert
+     inside the transaction and surfaces as a generic 500 from a route that otherwise returns
+     422s with reasons. Caught here, where it can be explained. */
+  const seen = new Set<string>();
   let daySum = 0;
   let dayCost = 0;
 
@@ -242,6 +358,11 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
       fail(`day ${d.day} has negative cost`);
     }
     if (!d.agent) fail(`day ${d.day} has no agent`);
+    else checkName("agent", d.agent);
+
+    const key = `${d.day}\u0000${d.agent}`;
+    if (seen.has(key)) fail(`day ${d.day} lists ${d.agent} twice`);
+    seen.add(key);
 
     perDay.set(d.day, (perDay.get(d.day) ?? 0) + d.tokens);
     daySum += d.tokens;
@@ -325,5 +446,5 @@ export function validatePayload(p: Payload, now: Date = new Date()): string[] {
   }
   if (p.firstDay && p.lastDay && p.lastDay < p.firstDay) fail("lastDay is before firstDay");
 
-  return errors;
+  return [...errors];
 }

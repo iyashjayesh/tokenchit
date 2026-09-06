@@ -62,7 +62,7 @@ const empty = (): Windowed => ({ tokens: 0, equivCostUsd: 0, events: 0 });
 
 export async function aggregate(
   events: AsyncIterable<UsageEvent> | Iterable<UsageEvent>,
-  opts: { now?: Date } = {},
+  opts: { now?: Date; year?: number } = {},
 ): Promise<Stats> {
   const now = opts.now ?? new Date();
 
@@ -88,6 +88,19 @@ export async function aggregate(
   for await (const e of events) {
     const n = totalTokens(e);
     if (n <= 0) continue;
+
+    /*
+     * Scoped here rather than by the caller, so every figure agrees.
+     *
+     * `recap --year` used to reach only `longestRun`, which meant the heat grid, the totals,
+     * the model table and activeDays all described all-time usage under a heading naming one
+     * year — `--year 2019` rendered 2026's data with a 0d streak beside 52 active days that
+     * were all in 2026. Filtering the events means the whole card describes the year it names.
+     *
+     * By local day, matching every other bucket: a session at 11pm on 31 December belongs to
+     * the year the person was working, not the one UTC had reached.
+     */
+    if (opts.year !== undefined && !localDay(e.ts).startsWith(`${opts.year}-`)) continue;
 
     const cost = costOf(e);
     tokens += n;

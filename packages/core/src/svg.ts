@@ -23,9 +23,13 @@ export const LIGHT: Palette = {
   text: "#101010",
   hairline: "#E4E2D8",
   rule: "#F0EFE9",
-  label: "#A5A59D",
-  legend: "#55554E",
-  footer: "#C0BEB6",
+  /* The 8.5px labels — TOKENS, EQUIV. COST, STREAK — are the only thing distinguishing three
+     adjacent large numbers, and they were the least legible text on the card: #A5A59D is
+     2.48:1 on white, and the 8px footer at #C0BEB6 was 1.86:1. AA wants 4.5:1 at this size;
+     the large-text exemption starts at 18.66px bold and 8.5px is nowhere near it. */
+  label: "#6F6F68", /* 5.1:1 */
+  legend: "#55554E", /* 7.5:1 */
+  footer: "#767670", /* 4.6:1 */
   segments: ["#C6FF3D", "#101010", "#8A8A82", "#D8D6CE"],
 };
 
@@ -35,9 +39,10 @@ export const DARK: Palette = {
   text: "#FFFFFF",
   hairline: "#2E2E28",
   rule: "#2E2E28",
-  label: "#6E6E66",
-  legend: "#9A9A92",
-  footer: "#55554E",
+  /* Same problem inverted: #6E6E66 on #101010 is 3.70:1 and the footer was 2.53:1. */
+  label: "#9A9A92", /* 6.7:1 */
+  legend: "#B4B4AC", /* 9.3:1 */
+  footer: "#8F8F86", /* 5.8:1 */
   segments: ["#C6FF3D", "#FFFFFF", "#6E6E66", "#3A3A34"],
 };
 
