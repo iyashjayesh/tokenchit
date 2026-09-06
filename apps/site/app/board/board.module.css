@@ -73,7 +73,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 16px;
 }
 
 /* One line instead of two, and roughly half the height. These are read once on arrival; four
@@ -667,16 +667,4 @@
   vertical-align: baseline;
 }
 
-/* When this page was built.
-   Below the tiles rather than beside them: as a flex child with an auto margin it floated in
-   the gap after the fourth box, unboxed and off their baseline, reading as text somebody
-   forgot to delete. It qualifies the figures, so it belongs under them as a caption. */
-.asOf {
-  margin: 0 0 16px;
-  font-size: 10.5px;
-  color: var(--text-dim);
-}
 
-.asOfNote {
-  color: var(--text-faint);
-}

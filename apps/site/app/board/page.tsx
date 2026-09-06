@@ -162,9 +162,6 @@ export default async function BoardPage({
   };
   const href = (p: number) => boardHref({ page: p });
 
-  /* Server render time, which with `revalidate` is when this page was actually built. */
-  const builtAt = new Date();
-
   const summary: [string, string][] = totals
     ? [
         ["developers", String(totals.developers)],
@@ -297,20 +294,6 @@ export default async function BoardPage({
         </div>
       )}
 
-      {/* The cheapest credibility signal a public stats page has, and this one had none: the
-          page is revalidated on a window and rows go stale independently, so someone who
-          publishes and reloads had no way to tell a cached page from a current one. Rendered on
-          the server, so it is the moment this page was built. A caption under the figures it
-          qualifies, rather than a fifth item in a row of boxes it is not one of. */}
-      {summary.length > 0 && (
-        <p className={styles.asOf}>
-          as of{" "}
-          <time dateTime={builtAt.toISOString()}>
-            {builtAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-          </time>
-          <span className={styles.asOfNote}> · refreshes every {revalidate / 60} min</span>
-        </p>
-      )}
 
       {rows.length === 0 ? (
         <p className={styles.empty}>
