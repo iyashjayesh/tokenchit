@@ -32,6 +32,15 @@ export type Profile = {
   mix: Record<string, number>;
   /** Lifetime model breakdown, from the most recent submission. */
   models: ProfileModel[];
+  /**
+   * The headline the committed card shows, or null when the machine could make no estimate.
+   *
+   * Lifetime and unwindowed, unlike `tokens` — it comes from the newest submission rather than
+   * from the daily series — so it is only ever shown as a footnote beside the verified figure,
+   * never in place of it. Null is the honest common case: a machine with no Claude Code
+   * rollup to calibrate against has nothing to estimate from.
+   */
+  estimatedTokens: number | null;
   /** One entry per active day in the window, ascending. Empty days are absent. */
   days: ProfileDay[];
   /** Position on the board for this window, or null if unranked. */
@@ -70,8 +79,14 @@ export async function readProfile(
   const user = userRows[0];
   if (!user) return null;
 
-  const [{ rows: agg }, { rows: series }, { rows: latest }, { rows: ranking }, { rows: review }] =
-    await Promise.all([
+  const [
+    { rows: agg },
+    { rows: series },
+    { rows: streak },
+    { rows: latest },
+    { rows: ranking },
+    { rows: review },
+  ] = await Promise.all([
       pool.query(
         `WITH d AS (
            SELECT day, agent, tokens, cost_usd
@@ -98,8 +113,23 @@ export async function readProfile(
          GROUP BY day ORDER BY day`,
         [user.id, days],
       ),
+      /* The same current-streak computation the board runs, for the same reason: taking it
+         from the newest submission made it the one figure on the page that never moved and
+         could not be checked. Both surfaces have to agree, so both derive it. */
+      pool.query<{ len: string }>(
+        `SELECT len FROM (
+           SELECT COUNT(*) AS len, MAX(day) AS last_day
+           FROM (
+             SELECT day, day - (ROW_NUMBER() OVER (ORDER BY day))::int AS grp
+             FROM (SELECT DISTINCT day FROM user_days WHERE user_id = $1) a
+           ) g
+           GROUP BY grp
+         ) r
+         WHERE last_day >= CURRENT_DATE - 1`,
+        [user.id],
+      ),
       pool.query(
-        `SELECT streak_days, models, received_at::text AS received_at
+        `SELECT streak_days, models, estimated_tokens, received_at::text AS received_at
          FROM submissions WHERE user_id = $1 AND NOT flagged
          ORDER BY received_at DESC LIMIT 1`,
         [user.id],
@@ -164,6 +194,8 @@ export async function readProfile(
 
   const a = agg[0];
   const l = latest[0];
+  // No current run at all is 0, not "whatever was last reported".
+  const streakDays = Number(streak[0]?.len ?? 0);
   const r = ranking[0];
   const underReview = review[0]?.flagged === true;
 
@@ -178,7 +210,11 @@ export async function readProfile(
     githubId: user.github_id,
     tokens: Number(a?.tokens ?? 0),
     equivCostUsd: Number(a?.cost ?? 0),
-    streakDays: Number(l?.streak_days ?? 0),
+    streakDays,
+    estimatedTokens:
+      l?.estimated_tokens === null || l?.estimated_tokens === undefined
+        ? null
+        : Number(l.estimated_tokens),
     activeDays: Number(a?.active_days ?? 0),
     firstDay: a?.first_day ?? null,
     lastDay: a?.last_day ?? null,
