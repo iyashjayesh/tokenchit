@@ -8,12 +8,10 @@ import { dirname, join } from "node:path";
  * Deliberately not `.tokenchit.json` — that file is committed. Credentials belong in the
  * user's config directory, on their machine, and nowhere a `git add -A` can reach.
  */
-const authPath = (): string =>
-  join(
-    process.env["XDG_CONFIG_HOME"] ?? join(homedir(), ".config"),
-    "tokenchit",
-    "auth.json",
-  );
+export const configDir = (): string =>
+  join(process.env["XDG_CONFIG_HOME"] ?? join(homedir(), ".config"), "tokenchit");
+
+const authPath = (): string => join(configDir(), "auth.json");
 
 export type Auth = {
   /** Our own API key. The GitHub token is never stored — see commands/login.ts. */
