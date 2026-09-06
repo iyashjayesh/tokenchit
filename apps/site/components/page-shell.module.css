@@ -23,7 +23,7 @@
 }
 
 .crumb:hover {
-  color: var(--coral);
+  color: var(--coral-text);
   border-bottom-color: var(--coral);
 }
 

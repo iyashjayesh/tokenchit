@@ -64,9 +64,35 @@ export function ContributionGraph({
 
   const total = days.reduce((a, d) => a + d.tokens, 0);
 
+  /*
+   * One sentence for anyone not using a mouse.
+   *
+   * This was ~365 empty spans coloured by inline style, each carrying a `title` and nothing
+   * else — no role, no label, no text alternative, no keyboard access. `title` does not fire
+   * on tap either, so the only way to read any of it was to hover with a pointer: unusable by
+   * screen reader, keyboard and touch alike. GitHub rewrote its own contribution graph for
+   * exactly this reason.
+   *
+   * The pattern is the one the board's `Spark` already uses correctly on this same page —
+   * `role="img"` with a label that says what the picture says — rather than 365 focus stops,
+   * which would be technically reachable and genuinely worse to use.
+   */
+  const busiest = days.reduce<{ day: string; tokens: number } | null>(
+    (best, d) => (best === null || d.tokens > best.tokens ? d : best),
+    null,
+  );
+
+  const summary =
+    days.length === 0
+      ? "Activity graph: no recorded activity in this window."
+      : `Activity graph: ${formatTokens(total)} tokens across ${days.length} active ` +
+        `${days.length === 1 ? "day" : "days"}` +
+        (busiest ? `, busiest on ${busiest.day} with ${formatTokens(busiest.tokens)}` : "") +
+        ".";
+
   return (
     <div className={styles.wrap}>
-      <div className={styles.scroll}>
+      <div className={styles.scroll} role="img" aria-label={summary}>
         <div className={styles.grid}>
           <div className={styles.weekdays}>
             {WEEKDAY_LABELS.map((label, i) => (

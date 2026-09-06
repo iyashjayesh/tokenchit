@@ -10,9 +10,9 @@ export type Crumb = { href: string; label: string };
 /**
  * Header, breadcrumb and footer for every page that is not the landing page.
  *
- * The landing page keeps its own composition because it wraps everything in the client-side
- * SiteStateProvider for the live handle input. Nothing on these pages needs that state, so
- * they stay entirely server-rendered and ship no JavaScript beyond the header's copy button.
+ * The landing page keeps its own composition — it has a hero and a full-bleed layout this
+ * shell would fight — but both are server-rendered and ship no JavaScript beyond the header's
+ * copy button and the board's window filter.
  */
 export function PageShell({
   crumbs,
@@ -41,7 +41,7 @@ export function PageShell({
           ))}
         </nav>
       )}
-      <main className={styles.main}>{children}</main>
+      <main id="content" className={styles.main}>{children}</main>
       <SiteFooter />
     </>
   );

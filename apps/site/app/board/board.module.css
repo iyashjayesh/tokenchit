@@ -175,7 +175,7 @@
 }
 
 .dev:hover .handle {
-  color: var(--coral);
+  color: var(--coral-text);
   border-bottom-color: var(--coral);
 }
 
@@ -220,9 +220,9 @@
   border: 1px solid var(--hairline);
 }
 
-.seg0 { background: var(--lime); }
-.seg1 { background: var(--coral); }
-.seg2 { background: var(--yellow); }
+/* The fill comes from `agentColour` per segment now, so the same agent is the same colour on
+   every row and on every surface. This class carries only the shape. */
+.seg { display: block; }
 
 .num {
   text-align: right;
@@ -235,7 +235,7 @@
 }
 
 .streak {
-  color: var(--coral);
+  color: var(--coral-text);
 }
 
 .empty {
@@ -411,8 +411,9 @@
   opacity: 0.5;
 }
 
+/* Typing focus keeps its own quieter treatment; the global :focus-visible ring still applies
+   when the field is reached by keyboard, which is what it is for. */
 .searchInput:focus {
-  outline: none;
   box-shadow: 3px 3px 0 var(--lime);
 }
 
@@ -449,7 +450,7 @@
 
 .searchClear:hover {
   opacity: 1;
-  color: var(--coral);
+  color: var(--coral-text);
 }
 
 /* The searched row, when this page happens to hold it. A left bar and a tint rather than a
@@ -586,4 +587,65 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* Available to a screen reader, absent from the page. The clip-rect form rather than
+   `display:none`, which removes it from the accessibility tree as well. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The agent-mix key. Only meaningful because `agentColour` fixes a colour per agent. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--ink);
+}
+
+/* The swatch on an agent filter chip, tying the chip to its colour in the mix bars. */
+.agentDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border: 1px solid currentColor;
+  vertical-align: baseline;
+}
+
+/* When this page was built. Sits with the summary tiles rather than above the table, because
+   it qualifies the figures rather than the ranking. */
+.asOf {
+  margin-left: auto;
+  align-self: center;
+  font-size: 10.5px;
+  color: var(--text-dim);
+}
+
+.asOfNote {
+  color: var(--text-faint);
 }

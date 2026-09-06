@@ -176,3 +176,9 @@
   line-height: 1.7;
   color: var(--text-dim);
 }
+
+/* `figure` carries a UA margin; these are layout cells and had none as divs. */
+.cardCol,
+.compactCol {
+  margin: 0;
+}

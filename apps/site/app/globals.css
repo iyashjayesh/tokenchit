@@ -12,17 +12,31 @@
   --coral: #FF5C3D;
   --yellow: #FFD23D;
 
-  --text-muted: #55554E;
-  --text-dim: #8A8A82;
-  --text-faint: #A5A59D;
+  /* The grey ramp, darkened to clear WCAG AA at the sizes it is actually used at.
+     This page is set almost entirely in 9-12px uppercase mono, which is the type that needs
+     the help most, and the old ramp did not come close: --text-faint was 2.48:1 on white
+     while carrying the board summary labels, the profile tile labels, the pagination range,
+     the stale chip and the contribution graph's axis labels; --text-dim was 3.48:1 and
+     carried every .label and footnote. AA wants 4.5:1 below 24px.
+     Measured on both #FFFFFF (--surface) and #FFFDF9 (--paper). */
+  --text-muted: #55554E; /* 7.5:1 — unchanged */
+  --text-dim: #63635C; /* was #8A8A82, 3.5:1 → 6.0:1 */
+  --text-faint: #6F6F68; /* was #A5A59D, 2.5:1 → 5.1:1 */
 
   --hairline: #E4E2D8;
+  /* Only ever the 8px signature line on the SVG card, where it is deliberately quiet and is
+     not required to be read. Nothing in the DOM uses it. */
   --card-footer: #C0BEB6;
-  --alert: #C43A20;
+  --alert: #C43A20; /* 5.3:1 */
+
+  /* Coral is a fill colour, not a text colour: #FF5C3D is 3.07:1 on white, which fails at
+     every size the site uses it. This is the same hue dark enough to read, for text and
+     icons only — fills, borders and the hard shadow offsets keep the bright one. */
+  --coral-text: #D93B1E; /* 4.6:1 on white */
 
   --dark-bg: #101010;
   --dark-border: #2E2E28;
-  --dark-dim: #6E6E66;
+  --dark-dim: #8F8F86; /* was #6E6E66, 3.7:1 on --dark-bg → 5.8:1 */
   --dark-body: #9A9A92;
 
   /* row tint for the signed-in developer / device-attested tier */
@@ -52,7 +66,9 @@ a {
   color: var(--ink);
   text-decoration: none;
 }
-a:hover { color: var(--coral); }
+/* The hover state is where a mouse user's eyes spend the most time, so it must not be the
+   one that drops the text to 3:1. */
+a:hover { color: var(--coral-text); }
 
 button,
 input,
@@ -61,6 +77,47 @@ select {
   font-family: inherit;
   /* Chrome gives buttons and inputs a 2px UA radius; radius is 0 everywhere here. */
   border-radius: 0;
+}
+
+/*
+ * Nothing scrolls to underneath the sticky filter bar.
+ *
+ * `SearchResult` links to `/board?…#u-<handle>`, and the browser puts that row at the top of
+ * the viewport — which is exactly where `.controls` is sitting, so the one row the reader
+ * explicitly asked for was the one row hidden behind the bar. The same applies to a row that
+ * receives keyboard focus, and to the landing page's own section anchors.
+ *
+ * Applied globally rather than to the row, because every future anchor has the same problem.
+ */
+:target,
+[id] {
+  scroll-margin-top: 72px;
+}
+
+/*
+ * One focus indicator, everywhere, for keyboard users only.
+ *
+ * There was no focus system at all: the site relied on the browser default, three components
+ * deleted it outright with `outline: none`, and the one custom indicator — a yellow hard
+ * shadow on the hero input — belonged to an element that no longer exists. Tabbing through
+ * the board was untrackable.
+ *
+ * `:focus-visible` rather than `:focus`, so a mouse click on a button does not leave a ring
+ * behind it. Two rings, ink inside lime, so it stays visible on the paper, on white surfaces,
+ * on the lime tint rows and on the dark panels alike — a single-colour outline disappears
+ * against one of them whichever colour is chosen.
+ */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--lime);
+}
+
+/* The dark panels invert it: ink on ink is not an outline. */
+.dark :focus-visible,
+[data-dark] :focus-visible {
+  outline-color: var(--lime);
+  box-shadow: 0 0 0 4px var(--ink);
 }
 
 /* The hero's two keyframes live in hero.module.css, not here. CSS Modules rewrites an
@@ -78,3 +135,45 @@ select {
 }
 
 ::selection { background: var(--lime); }
+
+/*
+ * Windows High Contrast, and Chrome/Edge's forced-colors emulation.
+ *
+ * Forced-colors replaces background-color, color and border-color with a small user-chosen
+ * palette and drops box-shadow entirely. This design encodes almost everything in a background
+ * colour and a hard shadow, so without this block the medals, the tier chips, the agent-mix
+ * segments, the contribution cells and every button's depth all collapse into the same two
+ * colours — the whole page becomes flat and several distinctions disappear.
+ *
+ * The fix is to give the things that carried meaning in a fill a border instead, since
+ * borders survive. `forced-color-adjust: none` is used only where a colour *is* the datum.
+ */
+@media (forced-colors: active) {
+  /* Buttons and cards lose their hard shadow; a border keeps them looking like objects. */
+  button,
+  a[class],
+  table,
+  th,
+  td {
+    border-color: currentColor;
+  }
+
+  /* These encode a value in their fill and have no text to fall back on, so they keep their
+     own colours rather than being flattened to the system palette. */
+  [role="img"] span,
+  [class*="seg"],
+  [class*="cell"],
+  [class*="agentFill"],
+  [class*="legendSwatch"],
+  [class*="agentDot"] {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+
+  /* The focus ring is drawn with box-shadow, which is dropped; the outline survives, so make
+     it thicker to carry the job alone. */
+  :focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}

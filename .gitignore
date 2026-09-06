@@ -52,3 +52,4 @@ packages/*/.build
 
 # local MCP server config — personal tooling, not project setup
 .mcp.json
+.qa/

@@ -49,9 +49,13 @@ export function SiteTicker() {
     <div className={styles.ticker}>
       <div className={styles.track}>
         <Run />
-        {/* The seam-hiding copy. Hidden from assistive tech so the message is announced once
-            rather than twice, and its links are not a second set of tab stops. */}
-        <span aria-hidden="true">
+        {/* The seam-hiding copy. `aria-hidden` alone did not do what the comment claimed:
+            it removes the duplicate links from the accessibility tree but leaves them in the
+            tab order, so a keyboard user landed on two links with no accessible name, no role
+            and no announced destination — axe-core's `aria-hidden-focus`, and a WCAG 4.1.2
+            failure. `inert` is the attribute that actually means "not interactive": it takes
+            the subtree out of the tab order and out of the tree together. */}
+        <span aria-hidden="true" inert>
           <Run />
         </span>
       </div>

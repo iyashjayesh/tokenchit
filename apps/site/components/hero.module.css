@@ -166,6 +166,16 @@
 
 
 
-.input:focus {
-  box-shadow: 3px 3px 0 var(--yellow);
+/* The one line on this page that says other people are here. Under the install command,
+   because it answers the question the command provokes: "and then what?" */
+.proof {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.proofLink {
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom: 2px solid var(--lime);
 }

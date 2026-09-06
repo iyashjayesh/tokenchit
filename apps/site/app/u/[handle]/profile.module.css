@@ -238,22 +238,10 @@
   background: var(--surface-alt);
 }
 
-.agentFill0 {
+/* Colour comes from `agentColour` per agent; this carries the shape. */
+.agentFill {
   display: block;
   height: 100%;
-  background: var(--lime);
-}
-
-.agentFill1 {
-  display: block;
-  height: 100%;
-  background: var(--coral);
-}
-
-.agentFill2 {
-  display: block;
-  height: 100%;
-  background: var(--yellow);
 }
 
 .tableWrap {
@@ -393,4 +381,65 @@
   border: 2px solid var(--ink);
   background: #d9d7cd;
   object-fit: cover;
+}
+
+/* A held submission, said where the rank chip would be.
+   Calm on purpose: this is a queue, not an accusation, and the person most likely to read it
+   is the one whose row it is. */
+.held {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 11px 14px;
+  border: 2px solid var(--ink);
+  background: color-mix(in srgb, var(--lime) 18%, var(--surface));
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.heldMark {
+  flex: none;
+  padding: 3px 8px;
+  background: var(--ink);
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Available to a screen reader, absent from the page. The clip-rect form rather than
+   `display:none`, which removes it from the accessibility tree as well. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The qualifier beside a heading — quieter than the heading, still part of it. */
+.h2Note {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Reconciles the card's headline with the ranked figure. A footnote, not a tile: the estimate
+   is not what the board ranks and must never read as though it were. */
+.estimate {
+  margin: -6px 0 22px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--hairline);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-dim);
 }

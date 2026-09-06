@@ -49,7 +49,9 @@
 
 .primary {
   background: var(--coral);
-  color: #fff;
+  /* Ink, not white: #fff on --coral is 3.07:1 and fails AA at every size here.
+     #101010 on the same fill is 6.2:1 and keeps the colour the design is built from. */
+  color: var(--ink);
 }
 
 .secondary {
@@ -63,7 +65,7 @@
   transform: translate(2px, 2px);
 }
 
-.primary:hover { color: #fff; }
+.primary:hover { color: var(--ink); }
 .secondary:hover { color: var(--ink); }
 
 .primary:active,

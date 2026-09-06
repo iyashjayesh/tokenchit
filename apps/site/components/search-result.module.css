@@ -52,7 +52,7 @@
 
 .rank {
   font-weight: 700;
-  color: var(--coral);
+  color: var(--coral-text);
 }
 
 .actions {
@@ -87,7 +87,7 @@
 }
 
 .secondary:hover {
-  color: var(--coral);
+  color: var(--coral-text);
   border-bottom-color: var(--coral);
 }
 
