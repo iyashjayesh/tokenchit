@@ -91,7 +91,8 @@ select {
  */
 :target,
 [id] {
-  scroll-margin-top: 72px;
+  /* Clears the board's pinned filter bar, which is two rows tall. */
+  scroll-margin-top: 104px;
 }
 
 /*

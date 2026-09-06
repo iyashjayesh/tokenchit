@@ -191,9 +191,18 @@ export default async function BoardPage({
 
       {/* Filters and search travel together and pin on scroll: on a long board the controls
           were a screen and a half behind the rows they govern. Sticky rather than a sidebar,
-          because the table needs 720px of width more than the page needs a second column. */}
+          because the table needs 720px of width more than the page needs a second column.
+
+          One row per axis, each named. Both sets of chips share a style, so putting eight of
+          them in a single run read as one group of eight rather than four-and-four — and with
+          an active chip in each half, two black chips in one line implied one choice had been
+          made twice. The label also stops the second row being a guess. */}
       <div className={styles.controls}>
-      <nav className={styles.windows} aria-label="Time window">
+      <div className={styles.controlsRow}>
+      <span className={styles.filterLabel} id="filter-window">
+        window
+      </span>
+      <nav className={styles.windows} aria-labelledby="filter-window">
         {WINDOWS.map((w) => (
           <Link
             key={w.key}
@@ -208,10 +217,42 @@ export default async function BoardPage({
         ))}
       </nav>
 
+      {/* A GET form, so a search is a URL: shareable, reloadable, and back-button-able, and it
+          keeps this page free of client JavaScript. Both filters ride along in hidden fields so
+          searching does not silently reset the reader to "this year, all agents". */}
+      <form className={styles.search} action="/board" method="get" role="search">
+        <input type="hidden" name="window" value={window} />
+        {agent && <input type="hidden" name="agent" value={agent} />}
+        <input
+          className={styles.searchInput}
+          type="search"
+          name="q"
+          defaultValue={query}
+          placeholder="find a developer by handle…"
+          aria-label="Find a developer by handle"
+          spellCheck={false}
+          autoComplete="off"
+          maxLength={39}
+        />
+        <button className={styles.searchGo} type="submit">
+          search
+        </button>
+        {query && (
+          <Link className={styles.searchClear} href={boardHref({ page: 1 })}>
+            clear
+          </Link>
+        )}
+      </form>
+      </div>
+
       {/* The second axis. `user_days` has carried the agent since the first migration and every
           board query already grouped by it, so this is a WHERE clause rather than new data —
           and at this size "the top Codex user" is a title someone can still win. */}
-      <nav className={styles.windows} aria-label="Agent">
+      <div className={styles.controlsRow}>
+      <span className={styles.filterLabel} id="filter-agent">
+        agent
+      </span>
+      <nav className={styles.windows} aria-labelledby="filter-agent">
         <Link
           href={boardHref({ agent: null, page: 1 })}
           className={agent === null ? styles.windowActive : styles.window}
@@ -235,33 +276,7 @@ export default async function BoardPage({
           </Link>
         ))}
       </nav>
-
-      {/* A GET form, so a search is a URL: shareable, reloadable, and back-button-able, and it
-          keeps this page free of client JavaScript. The window rides along in a hidden field
-          so searching does not silently reset the reader to "this year". */}
-      <form className={styles.search} action="/board" method="get" role="search">
-        <input type="hidden" name="window" value={window} />
-        <input
-          className={styles.searchInput}
-          type="search"
-          name="q"
-          defaultValue={query}
-          placeholder="find a developer by handle…"
-          aria-label="Find a developer by handle"
-          spellCheck={false}
-          autoComplete="off"
-          maxLength={39}
-        />
-        <button className={styles.searchGo} type="submit">
-          search
-        </button>
-        {query && (
-          <Link className={styles.searchClear} href={`/board?window=${window}`}>
-            clear
-          </Link>
-        )}
-      </form>
-
+      </div>
       </div>
 
       {found && <SearchResult found={found} window={window} query={query} />}
@@ -279,18 +294,22 @@ export default async function BoardPage({
               <div className={styles.statValue}>{value}</div>
             </div>
           ))}
-          {/* The cheapest credibility signal a public stats page has, and this one had none:
-              the page is revalidated on a window and rows go stale independently, so someone
-              who publishes and reloads had no way to tell a cached page from a current one.
-              Rendered on the server, so it is the moment this page was built. */}
-          <div className={styles.asOf}>
-            as of{" "}
-            <time dateTime={builtAt.toISOString()}>
-              {builtAt.toISOString().slice(0, 16).replace("T", " ")} UTC
-            </time>
-            <span className={styles.asOfNote}> · refreshes every {revalidate / 60} min</span>
-          </div>
         </div>
+      )}
+
+      {/* The cheapest credibility signal a public stats page has, and this one had none: the
+          page is revalidated on a window and rows go stale independently, so someone who
+          publishes and reloads had no way to tell a cached page from a current one. Rendered on
+          the server, so it is the moment this page was built. A caption under the figures it
+          qualifies, rather than a fifth item in a row of boxes it is not one of. */}
+      {summary.length > 0 && (
+        <p className={styles.asOf}>
+          as of{" "}
+          <time dateTime={builtAt.toISOString()}>
+            {builtAt.toISOString().slice(0, 16).replace("T", " ")} UTC
+          </time>
+          <span className={styles.asOfNote}> · refreshes every {revalidate / 60} min</span>
+        </p>
       )}
 
       {rows.length === 0 ? (

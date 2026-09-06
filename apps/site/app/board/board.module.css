@@ -73,7 +73,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 6px;
 }
 
 /* One line instead of two, and roughly half the height. These are read once on arrival; four
@@ -98,6 +98,9 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--text-faint);
+  /* "equiv. cost" was wrapping to two lines, which made one tile taller than the other three
+     and knocked the whole row off a shared baseline. */
+  white-space: nowrap;
 }
 
 .statValue {
@@ -492,19 +495,40 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  /* One row: the windows narrow the board and the search finds a name in it — both are ways of
-     asking "show me less", and stacking them spent a second line saying so twice. The search
-     goes right, where it reads as a separate question rather than a fifth filter. */
+  /* A row per filter axis, stacked. This was one row of window chips with the search pushed
+     right, and adding the agent chips to it produced eight identically-styled buttons in a
+     single run — four-and-four reading as one group of eight, with a black active chip in
+     each half implying the same choice had been made twice. The search then wrapped and
+     stranded itself against the right edge with a hole beside it. */
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   margin: 0 -8px 16px;
   padding: 12px 8px 10px;
   background: var(--paper);
   /* The page has a printed grid behind it; without a hairline the pinned bar looks like it is
      floating rather than sitting on top of what scrolls beneath it. */
   border-bottom: 2px solid var(--ink);
+}
+
+/* One axis: its name, its chips, and — on the first row only — the search. */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+/* Named, because two rows of identical chips are still a guess without it. Fixed width so the
+   two rows of chips start on the same vertical line. */
+.filterLabel {
+  flex: 0 0 46px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 
 .controls .windows,
@@ -520,11 +544,17 @@
 }
 
 /* Narrow enough that the four window buttons and a usable field cannot share a line, so stop
-   pretending and let the search have its own. */
+   pretending and let the search have its own — full width and left-aligned, rather than
+   stranded against the right edge with the gap the auto margin leaves behind. */
 @media (max-width: 860px) {
   .controls .search {
     margin-left: 0;
     width: 100%;
+  }
+
+  .controls .searchInput {
+    flex: 1 1 auto;
+    width: auto;
   }
 }
 
@@ -637,11 +667,12 @@
   vertical-align: baseline;
 }
 
-/* When this page was built. Sits with the summary tiles rather than above the table, because
-   it qualifies the figures rather than the ranking. */
+/* When this page was built.
+   Below the tiles rather than beside them: as a flex child with an auto margin it floated in
+   the gap after the fourth box, unboxed and off their baseline, reading as text somebody
+   forgot to delete. It qualifies the figures, so it belongs under them as a caption. */
 .asOf {
-  margin-left: auto;
-  align-self: center;
+  margin: 0 0 16px;
   font-size: 10.5px;
   color: var(--text-dim);
 }
