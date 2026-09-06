@@ -22,6 +22,35 @@ export const dynamic = "force-dynamic";
  * `?all=1` revokes every key the user has, which is what someone who has lost a machine wants.
  * The default revokes only the calling key, which is what `logout` wants.
  */
+/**
+ * Who this key belongs to, so the CLI can check one rather than assert it.
+ *
+ * `tokenchit whoami` read the local file and printed its contents, which meant it reported a
+ * confident `@handle · since …` for a key that had been revoked, while `publish` rejected the
+ * same key seconds later with nothing connecting the two answers. `gh auth status` validates
+ * against the API, and that is most of why people trust it as a debugging step.
+ *
+ * Returns the handle and how many keys the account has, so "signed in on three machines" is
+ * answerable. Never returns a key or a hash: this endpoint proves a key, it does not hand one out.
+ */
+export async function GET(req: Request) {
+  const user = await userFromRequest(req);
+  if (!user) {
+    return NextResponse.json({ error: "unknown or revoked key" }, { status: 401 });
+  }
+
+  const { rows } = await pool.query<{ keys: string }>(
+    "SELECT count(*)::text AS keys FROM api_tokens WHERE user_id = $1",
+    [user.id],
+  );
+
+  return NextResponse.json({
+    handle: user.handle,
+    tier: user.tier,
+    keys: Number(rows[0]?.keys ?? 1),
+  });
+}
+
 export async function DELETE(req: Request) {
   const user = await userFromRequest(req);
   if (!user) {
