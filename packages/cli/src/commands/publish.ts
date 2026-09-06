@@ -60,6 +60,14 @@ export async function publish(argv: string[], version: string): Promise<number> 
     return 1;
   }
 
+  /* An error here rather than the warning `sync` gives, because this one is a public claim.
+     `my.name` sanitises to `myname`, which may be somebody else's real account, and a row
+     submitted under a name the user never typed is not something to fix up silently. */
+  if (handle !== rawHandle) {
+    fail(`"${rawHandle}" is not a valid GitHub handle. Did you mean --handle ${handle}?`);
+    return 1;
+  }
+
   const reading = spin("reading local agent logs…");
   /* Named and counted, because a scan that reports nothing looks the same as one that has
      hung. On a large corpus this walks thousands of files over several seconds. */
