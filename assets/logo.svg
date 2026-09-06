@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="256" height="256" role="img" aria-label="tokenchit">
+  <!--
+    The tokenchit mark: a lime plate with a hard ink offset shadow — the signature every element
+    on the site carries — with a rectangle "t" cut out of it.
+
+    Drawn as rectangles rather than set in the display face, so the mark has no font dependency
+    and renders identically in a favicon, a README, an npm page and a print sheet.
+
+    The letterform took three tries and the failures are worth recording. A stem centred in its
+    crossbar reads as a plus sign. Moving the bar up and lengthening the descender turned it into
+    a crucifix, which is worse. What actually makes it a "t" is the foot: the bar sits high with
+    only a short ascender above it, and the stem turns right at the baseline. That asymmetry is
+    the whole letter, and it survives down to 16px.
+  -->
+  <rect x="9" y="9" width="27" height="27" fill="#0B0B09"/>
+  <rect x="4" y="4" width="27" height="27" fill="#C6FF3D" stroke="#0B0B09" stroke-width="2.5"/>
+  <rect x="14.2" y="9.4" width="3.9" height="16.2" fill="#0B0B09"/>
+  <rect x="10.9" y="12.4" width="10.6" height="3.7" fill="#0B0B09"/>
+  <rect x="17.8" y="21.9" width="4.3" height="3.7" fill="#0B0B09"/>
+</svg>

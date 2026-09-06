@@ -9,9 +9,14 @@
 
     Drawn as rectangles rather than set in the display face: a favicon has no fonts, and a
     stem-and-crossbar "t" at this size is more legible than any glyph would be anyway.
+
+    Geometry is assets/logo.svg scaled to this 32-unit box, so the favicon and the logo are the
+    same mark rather than two drawings that drift. The earlier version centred the stem in its
+    crossbar, which is fine here and reads as a plus sign at any size a logo is used at.
   -->
   <rect x="7" y="7" width="23" height="23" fill="#0B0B09"/>
   <rect x="2" y="2" width="23" height="23" fill="#C6FF3D" stroke="#0B0B09" stroke-width="2.5"/>
-  <rect x="12" y="7" width="3.5" height="13" fill="#0B0B09"/>
-  <rect x="8" y="10.5" width="11.5" height="3.5" fill="#0B0B09"/>
+  <rect x="11.4" y="7.5" width="3.3" height="13.8" fill="#0B0B09"/>
+  <rect x="8.7" y="10" width="9" height="3.1" fill="#0B0B09"/>
+  <rect x="14.4" y="18" width="3.6" height="3.1" fill="#0B0B09"/>
 </svg>
