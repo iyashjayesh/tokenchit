@@ -33,6 +33,7 @@ const eslintConfig = defineConfig([
          square brackets as a character class, so the literal never matches the file. */
       "app/u/**/page.tsx",
       "components/leaderboard.tsx",
+      "components/leaderboard-modal.tsx",
       "components/podium.tsx",
     ],
     rules: { "@next/next/no-img-element": "off" },

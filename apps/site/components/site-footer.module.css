@@ -1,5 +1,11 @@
 .footer {
-  padding: clamp(28px, 4vw, 44px) 0 clamp(40px, 6vw, 72px);
+  /* The bottom pad reserves room for the pinned "press L" pill, which is fixed to the
+     bottom-right corner and otherwise sits on top of the copyright line once the page is
+     scrolled to the end — on a phone, where the pad bottoms out at 40px, it covered it
+     outright. Reserved on /board too, where the pill is deliberately absent; 38px of extra
+     whitespace under a footer is a cheaper thing to carry than a second rule about where the
+     pill is mounted. */
+  padding: clamp(28px, 4vw, 44px) 0 max(clamp(40px, 6vw, 72px), 78px);
   border-top: 3px solid var(--ink);
 }
 

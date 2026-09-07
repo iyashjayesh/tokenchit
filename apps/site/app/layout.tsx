@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { Analytics } from "@/components/analytics";
+import { LeaderboardModal } from "@/components/leaderboard-modal";
 
 import { SITE_URL } from "@/lib/site";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
@@ -70,6 +71,10 @@ export default function RootLayout({
           <SiteTicker />
           <div className={styles.container}>{children}</div>
         </div>
+        {/* Outside the grid on purpose: it is position:fixed and the dialog renders in the
+            top layer, so neither one is laid out by the container it sits in. Mounted here
+            rather than per page so the shortcut works everywhere it is offered. */}
+        <LeaderboardModal />
         {/* useSearchParams needs a boundary or the whole route opts out of static
             rendering. Nothing is rendered here, so the fallback is empty. */}
         <Suspense fallback={null}>

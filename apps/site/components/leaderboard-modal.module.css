@@ -1,0 +1,479 @@
+/* ── The pill ─────────────────────────────────────────────────────────────── */
+
+/*
+ * Fixed to the bottom-right, above everything.
+ *
+ * z-index 60 rather than something enormous: the board's filter bar is the only other pinned
+ * chrome on the site and it sits at 20, so this clears it with room left over for anything
+ * that has to go between them later.
+ */
+.pill {
+  position: fixed;
+  right: clamp(12px, 2.5vw, 28px);
+  bottom: clamp(12px, 2.5vw, 28px);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 2px solid var(--ink);
+  background: var(--dark-bg);
+  color: var(--surface);
+  box-shadow: 4px 4px 0 var(--lime);
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/*
+ * Inverted rather than tinted. Coral with white text is the site's usual hover, but at 3.1:1
+ * it fails AA at this size, and this is 10px uppercase — the type that needs contrast most.
+ * Swapping the dark and the lime keeps the same two colours and lands at 15:1 either way.
+ */
+.pill:hover {
+  background: var(--lime);
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1.5px solid var(--ink);
+  background: var(--lime);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.pill:hover .key {
+  background: var(--ink);
+  color: var(--lime);
+}
+
+/* `display` on a class beats the UA sheet's `[hidden] { display: none }`, so the pill stayed
+   on screen underneath the open panel. */
+.pill[hidden] {
+  display: none;
+}
+
+/* The short label, for anything that cannot press a key. */
+.short {
+  display: none;
+}
+
+/*
+ * A phone has no L to press, and neither does a tablet.
+ *
+ * `hover: none` rather than width alone, because an iPad in landscape is wider than the
+ * breakpoint and still has no keyboard — telling it to "press L" is an instruction it cannot
+ * follow. Both queries collapse the pill to a plain button, which is what it is there.
+ */
+@media (max-width: 640px), (hover: none) {
+  .press,
+  .key,
+  .long {
+    display: none;
+  }
+
+  .short {
+    display: inline;
+  }
+}
+
+/* ── The dialog ───────────────────────────────────────────────────────────── */
+
+/*
+ * A real <dialog>, opened with showModal().
+ *
+ * The alternative is a div with a hand-rolled focus trap, an Escape listener, an aria-modal
+ * attribute and an inert background — four things the platform already does correctly and
+ * three of which are usually got wrong. It also renders in the top layer, so no ancestor's
+ * overflow or stacking context can clip it.
+ *
+ * The element itself is only a positioning box: the border, the paper and the hard shadow are
+ * on the panel inside, so a click that lands here rather than on the panel is unambiguously a
+ * click on the backdrop and closes.
+ */
+.dialog {
+  width: min(1180px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  /* Visible, so the panel's 8px hard shadow is not clipped by the dialog's own box. */
+  overflow: visible;
+  color: var(--ink);
+}
+
+.dialog::backdrop {
+  background: rgba(16, 16, 16, 0.74);
+}
+
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 40px);
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 8px 8px 0 var(--lime);
+}
+
+/*
+ * The panel takes focus on open so a screen reader announces the dialog by its title rather
+ * than by whichever control happened to be first in the DOM. It is not a tab stop, and it
+ * must not draw the global focus ring: that ring is a box-shadow, so it replaced the panel's
+ * own hard shadow with a lime outline on all four sides.
+ *
+ * Suppressed only for this element, and only because the ring has nothing to indicate here —
+ * the whole screen already changed. Every control inside the panel keeps it.
+ */
+.panel:focus,
+.panel:focus-visible {
+  outline: none;
+  box-shadow: 8px 8px 0 var(--lime);
+}
+
+.head {
+  padding: clamp(20px, 3vw, 34px) clamp(20px, 3vw, 34px) clamp(14px, 2vw, 22px);
+  border-bottom: 3px solid var(--ink);
+  /* Room for the close button, which is absolutely positioned into this corner. */
+  padding-right: 74px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display), var(--font-mono), sans-serif;
+  font-size: clamp(24px, 3.4vw, 38px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.blurb {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  max-width: 62ch;
+}
+
+.strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.close {
+  position: absolute;
+  top: clamp(16px, 2.4vw, 26px);
+  right: clamp(16px, 2.4vw, 26px);
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.close:hover {
+  background: var(--coral);
+  color: var(--ink);
+}
+
+/* Everything below the header scrolls, so the title and the close button stay reachable on a
+   short window without the whole page moving. */
+.body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* The divider between the two windows, and the rule that turns them into a stack. */
+.column + .column {
+  border-left: 3px solid var(--ink);
+}
+
+@media (max-width: 860px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+
+  .column + .column {
+    border-left: 0;
+    border-top: 3px solid var(--ink);
+  }
+}
+
+/*
+ * On a phone the header is competing with the thing it introduces.
+ *
+ * Mono is a wide face, so the blurb runs to six lines at 390px and the two columns are
+ * stacked below it — which put roughly a third of the panel between the reader and the first
+ * row. Tighter type rather than dropping the sentence: it is the one place that says why
+ * there are two windows.
+ */
+@media (max-width: 640px) {
+  .blurb {
+    margin-top: 8px;
+    font-size: 11.5px;
+    line-height: 1.55;
+  }
+
+  .head {
+    padding-bottom: 16px;
+  }
+}
+
+.column {
+  padding: clamp(16px, 2.4vw, 26px);
+  min-width: 0;
+}
+
+.columnHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.columnTitle {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Says the left column is the moving one. Bordered rather than a bare dot so it survives
+   forced-colors, where a background fill is replaced and a border is not. */
+.live {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  background: var(--lime);
+  border: 1.5px solid var(--ink);
+}
+
+/* ── Rows ─────────────────────────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.table th {
+  padding: 8px 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 2px solid var(--ink);
+}
+
+.table td {
+  padding: 9px 10px;
+  border-bottom: 1.5px solid var(--hairline);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.wRank {
+  width: 54px;
+}
+
+.num {
+  text-align: right;
+}
+
+.rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border: 2px solid var(--ink);
+  font-weight: 800;
+  font-size: 11.5px;
+}
+
+.dev {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dev:hover .handle {
+  color: var(--coral-text);
+}
+
+.handle {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar,
+.avatarBlank {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 1.5px solid var(--ink);
+  background: #d9d7cd;
+}
+
+.avatar {
+  object-fit: cover;
+}
+
+.avatarBlank {
+  border-style: dashed;
+  opacity: 0.45;
+}
+
+/* Same rule as the board: a tick only ever means a proven GitHub identity. */
+.verified {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  background: var(--lime);
+  border: 1.5px solid var(--ink);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.tokens {
+  font-weight: 700;
+}
+
+/* ── Loading, empty and failed ────────────────────────────────────────────── */
+
+/* Bars rather than a spinner, so the panel is the size it will be once the rows land and
+   nothing jumps underneath the reader's cursor. */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.skeletonRow {
+  height: 24px;
+  background: var(--grid);
+  border: 1.5px solid var(--hairline);
+}
+
+.note {
+  margin: 0;
+  padding: 22px 10px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.failed {
+  margin: 0;
+  padding: 16px clamp(16px, 2.4vw, 26px) 0;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.retry {
+  margin-left: 8px;
+  padding: 4px 9px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.retry:hover {
+  background: var(--lime);
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: clamp(14px, 2vw, 20px) clamp(20px, 3vw, 34px);
+  border-top: 3px solid var(--ink);
+  background: var(--surface-alt);
+}
+
+.footNote {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.footLink {
+  padding: 9px 16px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  color: var(--lime);
+  box-shadow: 3px 3px 0 var(--lime);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.footLink:hover {
+  background: var(--coral);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* Available to a screen reader, absent from the page — the clip-rect form rather than
+   `display: none`, which would take it out of the accessibility tree too. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
