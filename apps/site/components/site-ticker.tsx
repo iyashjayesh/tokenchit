@@ -10,18 +10,28 @@ const REPO = "https://github.com/iyashjayesh/tokenchit";
  * links have to be real links in both halves — a reader whose eye lands on the second copy
  * should be able to click it.
  */
-function Run() {
+function Run({ decorative = false }: { decorative?: boolean }) {
+  /* Reachable by pointer in both copies, reachable by keyboard in only one. See the note on
+     the duplicate below for why this is a tabIndex and not `inert`. */
+  const tabIndex = decorative ? -1 : undefined;
+
   return (
     <span className={styles.run}>
       <span className={styles.item}>open source · MIT</span>
       <span className={styles.dot} aria-hidden="true">◆</span>
-      <a className={styles.link} href={REPO} target="_blank" rel="noreferrer">
+      <a className={styles.link} href={REPO} target="_blank" rel="noreferrer" tabIndex={tabIndex}>
         ★ star it on GitHub
       </a>
       <span className={styles.dot} aria-hidden="true">◆</span>
       <span className={styles.item}>found a bug, or want an agent supported?</span>
       <span className={styles.dot} aria-hidden="true">◆</span>
-      <a className={styles.link} href={`${REPO}/issues`} target="_blank" rel="noreferrer">
+      <a
+        className={styles.link}
+        href={`${REPO}/issues`}
+        target="_blank"
+        rel="noreferrer"
+        tabIndex={tabIndex}
+      >
         open an issue
       </a>
       <span className={styles.dot} aria-hidden="true">◆</span>
@@ -49,14 +59,25 @@ export function SiteTicker() {
     <div className={styles.ticker}>
       <div className={styles.track}>
         <Run />
-        {/* The seam-hiding copy. `aria-hidden` alone did not do what the comment claimed:
-            it removes the duplicate links from the accessibility tree but leaves them in the
-            tab order, so a keyboard user landed on two links with no accessible name, no role
-            and no announced destination — axe-core's `aria-hidden-focus`, and a WCAG 4.1.2
-            failure. `inert` is the attribute that actually means "not interactive": it takes
-            the subtree out of the tab order and out of the tree together. */}
-        <span aria-hidden="true" inert>
-          <Run />
+        {/*
+          * The seam-hiding copy. Three constraints, and only one attribute combination meets
+          * all three.
+          *
+          * It must be out of the accessibility tree, or a screen reader reads the strip twice
+          * — that is `aria-hidden`. It must be out of the tab order, or a keyboard user lands
+          * on two links that `aria-hidden` has stripped of name and role, which is axe-core's
+          * `aria-hidden-focus` and a WCAG 4.1.2 failure. And it must still be clickable,
+          * because the track translates by -50% forever: every position on the strip spends
+          * half its time showing this copy, so a reader pointing at an underlined "star it on
+          * GitHub" has no way to know which half they are pointing at.
+          *
+          * `inert` satisfied the first two and silently broke the third — it takes the subtree
+          * out of the tab order by making it non-interactive, pointer included, so half of
+          * every link's on-screen life was dead. `tabindex="-1"` is the narrower tool: not
+          * tabbable, which is what `aria-hidden-focus` actually checks, but still clickable.
+          */}
+        <span aria-hidden="true">
+          <Run decorative />
         </span>
       </div>
     </div>
