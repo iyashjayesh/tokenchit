@@ -217,15 +217,21 @@ Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals
 | `/api/card/<handle>.svg` | the card endpoint |
 | `/api/submissions` | publish (POST) and read the board (GET) |
 
-**The site is measured; the CLI is not.** Page views and one copy event go to Firebase
-Analytics from tokenchit.app — not from previews, not from localhost. The privacy
-guarantees in `packages/cli/test/privacy.test.js` are about the CLI, which makes exactly one
-network call, to publish, and carries no analytics of any kind. Saying so here rather than
-leaving someone to find a Google request in devtools and wonder what else is unstated.
+**The site is measured; the CLI is not.** Page views and two custom events (copy, share)
+go to a self-hosted [Umami](https://umami.is) instance at `analytics.yashchauhan.dev` from
+tokenchit.app — not from previews, not from localhost, and not from anyone whose browser
+sends Do Not Track. The privacy guarantees in `packages/cli/test/privacy.test.js` are about
+the CLI, which makes exactly one network call, to publish, and carries no analytics of any
+kind. Saying so here rather than leaving someone to find a request in devtools and wonder
+what else is unstated.
 
-The Firebase web config in `apps/site/lib/firebase.ts` is checked in on purpose: it is
-shipped to every browser that loads the page, and Google documents the API key as a project
-identifier rather than a credential.
+The tracker is served from this origin, not from the analytics host: `next.config.ts`
+rewrites `/stats.js` and `/api/send` upstream. That is what lets it run under a
+`script-src 'self'` / `connect-src 'self'` CSP without widening the policy — the previous
+Firebase Analytics setup was being blocked by exactly that policy and recording nothing.
+
+Two environment variables drive it, `UMAMI_HOST` and `NEXT_PUBLIC_UMAMI_WEBSITE_ID`. With
+either unset the rewrite and the script tag both drop out, so a local build sends nothing.
 
 Every column on the board and the profile is summed over the same window, which is why
 `user_days` carries an agent and a cost per day. Streak is the exception and is not windowed:
