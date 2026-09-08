@@ -50,7 +50,28 @@ const CSP = [
   "upgrade-insecure-requests",
 ].join("; ");
 
+/*
+ * Umami is proxied through this origin rather than loaded from the analytics host.
+ *
+ * The CSP above is `script-src 'self'` and `connect-src 'self'`, so a tracker loaded from
+ * another domain would be blocked outright - which is what was happening to the Firebase
+ * beacons this replaces. Rewriting the script and the collect endpoint onto this origin
+ * satisfies the policy without widening it, and has the side benefit that ad blockers
+ * filtering on Umami's default `script.js` and `/api/send` paths do not match either.
+ *
+ * Skipped entirely when UMAMI_HOST is unset, so a local or unconfigured build is a no-op
+ * rather than a rewrite pointing at nothing.
+ */
+const UMAMI_HOST = process.env.UMAMI_HOST?.replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
+  async rewrites() {
+    if (!UMAMI_HOST) return [];
+    return [
+      { source: "/stats.js", destination: `${UMAMI_HOST}/script.js` },
+      { source: "/api/send", destination: `${UMAMI_HOST}/api/send` },
+    ];
+  },
   async headers() {
     return [
       {

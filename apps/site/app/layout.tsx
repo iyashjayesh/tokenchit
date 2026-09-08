@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
-import { Analytics } from "@/components/analytics";
 import { LeaderboardModal } from "@/components/leaderboard-modal";
 
 import { SITE_URL } from "@/lib/site";
@@ -60,11 +58,28 @@ export const metadata: Metadata = {
   },
 };
 
+const UMAMI_WEBSITE_ID = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
+      <head>
+        {UMAMI_WEBSITE_ID && (
+          /* Proxied through this origin by the rewrite in next.config.ts, which is what lets
+             it past `script-src 'self'` / `connect-src 'self'` without widening the CSP.
+             data-domains keeps previews and localhost out of the real numbers. */
+          <script
+            defer
+            src="/stats.js"
+            data-website-id={UMAMI_WEBSITE_ID}
+            data-performance="true"
+            data-domains="tokenchit.app"
+            data-do-not-track="true"
+          />
+        )}
+      </head>
       <body>
         <div className={styles.grid}>
           {/* Outside the container on purpose — see SiteTicker. */}
@@ -75,11 +90,6 @@ export default function RootLayout({
             top layer, so neither one is laid out by the container it sits in. Mounted here
             rather than per page so the shortcut works everywhere it is offered. */}
         <LeaderboardModal />
-        {/* useSearchParams needs a boundary or the whole route opts out of static
-            rendering. Nothing is rendered here, so the fallback is empty. */}
-        <Suspense fallback={null}>
-          <Analytics />
-        </Suspense>
       </body>
     </html>
   );
