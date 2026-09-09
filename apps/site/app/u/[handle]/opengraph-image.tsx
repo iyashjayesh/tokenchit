@@ -158,6 +158,34 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
     {
       ...size,
       fonts: [{ name: "JetBrains Mono", data: await font, style: "normal", weight: 700 }],
+
+      /*
+       * The only layer that actually decides this route's caching.
+       *
+       * This image was the one thing on the site with no caching at all: it answered
+       * `max-age=0, must-revalidate` and was a Vercel MISS on every request, 4.5s from London,
+       * against 0.35s for the prerendered root image. It is what every link preview of every
+       * profile depends on, and a crawler that gives up waiting renders the card without one —
+       * which is a shared profile showing the generic site card instead of its own figures.
+       *
+       * Two earlier attempts did nothing, and the order matters because each looked like it
+       * had worked. `export const revalidate` leaves the emitted header byte-identical. A
+       * `Cache-Control` rule in next.config's `headers()` does apply under `next start` — which
+       * is how it passed review — but not on Vercel, where a route's own header wins: the CSP,
+       * Referrer-Policy, Permissions-Policy and X-Content-Type-Options from that same config
+       * block all reach this response, and only Cache-Control is overridden. Setting it here,
+       * on the response itself, is the version there is nothing left to override.
+       *
+       * `s-maxage` matches the page's own `revalidate`, so the image and the figures printed
+       * beside it cannot drift further apart than the page already can. The long
+       * `stale-while-revalidate` is the part crawlers need: after the first render a fetch is
+       * served from the edge immediately and the refresh happens behind it, so nothing waits
+       * on a cold compose twice. A week outlasts the interval at which LinkedIn and Slack
+       * re-check a link.
+       */
+      headers: {
+        "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=604800",
+      },
     },
   );
 }

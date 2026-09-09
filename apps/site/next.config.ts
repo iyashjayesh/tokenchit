@@ -64,31 +64,6 @@ const CSP = [
  */
 const UMAMI_HOST = process.env.UMAMI_HOST?.replace(/\/$/, "");
 
-/*
- * The one image on the site with no caching at all.
- *
- * `/u/<handle>/opengraph-image` composes a 1200x630 PNG from a database read and a font load
- * on every single request: it answered `max-age=0, must-revalidate` and was a Vercel cache
- * MISS every time, measured at 4.5s from London against 0.35s for the root image, which is
- * prerendered. The board's revalidates hourly. This one never did.
- *
- * That is a correctness problem before it is a cost one. It is the image every link preview of
- * every profile depends on, and a crawler that gives up waiting for og:image renders the card
- * without one — which is the difference between a shared profile showing its own figures and
- * showing the generic site card.
- *
- * Set here rather than as `export const revalidate` in the route, which was tried first and
- * changes nothing: the emitted header is byte-identical with and without it, checked over
- * three consecutive `next start` requests. This is the layer that actually decides.
- *
- * `s-maxage` matches the page's own `revalidate`, so the image and the figures printed beside
- * it can never disagree by more than the page already can. The long `stale-while-revalidate`
- * is the part that matters for crawlers: after the first render a fetch is served from the
- * edge immediately and the refresh happens behind it, so nothing waits on a cold compose
- * twice. A week is chosen to outlast the interval at which LinkedIn and Slack re-check a link.
- */
-const PROFILE_IMAGE_CACHE = "public, max-age=0, s-maxage=300, stale-while-revalidate=604800";
-
 const nextConfig: NextConfig = {
   async rewrites() {
     if (!UMAMI_HOST) return [];
@@ -104,11 +79,6 @@ const nextConfig: NextConfig = {
         // loaded cross-origin.
         source: "/((?!api/card|api/avatar).*)",
         headers: [...SECURITY_HEADERS, { key: "Content-Security-Policy", value: CSP }],
-      },
-      {
-        // Additive: the rule above still matches this path and still applies the CSP to it.
-        source: "/u/:handle/opengraph-image",
-        headers: [{ key: "Cache-Control", value: PROFILE_IMAGE_CACHE }],
       },
     ];
   },
