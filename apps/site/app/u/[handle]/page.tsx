@@ -191,12 +191,25 @@ export default async function ProfilePage({ params, searchParams }: Props) {
         * half the time. Naming the handle reads correctly posted by its owner or by anybody
         * else.
         *
-        * Two links because they answer different questions: the profile is the receipt, the
-        * bare domain is the invitation. Roughly 275 characters as X counts them for a handle
-        * of ordinary length, which leaves the common case inside one post.
+        * One link, deliberately. There were two — the profile as the receipt, the bare domain
+        * as the invitation — and a post with two links hands the platform a choice nobody
+        * asked it to make: which one to unfurl. It picked the domain, so a post about a
+        * person's own figures previewed as the generic site card. The invitation does not
+        * need a URL of its own, because the command above it is the invitation, and the
+        * profile page carries the site's own header for anyone who wants the rest of it.
+        *
+        * Around 240 characters as X counts them for a handle of ordinary length, which leaves
+        * the common case inside one post with more room than before.
         */}
       <ShareRow
         handle={profile.handle}
+        /* Relative for the preview and the clipboard, so both work on localhost and neither
+           makes a cross-origin request the CSP would have to be widened for; absolute for the
+           field that exists to be pasted somewhere else. Same image either way — the one the
+           og:image tag already points at, so what the panel shows is what a platform that
+           does unfurl the link would build. */
+        imagePath={`/u/${profile.handle}/opengraph-image`}
+        imageUrl={`${SITE_URL}/u/${profile.handle}/opengraph-image`}
         text={
           profile.underReview
             ? [
@@ -207,7 +220,6 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 PRIMARY_COMMAND,
                 ``,
                 `Card: ${SITE_URL}/u/${profile.handle}`,
-                `Try it: ${SITE_URL}`,
               ].join("\n")
             : [
                 `@${profile.handle} · ${formatTokens(profile.tokens)} tokens · ${profile.activeDays} active days · ${profile.streakDays}-day streak`,
@@ -217,7 +229,6 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 PRIMARY_COMMAND,
                 ``,
                 `Card: ${SITE_URL}/u/${profile.handle}`,
-                `Try it: ${SITE_URL}`,
               ].join("\n")
         }
       />

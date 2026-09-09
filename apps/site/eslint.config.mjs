@@ -38,6 +38,21 @@ const eslintConfig = defineConfig([
     ],
     rules: { "@next/next/no-img-element": "off" },
   },
+
+  {
+    /*
+     * The share sheet's preview is a plain <img> for a different reason than the avatars are.
+     *
+     * It shows `/u/<handle>/opengraph-image`, and the two controls beside it — download, and
+     * copy-to-clipboard — have to act on that exact URL. Routing the preview through
+     * next/image would show the reader an optimised derivative while handing them the original,
+     * so the picture they approve and the file they post would be produced by different
+     * pipelines. It is also already a PNG at precisely the size it is displayed at, so there is
+     * nothing for a second optimisation pass to do but bill for it.
+     */
+    files: ["components/share-row.tsx"],
+    rules: { "@next/next/no-img-element": "off" },
+  },
 ]);
 
 export default eslintConfig;
