@@ -15,6 +15,7 @@ import {
   type BoardWindow,
 } from "@/lib/board";
 import { readBoard } from "@/lib/board-query";
+import { openGraphFor } from "@/lib/site";
 import { findOnBoard } from "@/lib/board-search";
 import { SearchResult } from "@/components/search-result";
 import { Podium } from "@/components/podium";
@@ -25,9 +26,21 @@ import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
 
 export const revalidate = 300;
 
+const BOARD_TITLE = "The board · tokenchit";
+const BOARD_DESCRIPTION =
+  "Public ranking of developers who chose to publish their AI coding agent usage.";
+
 export const metadata: Metadata = {
-  title: "The board · tokenchit",
-  description: "Public ranking of developers who chose to publish their AI coding agent usage.",
+  title: BOARD_TITLE,
+  description: BOARD_DESCRIPTION,
+  /* Without this the page inherited the root layout's openGraph unchanged, so a shared link
+     to the board unfurled with the home page's title and description above the board's own
+     image. Setting `title` at the top level does not reach og:title on its own. */
+  openGraph: openGraphFor({
+    title: BOARD_TITLE,
+    description: BOARD_DESCRIPTION,
+    path: "/board",
+  }),
 };
 
 /** Gold, silver, bronze. Only the top three; everyone else takes the default fill. */

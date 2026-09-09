@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { LeaderboardModal } from "@/components/leaderboard-modal";
 
-import { SITE_URL } from "@/lib/site";
+import { openGraphFor, SITE_URL } from "@/lib/site";
 import { Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteTicker } from "@/components/site-ticker";
@@ -42,13 +42,10 @@ export const metadata: Metadata = {
    * `/u/[handle]` sets its own title and description, and the file-based opengraph-image
    * convention supplies each route's image without being named here.
    */
-  openGraph: {
-    type: "website",
-    siteName: "tokenchit",
+  openGraph: openGraphFor({
     title: "tokenchit — receipts for your robots",
     description: DESCRIPTION,
-    url: SITE_URL,
-  },
+  }),
   twitter: {
     // The wide format, because the image is a 1200x630 card whose figures are unreadable at
     // the small square size the default `summary` gives it.

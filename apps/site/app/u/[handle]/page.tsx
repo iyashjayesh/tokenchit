@@ -19,7 +19,7 @@ import { PRIMARY_COMMAND } from "@/lib/cli";
 import { isWindow, WINDOW_DAYS, WINDOWS, type BoardWindow } from "@/lib/board";
 import { cardFigures, EMPTY_FIGURES } from "@/lib/card-figures";
 import { readProfile } from "@/lib/profile";
-import { SITE_URL } from "@/lib/site";
+import { openGraphFor, SITE_URL } from "@/lib/site";
 
 import styles from "./profile.module.css";
 import { cmd } from "@/lib/cli";
@@ -48,14 +48,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `@${profile.handle} · tokenchit`,
     description: summary,
-    openGraph: {
+    // No `images` on purpose: setting it overrides the file-based opengraph-image convention,
+    // and this page would then advertise the SVG card, which Twitter, Slack and Facebook all
+    // decline to render. opengraph-image.tsx supplies a PNG instead.
+    openGraph: openGraphFor({
       title: `@${profile.handle} · tokenchit`,
       description: summary,
-      url: `${SITE_URL}/u/${profile.handle}`,
-      // No `images` here on purpose: setting it overrides the file-based opengraph-image
-      // convention, and this page would then advertise the SVG card, which Twitter, Slack
-      // and Facebook all decline to render. opengraph-image.tsx supplies a PNG instead.
-    },
+      path: `/u/${profile.handle}`,
+    }),
     twitter: { card: "summary_large_image" },
   };
 }
