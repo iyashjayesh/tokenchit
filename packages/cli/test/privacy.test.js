@@ -15,6 +15,10 @@ const CLI = join(HERE, "..", "dist", "index.js");
 const FIXTURE_HOME = join(HERE, "fixtures", "home");
 const SRC = join(HERE, "..", "src");
 const CORE_SRC = join(HERE, "..", "..", "core", "src");
+/* The MCP server is in scope for the same guarantee. It hands local figures to a model, which
+   is exactly the surface where an added "just fetch the board too" would be least visible —
+   and unlike the CLI it has no allowlisted module at all, so every file under it must be clean. */
+const MCP_SRC = join(HERE, "..", "..", "mcp", "src");
 
 /**
  * These four tests are the ones the site prints as `privacy.spec.ts` output, under the
@@ -133,7 +137,7 @@ test("net.isolated", async () => {
   const ALLOWED = join(SRC, "net.ts");
   const offenders = [];
 
-  for (const root of [SRC, CORE_SRC]) {
+  for (const root of [SRC, CORE_SRC, MCP_SRC]) {
     for (const file of await walk(root)) {
       if (file === ALLOWED) continue;
       const text = await readFile(file, "utf8");

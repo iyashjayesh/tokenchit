@@ -139,6 +139,35 @@ activity, and a run that finds an unchanged card makes no commit. On a quiet rep
 schedule can switch itself off. `workflow_dispatch` is there so you can start it again, and
 the run summary says which happened.
 
+## From an agent, not a terminal
+
+There is an MCP server in `packages/mcp`, so a model can answer questions about your usage
+instead of you reading a table:
+
+```json
+{
+  "mcpServers": {
+    "tokenchit": { "command": "npx", "args": ["-y", "@tokenchit/mcp@latest"] }
+  }
+}
+```
+
+Four tools — `get_usage`, `get_daily_usage`, `get_recap` and `detect_agents`. All of them
+read the same logs the CLI reads, and **none of them can make a network request**: the
+`net.isolated` test covers `packages/mcp/src` alongside the CLI, and unlike the CLI this
+package has no allowlisted module, so every file under it must be clean. Adding a `fetch`
+anywhere in it fails the suite.
+
+Two things it does that a plain data dump would not. Every figure ships with its caveat as a
+sibling field, because a model handed `equivCostUsd` on its own will report it to you as
+money you spent — and it is not. And a tool that fails answers with `isError` rather than a
+transport error, so "no logs on this machine" reaches the model as something it can relay
+instead of something it has to guess at.
+
+It reads the ledger and never writes it. `sync` banks what it saw because you asked it to; a
+tool call is a question, and a question that mutates state on disk is a surprise you cannot
+see or undo.
+
 ## Privacy
 
 `sync` and `recap` make no network request at all.
@@ -148,7 +177,8 @@ model names, and your handle — never prompts, replies, file paths, branch name
 names. `--dry-run` prints the exact bytes so you can check rather than take our word.
 
 Five tests in `packages/cli/test/privacy.test.js` enforce this on every push, including one
-that fails if any file outside `net.ts` can open a socket.
+that fails if any file outside `net.ts` can open a socket — across the CLI, the core engine
+and the MCP server.
 
 ## The board
 

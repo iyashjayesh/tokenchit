@@ -12,12 +12,13 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "npm run build -w @tokenchit/core && npm run build -w @tokenchit/cli && npm run build -w tokenchit-site",
+    "build": "npm run build -w @tokenchit/core && npm run build -w @tokenchit/cli && npm run build -w @tokenchit/mcp && npm run build -w tokenchit-site",
     "build:core": "npm run build -w @tokenchit/core",
     "dev": "npm run dev -w tokenchit-site",
-    "test": "npm run build:core && npm run build -w @tokenchit/cli && npm run test -w @tokenchit/core && npm run test -w @tokenchit/cli && npm run test -w tokenchit-site",
+    "test": "npm run build:core && npm run build -w @tokenchit/cli && npm run build -w @tokenchit/mcp && npm run test -w @tokenchit/core && npm run test -w @tokenchit/cli && npm run test -w @tokenchit/mcp && npm run test -w tokenchit-site",
     "cli": "node packages/cli/dist/index.js",
     "db:migrate": "node apps/site/db/migrate.mjs",
-    "version:set": "node scripts/version.mjs"
+    "version:set": "node scripts/version.mjs",
+    "mcp": "node packages/mcp/dist/index.js"
   }
 }
