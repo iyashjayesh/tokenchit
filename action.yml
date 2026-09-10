@@ -1,0 +1,140 @@
+# Marketplace requires action.yml at the repository root, so this sits beside the monorepo
+# rather than under packages/. It is a composite action: no Docker image to build, no
+# JavaScript bundle to keep in sync with the CLI, and nothing to publish separately.
+#
+# What it does NOT do, deliberately: read your logs. An Actions runner has no access to
+# ~/.claude or ~/.codex, so there is no version of this that regenerates the card from
+# source. The CLI does that on your machine. This refreshes the committed copy of a card
+# you have already published, which is the half of the problem a runner can actually solve.
+name: tokenchit card
+description: Refresh your committed tokenchit card so the SVG in your README never goes stale.
+author: Yash Chauhan
+
+branding:
+  icon: activity
+  color: green
+
+inputs:
+  handle:
+    description: GitHub handle whose published card to fetch. Must have run `tokenchit publish` at least once.
+    required: true
+  output:
+    description: Path to write the SVG to, relative to the repository root.
+    required: false
+    default: tokenchit.svg
+  layout:
+    description: default (495px) or compact (340px).
+    required: false
+    default: default
+  theme:
+    description: auto follows GitHub dark mode; light or dark force one.
+    required: false
+    default: auto
+  agents:
+    description: Comma-separated allowlist, e.g. "claude-code,codex". Empty means all.
+    required: false
+    default: ""
+  hide:
+    description: Comma-separated fields to drop from the card - any of spend, streak, mix.
+    required: false
+    default: ""
+  commit:
+    description: Commit and push the card when it changed. Set false to leave it in the working tree.
+    required: false
+    default: "true"
+  commit-message:
+    description: Commit message used when the card changed.
+    required: false
+    default: "chore: refresh tokenchit card"
+
+outputs:
+  changed:
+    description: "true when the fetched card differed from the committed one."
+    value: ${{ steps.fetch.outputs.changed }}
+  path:
+    description: Path the card was written to.
+    value: ${{ steps.fetch.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - id: fetch
+      shell: bash
+      env:
+        TC_HANDLE: ${{ inputs.handle }}
+        TC_OUT: ${{ inputs.output }}
+        TC_LAYOUT: ${{ inputs.layout }}
+        TC_THEME: ${{ inputs.theme }}
+        TC_AGENTS: ${{ inputs.agents }}
+        TC_HIDE: ${{ inputs.hide }}
+      run: |
+        set -euo pipefail
+
+        # Reject a handle that could escape the path or the URL before it reaches either.
+        if ! printf '%s' "$TC_HANDLE" | grep -qE '^[A-Za-z0-9][A-Za-z0-9-]{0,38}$'; then
+          echo "::error::'$TC_HANDLE' is not a valid GitHub handle."
+          exit 1
+        fi
+
+        query="layout=${TC_LAYOUT}&theme=${TC_THEME}"
+        [ -n "$TC_AGENTS" ] && query="${query}&agents=${TC_AGENTS}"
+        [ -n "$TC_HIDE" ] && query="${query}&hide=${TC_HIDE}"
+        url="https://tokenchit.app/api/card/${TC_HANDLE}.svg?${query}"
+
+        tmp="$(mktemp)"
+        code="$(curl -sS -L --max-time 30 --retry 3 --retry-delay 2 \
+                     -o "$tmp" -w '%{http_code}' "$url" || echo 000)"
+
+        if [ "$code" != "200" ]; then
+          echo "::error::tokenchit.app returned HTTP $code for @${TC_HANDLE}."
+          exit 1
+        fi
+
+        if ! head -c 400 "$tmp" | grep -qi '<svg'; then
+          echo "::error::Response was not an SVG. Refusing to overwrite ${TC_OUT}."
+          exit 1
+        fi
+
+        # The endpoint renders a placeholder card rather than 404ing for a handle with
+        # nothing on the board, so HTTP 200 is not proof of a real card. Without this check
+        # a typo in `handle` commits an empty card on a schedule, forever, silently. The
+        # placeholder is identified by the string it prints, not by its size: a compact card
+        # with everything hidden is 6KB and a size threshold between the two would be a guess.
+        if grep -q 'NOT PUBLISHED YET' "$tmp"; then
+          echo "::error::@${TC_HANDLE} has nothing on the board, so the endpoint returned an empty card."
+          echo "::error::Run \`tokenchit publish\` on the machine with your logs first, and check the handle is spelt right."
+          exit 1
+        fi
+
+        mkdir -p "$(dirname "$TC_OUT")"
+
+        if [ -f "$TC_OUT" ] && cmp -s "$tmp" "$TC_OUT"; then
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          echo "Card is unchanged."
+        else
+          mv "$tmp" "$TC_OUT"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "Card updated at ${TC_OUT}."
+        fi
+        echo "path=${TC_OUT}" >> "$GITHUB_OUTPUT"
+
+    - if: inputs.commit == 'true' && steps.fetch.outputs.changed == 'true'
+      shell: bash
+      env:
+        TC_OUT: ${{ inputs.output }}
+        TC_MSG: ${{ inputs.commit-message }}
+      run: |
+        set -euo pipefail
+        git config user.name  "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add -- "$TC_OUT"
+
+        # `git add` can still stage nothing when the path is gitignored, and an empty commit
+        # would push a message with no change behind it. Check the index, not the file.
+        if git diff --cached --quiet; then
+          echo "::warning::${TC_OUT} changed on disk but staged nothing - is it gitignored?"
+          exit 0
+        fi
+
+        git commit -m "$TC_MSG"
+        git push

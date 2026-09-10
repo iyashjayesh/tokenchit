@@ -1,0 +1,33 @@
+# Keeps this repository's own tokenchit.svg fresh, and doubles as the live proof that the
+# action at the repo root works. If this workflow is red, the Marketplace listing is lying.
+#
+# It refreshes a card that `tokenchit publish` has already put on the board — the runner
+# cannot see local logs, so publishing still happens from a real machine.
+name: card
+
+on:
+  schedule:
+    # 06:00 UTC daily. The endpoint caches for four hours, so anything more frequent just
+    # re-fetches the same bytes and produces no commit.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+# Only one refresh at a time: two overlapping runs would race on the same push.
+concurrency:
+  group: card
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./
+        with:
+          handle: iyashjayesh
+          output: tokenchit.svg
+          commit-message: "chore: refresh tokenchit card"
