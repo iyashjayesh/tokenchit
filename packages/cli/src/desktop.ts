@@ -72,6 +72,43 @@ export async function openBrowser(url: string): Promise<boolean> {
 }
 
 /**
+ * Whether opening a browser would be a kindness or an intrusion.
+ *
+ * `openBrowser` answers "did the launcher exit cleanly", which is not the same question. A
+ * launcher can succeed against a display nobody is looking at, and the places a coding-agent
+ * CLI actually runs are exactly the places that happens: CI, a container, a cron entry, a
+ * remote box over SSH. Guessing wrong there is not a missing convenience, it is a process
+ * spawned into the void on every publish, and on a shared box it is somebody else's screen.
+ *
+ * So the default is "only when there is plainly a person at a terminal on this machine", and
+ * every check below is a way of not being sure of that:
+ *
+ * - `TOKENCHIT_NO_BROWSER` — the opt-out for anyone scripting this who cannot pass a flag.
+ * - `CI` — the same variable `prompt.ts` already trusts to mean nobody is watching.
+ * - no TTY on stdout — a pipe or a redirect, so the output is being read by a program.
+ * - `SSH_TTY` / `SSH_CONNECTION` — the terminal is here, the browser would open over there.
+ * - Linux with no `DISPLAY` and no `WAYLAND_DISPLAY` — there is no session to open onto, and
+ *   `xdg-open` will report success anyway.
+ *
+ * Deliberately not consulted: whether the launch worked. The URL is printed either way, which
+ * is what makes every one of these refusals cost nothing.
+ */
+export function canOpenBrowser(): boolean {
+  if (process.env["TOKENCHIT_NO_BROWSER"]) return false;
+  if (process.env["CI"]) return false;
+  if (!process.stdout.isTTY) return false;
+  if (process.env["SSH_TTY"] || process.env["SSH_CONNECTION"]) return false;
+  if (
+    process.platform === "linux" &&
+    !process.env["DISPLAY"] &&
+    !process.env["WAYLAND_DISPLAY"]
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * GitHub's device response carries no `verification_uri_complete` — RFC 8628 §3.2 makes that
  * field optional and GitHub omits it, so there is no protocol-blessed pre-filled URL to use.
  *

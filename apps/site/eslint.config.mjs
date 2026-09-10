@@ -41,7 +41,8 @@ const eslintConfig = defineConfig([
 
   {
     /*
-     * The share sheet's preview is a plain <img> for a different reason than the avatars are.
+     * The share sheet and the arrival panel use a plain <img> for a different reason than the
+     * avatars do.
      *
      * It shows `/u/<handle>/opengraph-image`, and the two controls beside it — download, and
      * copy-to-clipboard — have to act on that exact URL. Routing the preview through
@@ -50,7 +51,7 @@ const eslintConfig = defineConfig([
      * pipelines. It is also already a PNG at precisely the size it is displayed at, so there is
      * nothing for a second optimisation pass to do but bill for it.
      */
-    files: ["components/share-row.tsx"],
+    files: ["components/share-row.tsx", "components/published-modal.tsx"],
     rules: { "@next/next/no-img-element": "off" },
   },
 ]);

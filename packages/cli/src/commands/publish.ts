@@ -13,6 +13,7 @@ import { scan } from "../scan.js";
 import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { bold, dim, fail, green, grey, link, say, spin, warn, yellow } from "../ui.js";
+import { canOpenBrowser, openBrowser } from "../desktop.js";
 import { post } from "../net.js";
 import { signIn, signInOptions } from "./login.js";
 
@@ -155,9 +156,32 @@ export async function publish(argv: string[], version: string): Promise<number> 
 
   // The point of publishing. Printed last, because this is what someone actually wants out
   // of the command, and printed as full URLs so they survive a copy out of scrollback.
-  say(`  ${grey("your profile")}   ${link(`${api}/u/${payload.handle}`)}`);
+  const profile = `${api}/u/${payload.handle}`;
+  say(`  ${grey("your profile")}   ${link(profile)}`);
   say(`  ${grey("leaderboard")}    ${link(`${api}/board`)}`);
   say();
+
+  /*
+   * Open the profile, once, on the run that created it.
+   *
+   * The command has just spent a page of terminal output describing a thing whose whole point
+   * is being looked at and shared, and then left the person to select a URL out of scrollback.
+   * Every comparable tool — `vercel`, `gh repo create`, `create-next-app` — hands over to the
+   * browser at exactly this moment.
+   *
+   * `?published=1` is what tells the page this is the arrival rather than a visit, so it can
+   * show the card and the share actions. The page strips it immediately, because a URL copied
+   * out of the address bar and sent to somebody else must not greet them as though they had
+   * just published.
+   *
+   * Everything about it is best-effort and silent. `canOpenBrowser` refuses in CI, over SSH,
+   * without a TTY and on a Linux session with no display; `--no-browser` refuses on request;
+   * and a launcher that fails says nothing, because the URL two lines above is the real
+   * answer and it is already on screen.
+   */
+  if (!has(argv, "--no-browser") && canOpenBrowser()) {
+    await openBrowser(`${profile}?published=1`);
+  }
 
   if (tier === "cli" && !auth) {
     say(dim("  This row is marked unverified — nothing has proved the handle is yours."));

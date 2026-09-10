@@ -14,6 +14,7 @@ import {
 import { ContributionGraph } from "@/components/contribution-graph";
 import { CopyButton } from "@/components/copy-button";
 import { PageShell } from "@/components/page-shell";
+import { PublishedModal } from "@/components/published-modal";
 import { ShareRow } from "@/components/share-row";
 import { PRIMARY_COMMAND } from "@/lib/cli";
 import { isWindow, WINDOW_DAYS, WINDOWS, type BoardWindow } from "@/lib/board";
@@ -28,7 +29,7 @@ export const revalidate = 300;
 
 type Props = {
   params: Promise<{ handle: string }>;
-  searchParams: Promise<{ window?: string }>;
+  searchParams: Promise<{ window?: string; published?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -63,8 +64,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProfilePage({ params, searchParams }: Props) {
   const raw = decodeURIComponent((await params).handle);
   const handle = sanitizeHandle(raw);
-  const requested = (await searchParams).window ?? null;
+  const query = await searchParams;
+  const requested = query.window ?? null;
   const window: BoardWindow = isWindow(requested) ? requested : "year";
+
+  /*
+   * Set by `tokenchit publish`, which opens this page when it finishes.
+   *
+   * Read on the server so an ordinary visit renders nothing at all — the panel pulls the
+   * 1200x630 PNG, and no one who merely looked at a profile should pay for that. The client
+   * strips the parameter on mount, so a refresh or a URL pasted to somebody else does not
+   * replay it.
+   */
+  const justPublished = query.published === "1";
 
   /*
    * A failed query is not a missing person.
@@ -86,6 +98,42 @@ export default async function ProfilePage({ params, searchParams }: Props) {
    * served zeroes for the same person. The page contradicted its own preview.
    */
   const held = profile.underReview;
+
+  /*
+   * The post, composed once and used by both surfaces.
+   *
+   * It was inlined in the ShareRow call; the arrival panel needs the same string, and two
+   * copies of a paragraph that mentions figures is exactly the kind of thing that drifts and
+   * then quietly disagrees with itself on one of the two screens.
+   *
+   * A held row's figures stay out of it, as they do from the og:description and the card: the
+   * point of holding is that nothing about the row circulates until somebody has looked at it,
+   * and a share button handing the numbers over in plain text would be another hole in the
+   * same gate.
+   */
+  const shareText = [
+    held
+      ? `@${profile.handle} on tokenchit.`
+      : `@${profile.handle} · ${formatTokens(profile.tokens)} tokens · ${profile.activeDays} active days · ${profile.streakDays}-day streak`,
+    ``,
+    `tokenchit reads your AI coding agent logs locally and renders a card you commit to your README. Set up in ~10s:`,
+    ``,
+    PRIMARY_COMMAND,
+    ``,
+    `Card: ${SITE_URL}/u/${profile.handle}`,
+  ].join("\n");
+
+  /* Third person, like the post: the panel is shown to whoever the CLI opened it for, but the
+     line is also what they will paste, so it must read correctly from anybody. */
+  const arrivalHeadline = held
+    ? "Held for review — the figures return once someone has looked at it."
+    : [
+        profile.rank !== null ? `rank ${profile.rank} of ${profile.totalRanked}` : null,
+        `${formatTokens(profile.tokens)} tokens`,
+        `${profile.streakDays}-day streak`,
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
   const mix = held ? [] : Object.entries(profile.mix).sort((a, b) => b[1] - a[1]);
   const models = held ? [] : profile.models;
@@ -136,6 +184,17 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   return (
     <PageShell crumbs={[{ href: "/board", label: "board" }, { href: `/u/${profile.handle}`, label: `@${profile.handle}` }]}>
+      {/* Nothing at all on an ordinary visit — see `justPublished`. */}
+      {justPublished && (
+        <PublishedModal
+          handle={profile.handle}
+          headline={arrivalHeadline}
+          imagePath={`/u/${profile.handle}/opengraph-image`}
+          imageUrl={`${SITE_URL}/u/${profile.handle}/opengraph-image`}
+          shareText={shareText}
+          command={PRIMARY_COMMAND}
+        />
+      )}
       <header className={styles.head}>
         <div className={styles.identity}>
           {/* Bigger here than in a table row, because a profile is the one page that is about
@@ -210,27 +269,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
            does unfurl the link would build. */
         imagePath={`/u/${profile.handle}/opengraph-image`}
         imageUrl={`${SITE_URL}/u/${profile.handle}/opengraph-image`}
-        text={
-          profile.underReview
-            ? [
-                `@${profile.handle} on tokenchit.`,
-                ``,
-                `tokenchit reads your AI coding agent logs locally and renders a card you commit to your README. Set up in ~10s:`,
-                ``,
-                PRIMARY_COMMAND,
-                ``,
-                `Card: ${SITE_URL}/u/${profile.handle}`,
-              ].join("\n")
-            : [
-                `@${profile.handle} · ${formatTokens(profile.tokens)} tokens · ${profile.activeDays} active days · ${profile.streakDays}-day streak`,
-                ``,
-                `tokenchit reads your AI coding agent logs locally and renders a card you commit to your README. Set up in ~10s:`,
-                ``,
-                PRIMARY_COMMAND,
-                ``,
-                `Card: ${SITE_URL}/u/${profile.handle}`,
-              ].join("\n")
-        }
+        text={shareText}
       />
 
       <p className={styles.since}>

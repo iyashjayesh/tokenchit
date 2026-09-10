@@ -60,7 +60,7 @@ export const COMMANDS: Record<string, Command> = {
     flags: [
       ["--anonymous", "publish without signing in; the row is marked unverified"],
       ["--no-clipboard", "signing in: do not copy the device code"],
-      ["--no-browser", "signing in: do not open the verification page"],
+      ["--no-browser", "do not open any page: the sign-in, or your profile after publishing"],
       ["--dry-run", "print the exact bytes and send nothing"],
       ["--api <url>", `default ${DEFAULT_API}`],
       ["--handle <name>", ""],
