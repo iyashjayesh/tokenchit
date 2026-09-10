@@ -123,6 +123,22 @@ export default async function ProfilePage({ params, searchParams }: Props) {
     `Card: ${SITE_URL}/u/${profile.handle}`,
   ].join("\n");
 
+  /*
+   * The invitation, which is not the same thing as the post.
+   *
+   * The post is about this person's figures and carries the card. This is a sentence about
+   * what the tool is, aimed at somebody who has never heard of it — so it leads with the
+   * command rather than a number, and it survives being read by a stranger in a group chat.
+   *
+   * Composed without the link. Half the targets that accept it — X, Telegram — take the URL
+   * as a separate parameter, and folding it into the text as well prints it twice.
+   */
+  const inviteBody = [
+    `Try tokenchit: it reads your Claude Code, Codex and OpenCode logs locally and renders a usage card you commit to your README.`,
+    ``,
+    PRIMARY_COMMAND,
+  ].join("\n");
+
   /* Third person, like the post: the panel is shown to whoever the CLI opened it for, but the
      line is also what they will paste, so it must read correctly from anybody. */
   const arrivalHeadline = held
@@ -193,6 +209,8 @@ export default async function ProfilePage({ params, searchParams }: Props) {
           imageUrl={`${SITE_URL}/u/${profile.handle}/opengraph-image`}
           shareText={shareText}
           command={PRIMARY_COMMAND}
+          inviteBody={inviteBody}
+          profileUrl={`${SITE_URL}/u/${profile.handle}`}
         />
       )}
       <header className={styles.head}>

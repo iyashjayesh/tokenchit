@@ -32,6 +32,8 @@ export function PublishedModal({
   imageUrl,
   shareText,
   command,
+  inviteBody,
+  profileUrl,
 }: {
   handle: string;
   /** e.g. "rank 5 of 34 · 13.5B tokens · 31-day streak", or null for a held row. */
@@ -40,6 +42,10 @@ export function PublishedModal({
   imageUrl: string;
   shareText: string;
   command: string;
+  /** The prose half of the invitation, without the link — see Invite. */
+  inviteBody: string;
+  /** The link half. Kept separate because half these targets take the two apart. */
+  profileUrl: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -134,6 +140,8 @@ export function PublishedModal({
               handle={handle}
             />
           </div>
+
+          <Invite handle={handle} body={inviteBody} url={profileUrl} />
         </div>
 
         <div className={styles.foot}>
@@ -280,5 +288,79 @@ function CopyButton({
     >
       {local === "done" ? "copied" : local === "failed" ? "blocked" : label}
     </button>
+  );
+}
+
+/**
+ * Send the invitation somewhere, rather than leaving it on the clipboard.
+ *
+ * The share sheet deliberately refuses a row of platform buttons, on the grounds that a row of
+ * four would work as advertised on one of them. That reasoning is about posting *the card*:
+ * the payload is an image and a paragraph of figures, and LinkedIn takes neither.
+ *
+ * An invitation is a different payload — a sentence and a link — and that is exactly what
+ * every target below accepts. LinkedIn is absent because it still takes only a URL, and it is
+ * not where anybody invites a friend anyway.
+ *
+ * `navigator.share` is offered first where it exists, because it is the only one that reaches
+ * the apps people actually use and does not require guessing which. It is a progressive
+ * enhancement over the links, not a replacement: Chrome on desktop does not have it.
+ *
+ * Body and URL are kept apart because half of these want them apart — X and Telegram each
+ * take a separate `url`, and passing the link inside the text as well prints it twice.
+ */
+function Invite({ handle, body, url }: { handle: string; body: string; url: string }) {
+  const canShare = useSyncExternalStore(
+    () => () => {},
+    () => typeof navigator !== "undefined" && typeof navigator.share === "function",
+    () => false,
+  );
+
+  const text = encodeURIComponent(body);
+  const link = encodeURIComponent(url);
+  const targets = [
+    // Takes the whole thing as one message; there is no separate url parameter.
+    { key: "whatsapp", href: `https://wa.me/?text=${encodeURIComponent(`${body}\n\n${url}`)}` },
+    { key: "x", href: `https://x.com/intent/tweet?text=${text}&url=${link}` },
+    { key: "telegram", href: `https://t.me/share/url?url=${link}&text=${text}` },
+    {
+      key: "email",
+      href: `mailto:?subject=${encodeURIComponent("Receipts for your robots")}&body=${encodeURIComponent(`${body}\n\n${url}`)}`,
+    },
+  ];
+
+  return (
+    <div className={styles.inviteTargets}>
+      {canShare && (
+        <button
+          type="button"
+          className={styles.action}
+          onClick={async () => {
+            try {
+              await navigator.share({ text: body, url });
+              track("invite", { surface: "web-share", handle, ok: true });
+            } catch {
+              /* Cancelling the sheet rejects, and a cancelled share is not a failure — there
+                 is nothing to report and nothing to fall back to. The links are still here. */
+            }
+          }}
+        >
+          share…
+        </button>
+      )}
+
+      {targets.map((t) => (
+        <a
+          key={t.key}
+          className={styles.action}
+          href={t.href}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => track("invite", { surface: t.key, handle, ok: true })}
+        >
+          {t.key}
+        </a>
+      ))}
+    </div>
   );
 }

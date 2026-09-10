@@ -243,3 +243,12 @@
 .dismiss:hover {
   color: var(--coral-text);
 }
+
+/* The invitation's destinations. A second, quieter row under the command. */
+.inviteTargets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
