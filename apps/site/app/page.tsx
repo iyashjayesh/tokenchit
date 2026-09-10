@@ -10,6 +10,7 @@ import { readFeatured } from "@/lib/featured";
 import { Verification } from "@/components/verification";
 import { Privacy } from "@/components/privacy";
 import { Recap } from "@/components/recap";
+import { ClosingCta } from "@/components/closing-cta";
 import { SiteFooter } from "@/components/site-footer";
 
 /**
@@ -62,6 +63,8 @@ export default async function Page() {
         <Verification />
         <Privacy />
         <Recap />
+        {/* The command appeared once, in the hero, five sections above this. */}
+        <ClosingCta />
       </main>
       <SiteFooter />
     </>

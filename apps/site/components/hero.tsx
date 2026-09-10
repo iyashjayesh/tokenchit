@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { formatTokens, formatUsd } from "@tokenchit/core";
+import { formatTokens } from "@tokenchit/core";
 
 import { CopyButton } from "./copy-button";
 import type { BoardTotals } from "@/lib/board-totals";
@@ -51,17 +51,29 @@ export function Hero({ preview, totals }: { preview: Featured; totals: BoardTota
           />
         </div>
 
+        {/* Free is stated here because the page never said it anywhere. "MIT" sits in the
+            header and the footer, but that is a licence, not a price, and a reader scanning
+            for the catch did not find the answer — which reads as "pricing later" rather
+            than "there is none". */}
+        <p className={styles.free}>
+          Free, MIT, and no account needed to read your own numbers.
+        </p>
+
         {/* Proof that the board is a place rather than a demo. The figures already existed
             and only /board showed them, so the page invited people to join something whose
             size it never mentioned. Absent rather than zeroed when the query fails — "0
-            developers" is a worse claim than no claim. */}
+            developers" is a worse claim than no claim.
+
+            Equivalent cost is deliberately not here. It was the largest number on the page
+            and the one the page spends three paragraphs explaining is not real money, so a
+            cold reader met the claim well before the caveat. It still leads the board and
+            section 02, where the explanation is next to it. */}
         {totals && totals.developers > 0 && (
           <p className={styles.proof}>
             <Link href="/board" className={styles.proofLink}>
               {totals.developers} {totals.developers === 1 ? "developer" : "developers"}
             </Link>{" "}
-            on the board · {formatTokens(totals.tokens)} tokens ·{" "}
-            {formatUsd(totals.equivCostUsd)} equiv. cost
+            on the board · {formatTokens(totals.tokens)} tokens
           </p>
         )}
       </div>
