@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import pkg from "../package.json" with { type: "json" };
+
 import { byName, tools } from "./tools.js";
 
 /*
@@ -32,7 +34,12 @@ import { byName, tools } from "./tools.js";
 
 /** Latest revision this server has been checked against. */
 const PROTOCOL_VERSION = "2025-06-18";
-const SERVER_INFO = { name: "tokenchit", version: "0.8.0" };
+
+/* Read from the package rather than written out here. scripts/version.mjs bumps
+   packages/mcp/package.json, so a literal would have started reporting a version this server
+   is not from the very next release — in the one field a client logs and a bug report
+   quotes. esbuild inlines the import at bundle time, so nothing reads a file at runtime. */
+const SERVER_INFO = { name: "tokenchit", version: pkg.version };
 
 type Id = string | number | null;
 type Request = { jsonrpc: "2.0"; id?: Id; method: string; params?: Record<string, unknown> };
@@ -150,7 +157,18 @@ let pending = 0;
 let inputEnded = false;
 
 const settle = (): void => {
-  if (inputEnded && pending === 0) process.exit(0);
+  if (!inputEnded || pending > 0) return;
+
+  /*
+   * Set the code and let the loop end, rather than calling `process.exit`.
+   *
+   * stdout is always a pipe under stdio transport, and Node's pipe writes are asynchronous:
+   * `process.exit` does not flush them, so a reply larger than the 64KB pipe buffer was
+   * truncated on the way out. `get_daily_usage` with a decade of history clears that easily.
+   * Nothing else holds the loop open once stdin has ended and no call is in flight.
+   */
+  process.exitCode = 0;
+  process.stdin.destroy();
 };
 
 process.stdin.setEncoding("utf8");
@@ -165,13 +183,29 @@ process.stdin.on("data", (chunk: string) => {
 
     if (!line) continue;
 
-    let req: Request;
+    let parsed: unknown;
     try {
-      req = JSON.parse(line) as Request;
+      parsed = JSON.parse(line);
     } catch {
       fail(null, PARSE_ERROR, "invalid JSON");
       continue;
     }
+
+    /*
+     * `null`, a number and a bare string are all valid JSON and none of them have an `id`.
+     * Dispatching one threw inside `handle`, and the catch below then threw the *same*
+     * TypeError re-reading `req.id` — so the promise rejected unhandled and took the process
+     * with it. One `null` frame killed the server, which is exactly what the malformed-input
+     * test was meant to rule out and did not, because it only covered unparseable bytes.
+     */
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      fail(null, INVALID_REQUEST, "request must be a JSON object");
+      continue;
+    }
+
+    const req = parsed as Request;
+    // Captured before dispatch so the handler below cannot fail on the same access.
+    const id = req.id ?? null;
 
     // Requests are handled in arrival order but not serialised: a client may pipeline, and
     // each reply carries its own id.
@@ -179,7 +213,7 @@ process.stdin.on("data", (chunk: string) => {
     void handle(req)
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err);
-        fail(req.id ?? null, INTERNAL_ERROR, message);
+        fail(id, INTERNAL_ERROR, message);
       })
       .finally(() => {
         pending -= 1;

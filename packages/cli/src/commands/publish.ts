@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import {
@@ -14,7 +15,7 @@ import { claudeContext, estimatedTotal } from "../claude-context.js";
 import { scan } from "../scan.js";
 import { readAuth } from "../auth.js";
 import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
-import { bold, dim, fail, green, grey, link, say, spin, warn, yellow } from "../ui.js";
+import { asUrlPath, bold, dim, fail, green, grey, link, say, spin, warn, yellow } from "../ui.js";
 import { canOpenBrowser, openBrowser } from "../desktop.js";
 import { post } from "../net.js";
 import { signIn, signInOptions } from "./login.js";
@@ -176,9 +177,18 @@ export async function publish(argv: string[], version: string): Promise<number> 
    * card — people who had published a row and never took the last step, because the command
    * that put them on the board did not ask them to.
    */
-  const card = relative(process.cwd(), resolve(config.output));
-  say(`  ${grey("embed")}     ![tokenchit — @${payload.handle} AI coding agent usage](./${card})`);
-  say(`  ${grey("commit")}    git add ${card} && git commit -m "chore: update tokenchit"`);
+  const target = resolve(config.output);
+  const card = relative(process.cwd(), target);
+
+  /* Only offered when the card is actually on disk. `publish` does not write one, so someone
+     who ran `init` then `publish` has no file — and `git add <card>` would fail with "did not
+     match any files", which is a worse first experience than not being told. */
+  if (existsSync(target)) {
+    say(`  ${grey("embed")}     ![tokenchit — @${payload.handle} AI coding agent usage](./${asUrlPath(card)})`);
+    say(`  ${grey("commit")}    git add ${card} && git commit -m "chore: update tokenchit"`);
+  } else {
+    say(`  ${grey("the card")}   ${bold("tokenchit sync")} ${dim(`— writes ${card}, which is the point of the row above`)}`);
+  }
   say();
 
   /*

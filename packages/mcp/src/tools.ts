@@ -1,4 +1,4 @@
-import { buildRecap, formatTokens, type AgentId, type Stats } from "@tokenchit/core";
+import { buildRecap, formatTokens, localDay, type AgentId, type Stats } from "@tokenchit/core";
 
 import { ALL_AGENTS, detect, read } from "./stats.js";
 
@@ -45,6 +45,31 @@ const clampDays = (raw: unknown, fallback: number): number => {
   return Math.min(3650, Math.max(1, Math.trunc(n)));
 };
 
+/**
+ * A year the logs could plausibly cover, or undefined.
+ *
+ * The JSON schema states the bounds but nothing enforces them at runtime — a client that
+ * ignores the schema could ask for 2030 and get all-time data stamped 2030. Out-of-range is
+ * treated as "not asked" rather than as an error, because the current year is the useful
+ * answer to a malformed year and a rejection is not.
+ */
+const asYear = (raw: unknown, now: Date): number | undefined => {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return undefined;
+  const year = Math.trunc(raw);
+  return year >= 2020 && year <= now.getFullYear() ? year : undefined;
+};
+
+/** Local `YYYY-MM-DD` for each of the last `days` calendar days, oldest first. */
+function calendarRange(days: number, now: Date): string[] {
+  const out: string[] = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    out.push(localDay(d));
+  }
+  return out;
+}
+
 const windowOf = (w: Stats["windows"][keyof Stats["windows"]]) => ({
   tokens: w.tokens,
   tokensHuman: formatTokens(w.tokens),
@@ -57,8 +82,9 @@ export const tools: Tool[] = [
     name: "get_usage",
     description:
       "Total local AI coding agent usage: tokens, equivalent cost, streak, active days, " +
-      "per-agent mix and per-model breakdown, over all time and the last year, 30 days and " +
-      "7 days. Reads logs on this machine; makes no network request.",
+      "per-agent mix and per-model breakdown. Windows are all time, the current calendar " +
+      "year so far, the last 30 days and the last 7 days. Reads logs on this machine; " +
+      "makes no network request.",
     inputSchema: {
       type: "object",
       properties: { agents: AGENTS_ARG },
@@ -82,7 +108,10 @@ export const tools: Tool[] = [
         mix: stats.mix,
         windows: {
           all: windowOf(stats.windows.all),
-          year: windowOf(stats.windows.year),
+          /* Named for what it is. As `year`, sitting beside `last30Days` and `last7Days`, it
+             read as a trailing twelve months — so asked in mid-January a model would report
+             two weeks of usage as someone's year. */
+          yearToDate: windowOf(stats.windows.year),
           last30Days: windowOf(stats.windows.d30),
           last7Days: windowOf(stats.windows.d7),
         },
@@ -106,7 +135,7 @@ export const tools: Tool[] = [
           minimum: 1,
           maximum: 3650,
           default: 30,
-          description: "How many days back to return, counting from the most recent day with data.",
+          description: "How many calendar days back to return, ending today. Idle days are included as zero.",
         },
         agents: AGENTS_ARG,
       },
@@ -115,20 +144,31 @@ export const tools: Tool[] = [
     async run(args) {
       const { stats } = await read(asAgents(args.agents));
       const days = clampDays(args.days, 30);
-      const series = [...stats.byDay.entries()]
-        .map(([day, tokens]) => ({ day, tokens }))
-        .slice(-days);
+
+      /*
+       * Built from a calendar range rather than by slicing the map.
+       *
+       * `stats.byDay` only carries days that had events, so `.slice(-days)` returned the last
+       * `days` *active* days — on a sparse corpus that was two entries a month apart returned
+       * as "the last 3 days", with a total a model would quote as a three-day figure. It also
+       * disagreed with `get_usage`'s last7Days/last30Days for the same machine, which is the
+       * kind of inconsistency that makes every number here suspect.
+       */
+      const series = calendarRange(days, new Date()).map((day) => ({
+        day,
+        tokens: stats.byDay.get(day) ?? 0,
+      }));
 
       return {
         days: series,
-        // Idle days inside the range are present with 0 rather than skipped, so a caller can
-        // count gaps. Days before `firstDay` are simply absent — the logs did not exist yet,
-        // which is not the same claim as "you used nothing".
         requestedDays: days,
         returnedDays: series.length,
         totalInRange: series.reduce((a, d) => a + d.tokens, 0),
-        byWeekdayMondayFirst: stats.byWeekday,
-        byHourLocal: stats.byHour,
+        /* Lifetime, not windowed — these come from the whole corpus and are here for shape
+           questions ("when do I work"), not for the range above. */
+        lifetimeByWeekdayMondayFirst: stats.byWeekday,
+        lifetimeByHourLocal: stats.byHour,
+        firstDayWithData: stats.firstDay,
         accuracyNote: PANEL_CAVEAT,
       };
     },
@@ -137,8 +177,9 @@ export const tools: Tool[] = [
   {
     name: "get_recap",
     description:
-      "Year in review: headline tiles, per-agent and per-model breakdown, the busiest hour " +
-      "range and a day-by-hour activity grid. The same figures `tokenchit recap` renders.",
+      "Year in review for one calendar year: headline tiles, per-agent and per-model " +
+      "breakdown, the busiest hour range, and activity aggregated by weekday and hour (not " +
+      "by date). The same figures `tokenchit recap` renders.",
     inputSchema: {
       type: "object",
       properties: {
@@ -153,8 +194,9 @@ export const tools: Tool[] = [
       additionalProperties: false,
     },
     async run(args) {
-      const { stats } = await read(asAgents(args.agents));
-      const year = typeof args.year === "number" ? Math.trunc(args.year) : undefined;
+      const now = new Date();
+      const year = asYear(args.year, now);
+      const { stats } = await read(asAgents(args.agents), year);
       const recap = buildRecap(stats, year === undefined ? {} : { year });
 
       return {
@@ -165,8 +207,21 @@ export const tools: Tool[] = [
         peakHours: recap.peak,
         activeDays: recap.activeDays,
         tokens: recap.tokens,
-        // The colour ramp is for the SVG. A caller wants the numbers.
-        activityByDay: recap.rows.map((r) => ({ day: r.day, tokens: r.tokens, busiest: r.busiest })),
+        /*
+         * Weekday buckets, named as such.
+         *
+         * `recap.rows` is `WEEKDAYS.map(...)`, so `day` is "MON".."SUN" — this was returned
+         * as `activityByDay`, which a model asked "which days was I busiest" would read as
+         * dates. The hour dimension was also being dropped: `levels` is the 0-4 ramp per
+         * hour and is the only part of the grid worth handing over, the colours being for
+         * the SVG.
+         */
+        activityByWeekday: recap.rows.map((r) => ({
+          weekday: r.day,
+          tokens: r.tokens,
+          busiest: r.busiest,
+          byHourLevel: r.levels,
+        })),
         equivCostNote: COST_CAVEAT,
         accuracyNote: PANEL_CAVEAT,
       };

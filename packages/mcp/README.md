@@ -18,9 +18,9 @@ Reads the logs Claude Code, Codex and OpenCode already write on your machine. No
 
 | tool | what it answers |
 | --- | --- |
-| `get_usage` | totals, streak, active days, per-agent mix and per-model breakdown, over all time and the last year / 30 days / 7 days |
-| `get_daily_usage` | tokens per local calendar day, plus by weekday and by hour |
-| `get_recap` | year in review — headline tiles, per-agent split, busiest hour range, day-by-day activity |
+| `get_usage` | totals, streak, active days, per-agent mix and per-model breakdown, over all time, the current calendar year so far, and the last 30 / 7 days |
+| `get_daily_usage` | tokens per local calendar day for the last N days, idle days included as zero |
+| `get_recap` | year in review for one calendar year — headline tiles, per-agent split, busiest hour range, activity by weekday and hour |
 | `detect_agents` | which agents are on this machine, where each reads from, and what cannot be supported |
 
 ## It cannot make a network request

@@ -20,13 +20,30 @@ export const ALL_AGENTS: readonly AgentId[] = adapters.map((a) => a.id);
  * disk is a surprise the caller cannot see or undo. Reading the bank still hands the caller
  * its recovered days; not writing it means asking twice changes nothing.
  */
-export async function read(agents?: readonly AgentId[]): Promise<Read> {
+export async function read(
+  agents?: readonly AgentId[],
+  /**
+   * Report on one calendar year only.
+   *
+   * Threaded into `aggregate` rather than only into `buildRecap`, because `buildRecap` uses
+   * it for the streak tile and nothing else — every other figure it returns comes from the
+   * stats it is handed. `aggregate` is what filters the events, and skipping it is how
+   * `get_recap({ year: 2021 })` came to return this year's totals under a 2021 heading.
+   * `packages/core/src/aggregate.ts` carries a comment about this exact bug being fixed once
+   * already for `recap --year`; this is the second time.
+   */
+  year?: number,
+): Promise<Read> {
   const only = agents?.length ? agents : ALL_AGENTS;
   const ledger = await readLedger();
   const recovered: Recovered = { days: 0, tokens: 0 };
 
+  /* The year filter belongs to the aggregation and not the read: the ledger must still bank
+     every day it sees, or asking for one year would prune the bank to that year. Same
+     reasoning as the CLI's `scan`. */
   const stats = await aggregate(
     recordAndReplay(readAll([...only]), ledger, only, recovered),
+    year === undefined ? {} : { year },
   );
 
   return { stats, recovered };

@@ -244,3 +244,13 @@ export function muteSqliteWarning(): void {
     if (listeners.length === 0) process.stderr.write(`${w.name}: ${w.message}\n`);
   });
 }
+
+/**
+ * A repo-relative path as a markdown URL.
+ *
+ * `relative()` returns `\`-separated paths on Windows, and a markdown image path with
+ * backslashes in it does not resolve — so the one line whose entire job is to be pasted into
+ * a README was broken on Windows in both `sync` and `publish`. Separate from the plain path
+ * because the shell line beside it wants the native separator.
+ */
+export const asUrlPath = (rel: string): string => rel.split("\\").join("/");

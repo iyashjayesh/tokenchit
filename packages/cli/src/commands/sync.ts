@@ -17,7 +17,7 @@ import { CONFIG_FILE, DEFAULT_CONFIG, readConfig } from "../config.js";
 import { claudeContext, estimatedTotal } from "../claude-context.js";
 import { scan } from "../scan.js";
 import { renderStats } from "../stats-view.js";
-import { bold, dim, green, grey, note, say, spin, under, warn, yellow } from "../ui.js";
+import { asUrlPath, bold, dim, green, grey, note, say, spin, under, warn, yellow } from "../ui.js";
 
 const LAYOUTS = ["default", "compact"] as const satisfies readonly Layout[];
 const THEMES = ["auto", "light", "dark"] as const satisfies readonly Theme[];
@@ -208,7 +208,7 @@ export async function sync(argv: string[], chained = false): Promise<number> {
   say(`${green("✓")} wrote ${bold(rel)} ${dim(`(${svg.length} bytes)`)}`);
 
   say();
-  say(`  ${grey("embed")}     ![tokenchit — @${handle} AI coding agent usage](./${rel})`);
+  say(`  ${grey("embed")}     ![tokenchit — @${handle} AI coding agent usage](./${asUrlPath(rel)})`);
   // Committing on the user's behalf is not ours to decide — a tool that reads your logs
   // should not also decide what lands in your history on its first run.
   say(`  ${grey("commit")}    git add ${rel} && git commit -m "chore: update tokenchit"`);

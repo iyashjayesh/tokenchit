@@ -70,10 +70,36 @@ runs:
       run: |
         set -euo pipefail
 
-        # Reject a handle that could escape the path or the URL before it reaches either.
-        if ! printf '%s' "$TC_HANDLE" | grep -qE '^[A-Za-z0-9][A-Za-z0-9-]{0,38}$'; then
-          echo "::error::'$TC_HANDLE' is not a valid GitHub handle."
-          exit 1
+        # Every input is checked before it reaches a path or a URL. `handle` was the only one
+        # guarded at first, which left the input that is *actually* a path unvalidated, and let
+        # the four query values through raw — where an `&` or `#` silently rewrites the request
+        # rather than failing. These are all closed sets, so validating beats escaping: a typo
+        # gets an error naming the field instead of a card that quietly ignores the option.
+        die() { echo "::error::$1"; exit 1; }
+
+        printf '%s' "$TC_HANDLE" | grep -qE '^[A-Za-z0-9][A-Za-z0-9-]{0,38}$' \
+          || die "'$TC_HANDLE' is not a valid GitHub handle."
+
+        # Relative, inside the workspace, no traversal. `output` is written to and committed,
+        # so `../../x.svg` would write outside the checkout.
+        case "$TC_OUT" in
+          "" ) die "output must not be empty." ;;
+          /* ) die "output must be a relative path, not '$TC_OUT'." ;;
+          *..* ) die "output must not contain '..' — got '$TC_OUT'." ;;
+        esac
+
+        printf '%s' "$TC_LAYOUT" | grep -qE '^(default|compact)$' \
+          || die "layout must be 'default' or 'compact', not '$TC_LAYOUT'."
+        printf '%s' "$TC_THEME" | grep -qE '^(auto|light|dark)$' \
+          || die "theme must be 'auto', 'light' or 'dark', not '$TC_THEME'."
+
+        if [ -n "$TC_AGENTS" ]; then
+          printf '%s' "$TC_AGENTS" | grep -qE '^[a-z][a-z-]*(,[a-z][a-z-]*)*$' \
+            || die "agents must be a comma-separated list of agent ids, not '$TC_AGENTS'."
+        fi
+        if [ -n "$TC_HIDE" ]; then
+          printf '%s' "$TC_HIDE" | grep -qE '^(spend|streak|mix)(,(spend|streak|mix))*$' \
+            || die "hide must be a comma-separated subset of spend,streak,mix — got '$TC_HIDE'."
         fi
 
         query="layout=${TC_LAYOUT}&theme=${TC_THEME}"
