@@ -1,3 +1,5 @@
+import { relative, resolve } from "node:path";
+
 import {
   buildPayload,
   formatTokens,
@@ -159,6 +161,24 @@ export async function publish(argv: string[], version: string): Promise<number> 
   const profile = `${api}/u/${payload.handle}`;
   say(`  ${grey("your profile")}   ${link(profile)}`);
   say(`  ${grey("leaderboard")}    ${link(`${api}/board`)}`);
+  say();
+
+  /*
+   * The embed line, repeated here.
+   *
+   * `sync` prints it, and `generate` therefore shows it once on the way past — but `publish`
+   * run on its own never mentioned the card at all, and `publish` is the command someone
+   * re-runs. So the whole flow ended on two links to someone else's website, for a tool whose
+   * entire argument is that the card belongs in your repo.
+   *
+   * Measured rather than assumed: of the 34 rows on the board at the time of writing, two
+   * carried a card in the author's profile README. Twelve more had a profile README and no
+   * card — people who had published a row and never took the last step, because the command
+   * that put them on the board did not ask them to.
+   */
+  const card = relative(process.cwd(), resolve(config.output));
+  say(`  ${grey("embed")}     ![tokenchit — @${payload.handle} AI coding agent usage](./${card})`);
+  say(`  ${grey("commit")}    git add ${card} && git commit -m "chore: update tokenchit"`);
   say();
 
   /*
