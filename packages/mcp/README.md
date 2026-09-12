@@ -23,6 +23,18 @@ Reads the logs Claude Code, Codex and OpenCode already write on your machine. No
 | `get_recap` | year in review for one calendar year — headline tiles, per-agent split, busiest hour range, activity by weekday and hour |
 | `detect_agents` | which agents are on this machine, where each reads from, and what cannot be supported |
 
+## Docker
+
+```bash
+docker build -t tokenchit-mcp packages/mcp
+docker run -i --rm tokenchit-mcp
+```
+
+Installs the published package rather than building from source, so a working image proves the
+thing on npm works. There are no agent logs inside a container, so the usage tools answer
+zero — the right answer to "what is on this machine" when the machine is empty. Introspection
+does not read the disk at all.
+
 ## It cannot make a network request
 
 Not a policy sentence. `net.isolated` in `packages/cli/test/privacy.test.js` reads every source
