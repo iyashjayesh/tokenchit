@@ -40,6 +40,9 @@ const asAgents = (raw: unknown): AgentId[] | undefined => {
 };
 
 const clampDays = (raw: unknown, fallback: number): number => {
+  // `Number(null)` is 0, which clamped to 1 — so a client sending `days: null` to mean
+  // "unset" got a single day instead of the default. Absent and null are the same intent.
+  if (raw === undefined || raw === null) return fallback;
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(3650, Math.max(1, Math.trunc(n)));
@@ -53,10 +56,23 @@ const clampDays = (raw: unknown, fallback: number): number => {
  * treated as "not asked" rather than as an error, because the current year is the useful
  * answer to a malformed year and a rejection is not.
  */
-const asYear = (raw: unknown, now: Date): number | undefined => {
-  if (typeof raw !== "number" || !Number.isFinite(raw)) return undefined;
+const asYear = (raw: unknown, now: Date): number => {
+  /*
+   * Always a real year, never "no filter".
+   *
+   * Returning undefined for an omitted year left `aggregate` unfiltered while `buildRecap`
+   * still stamped the current year on the result — so `get_recap` with no arguments reported
+   * all-time totals headed 2026. That is the default call, and it is wrong for anyone with
+   * more than one year of history. `packages/cli/src/commands/recap.ts` resolves its default
+   * the same way and carries a comment saying exactly this.
+   *
+   * Out of range is treated as omitted rather than as an error: the payload states the year
+   * it actually used, so a model can see what it got, and a hard failure is a worse answer to
+   * a plausible guess.
+   */
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return now.getFullYear();
   const year = Math.trunc(raw);
-  return year >= 2020 && year <= now.getFullYear() ? year : undefined;
+  return year >= 2020 && year <= now.getFullYear() ? year : now.getFullYear();
 };
 
 /** Local `YYYY-MM-DD` for each of the last `days` calendar days, oldest first. */
@@ -197,7 +213,7 @@ export const tools: Tool[] = [
       const now = new Date();
       const year = asYear(args.year, now);
       const { stats } = await read(asAgents(args.agents), year);
-      const recap = buildRecap(stats, year === undefined ? {} : { year });
+      const recap = buildRecap(stats, { year });
 
       return {
         year: recap.year,

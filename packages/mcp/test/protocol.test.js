@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -348,4 +348,106 @@ test("initialize reports the package version", async () => {
   const { messages } = await talk([rpc(1, "initialize", {})]);
 
   assert.equal(find(messages, 1).result.serverInfo.version, pkg.version);
+});
+
+/**
+ * A HOME whose Claude Code transcript spans two calendar years.
+ *
+ * The committed fixture is all one year, so it cannot tell "this year" apart from "all time"
+ * — which is exactly how a recap that ignored the year passed the suite. Built here rather
+ * than committed because only these two tests need it.
+ */
+async function twoYearHome() {
+  const home = await mkdtemp(join(tmpdir(), "tokenchit-mcp-2y-"));
+  const dir = join(home, ".claude", "projects", "demo");
+  await mkdir(dir, { recursive: true });
+
+  const event = (ts, id, output) => ({
+    type: "assistant",
+    requestId: `r-${id}`,
+    timestamp: ts,
+    message: {
+      id,
+      role: "assistant",
+      model: "claude-opus-5",
+      content: [{ type: "text", text: "x" }],
+      usage: {
+        input_tokens: 0,
+        output_tokens: output,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+      },
+    },
+  });
+
+  const thisYear = new Date().getFullYear();
+  const rows = [
+    // Two days in a past year, then one in the current one. Deliberately lopsided: if the
+    // year filter is skipped, the current year's figure picks up the past year's bulk.
+    event(`${thisYear - 1}-03-10T10:00:01.000Z`, "past-a", 2000),
+    event(`${thisYear - 1}-03-11T10:00:01.000Z`, "past-b", 3000),
+    event(`${thisYear}-06-01T10:00:01.000Z`, "now-a", 100),
+  ];
+
+  await writeFile(join(dir, "session.jsonl"), rows.map((r) => JSON.stringify(r)).join("\n"));
+  return { home, thisYear, pastYear: thisYear - 1, pastTokens: 5000, currentTokens: 100 };
+}
+
+/** As `talk`, against a caller-supplied HOME. */
+async function talkIn(home, frames) {
+  const xdg = await mkdtemp(join(tmpdir(), "tokenchit-mcp-test-"));
+  const child = spawn(process.execPath, [SERVER], {
+    env: { ...process.env, HOME: home, USERPROFILE: home, CLAUDE_CONFIG_DIR: "", XDG_CONFIG_HOME: xdg },
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+
+  let out = "";
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (c) => (out += c));
+  for (const f of frames) child.stdin.write(`${JSON.stringify(f)}\n`);
+  child.stdin.end();
+
+  await new Promise((resolve) => child.on("close", resolve));
+  return out.split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l));
+}
+
+test("get_recap with no year defaults to a real year, not to all time", async () => {
+  /* The default call. `aggregate` was left unfiltered while `buildRecap` still stamped the
+     current year on the result, so `get_recap({})` reported every year's tokens headed with
+     this one — wrong for anyone with more than one year of history, and invisible on a
+     single-year fixture. recap.ts resolves its default the same way for the same reason. */
+  const fx = await twoYearHome();
+  const [omitted, explicit] = await Promise.all([
+    talkIn(fx.home, [call(1, "get_recap")]),
+    talkIn(fx.home, [call(1, "get_recap", { year: fx.thisYear })]),
+  ]);
+
+  const a = payload(find(omitted, 1));
+  const b = payload(find(explicit, 1));
+
+  assert.equal(a.year, fx.thisYear);
+  assert.equal(a.tokens, fx.currentTokens, "omitting the year must not pick up the past year");
+  assert.deepEqual(a.tokens, b.tokens, "omitted and explicit current year must agree");
+  assert.notEqual(a.tokens, fx.pastTokens + fx.currentTokens, "not an all-time total");
+});
+
+test("get_recap scopes a past year against a corpus that spans two", async () => {
+  const fx = await twoYearHome();
+  const messages = await talkIn(fx.home, [call(1, "get_recap", { year: fx.pastYear })]);
+  const out = payload(find(messages, 1));
+
+  assert.equal(out.year, fx.pastYear);
+  assert.equal(out.tokens, fx.pastTokens);
+});
+
+test("days: null means unset, not zero", async () => {
+  // `Number(null)` is 0, which clamped to 1 — so a client sending null to mean "use the
+  // default" got a single day. Absent and null are the same intent.
+  const [nulled, absent] = await Promise.all([
+    talk([call(1, "get_daily_usage", { days: null })]),
+    talk([call(1, "get_daily_usage")]),
+  ]);
+
+  assert.equal(payload(find(nulled.messages, 1)).requestedDays, 30);
+  assert.equal(payload(find(absent.messages, 1)).requestedDays, 30);
 });
