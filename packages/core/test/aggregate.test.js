@@ -747,3 +747,85 @@ test("the residual is priced off the cache, not off the live panel figure", asyn
     "500 records the window no longer lists, deflated by the 2x",
   );
 });
+
+/* ---------------------------------------------------------------------------
+   Monthly rollup, biggest day, and the separation between observed clock times
+   and synthesised ones.
+   --------------------------------------------------------------------------- */
+
+test("byMonth rolls days up by local month", async () => {
+  const s = await aggregate([
+    on(2026, 1, 5),
+    on(2026, 1, 20),
+    on(2026, 2, 3),
+  ]);
+
+  assert.deepEqual([...s.byMonth.keys()], ["2026-01", "2026-02"]);
+  assert.equal(s.byMonth.get("2026-01"), 2200);
+  assert.equal(s.byMonth.get("2026-02"), 1100);
+});
+
+test("byMonth is ascending, and a December-to-January boundary does not fold together", async () => {
+  const s = await aggregate([on(2026, 1, 1), on(2025, 12, 31)]);
+  assert.deepEqual([...s.byMonth.keys()], ["2025-12", "2026-01"]);
+});
+
+test("biggestDay names the heaviest local day", async () => {
+  const s = await aggregate([
+    on(2026, 3, 1),
+    on(2026, 3, 2, { output: 9000 }),
+    on(2026, 3, 3),
+  ]);
+
+  assert.equal(s.biggestDay.day, "2026-03-02");
+  assert.equal(s.biggestDay.tokens, 10_000);
+});
+
+test("biggestDay is null on empty input, not a zero-token day", async () => {
+  const s = await aggregate([]);
+  assert.equal(s.biggestDay, null);
+});
+
+test("a tie keeps the earlier day, so repeated runs agree with themselves", async () => {
+  const a = await aggregate([on(2026, 4, 1), on(2026, 4, 2)]);
+  const b = await aggregate([on(2026, 4, 2), on(2026, 4, 1)]);
+
+  assert.equal(a.biggestDay.day, "2026-04-01");
+  assert.equal(b.biggestDay.day, a.biggestDay.day, "input order must not change the answer");
+});
+
+test("a replayed day is counted in the total but not in the observed clock", async () => {
+  /* The whole point of tsPrecision. A ledger replay lands at local noon because the bank
+     stores a day, not a clock — so it must not become evidence for when someone works. */
+  const s = await aggregate([
+    on(2026, 5, 1, { ts: new Date(2026, 4, 1, 23, 0, 0) }),
+    on(2026, 5, 2, { ts: new Date(2026, 4, 2, 12, 0, 0), tsPrecision: "day" }),
+  ]);
+
+  assert.equal(s.tokens, 2200, "both days count toward the total");
+  assert.equal(s.byHour[12], 1100, "the heatmap still sees the replay — deliberately");
+  assert.equal(s.clockByHour[12], 0, "the observed-clock series does not");
+  assert.equal(s.clockByHour[23], 1100);
+  assert.equal(s.clockTokens, 1100, "coverage is the half that was actually observed");
+});
+
+test("a session-precision event is observed evidence, coarse but real", async () => {
+  // Codex stamps a whole rollout at its last turn. That moment happened; it is not invented.
+  const s = await aggregate([
+    on(2026, 6, 1, { agent: "codex", ts: new Date(2026, 5, 1, 9, 0, 0), tsPrecision: "session" }),
+  ]);
+
+  assert.equal(s.clockTokens, 1100);
+  assert.equal(s.clockByHour[9], 1100);
+});
+
+test("clock coverage is zero when every day came back from the ledger", async () => {
+  const s = await aggregate([
+    on(2026, 7, 1, { tsPrecision: "day" }),
+    on(2026, 7, 2, { tsPrecision: "day" }),
+  ]);
+
+  assert.equal(s.tokens, 2200);
+  assert.equal(s.clockTokens, 0, "nothing here was observed on a clock");
+  assert.deepEqual(s.clockByWeekday, Array(7).fill(0));
+});

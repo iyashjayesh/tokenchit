@@ -198,7 +198,21 @@ export async function* recordAndReplay(
 
         recoveredDays.add(day);
         recoveredTokens += sum(top);
-        yield { agent: agent as AgentId, ts, model, input: top[0], output: top[1], cacheWrite: top[2], cacheRead: top[3] };
+        yield {
+          agent: agent as AgentId,
+          ts,
+          model,
+          input: top[0],
+          output: top[1],
+          cacheWrite: top[2],
+          cacheRead: top[3],
+          /* The date is real; `noon` invented the clock. Tagged so anything asking when
+             somebody works can exclude it, rather than reading a synthesised hour as though
+             the user had been observed at midday. The heatmap keeps counting these — see the
+             note above on why a missing fortnight is the worse lie — but the peak headline
+             and the time-of-day badges do not. */
+          tsPrecision: "day",
+        };
       }
     }
   }

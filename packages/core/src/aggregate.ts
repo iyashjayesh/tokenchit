@@ -1,5 +1,5 @@
 import { costOf } from "./pricing.js";
-import { totalTokens, type AgentId, type UsageEvent } from "./types.js";
+import { hasRealClock, totalTokens, type AgentId, type UsageEvent } from "./types.js";
 
 export type Windowed = { tokens: number; equivCostUsd: number; events: number };
 
@@ -36,6 +36,29 @@ export type Stats = {
   mix: { agent: AgentId; pct: number }[];
   windows: { all: Windowed; year: Windowed; d30: Windowed; d7: Windowed };
   models: { model: string; tokens: number; equivCostUsd: number; priced: boolean }[];
+
+  /** Local `YYYY-MM` to tokens, ascending. */
+  byMonth: Map<string, number>;
+  /** The single heaviest local day, or null when nothing was recorded. */
+  biggestDay: { day: string; tokens: number } | null;
+
+  /*
+   * The same hour and weekday histograms, counting only events whose clock time was
+   * observed rather than synthesised — see `tsPrecision` in types.ts.
+   *
+   * `byHour`, `byWeekday` and `heat` above deliberately keep counting everything, including
+   * ledger replays landed at local noon. Dropping them would empty the heatmap for anyone
+   * whose logs have rotated, and an emptier map is its own lie; the existing card has always
+   * made that trade knowingly.
+   *
+   * A claim about *when somebody works* cannot make that trade, because noon is not an
+   * observation. So the peak headline and the time-of-day badges read these instead, and
+   * `clockTokens` against `tokens` says how much of the total they actually saw.
+   */
+  clockByHour: number[];
+  clockByWeekday: number[];
+  /** Tokens whose clock time was observed. Compare against `tokens` for coverage. */
+  clockTokens: number;
 };
 
 /**
@@ -71,6 +94,10 @@ export async function aggregate(
   const dayAgent = new Map<string, Map<AgentId, { tokens: number; equivCostUsd: number }>>();
   const byHour: number[] = Array(24).fill(0);
   const byWeekday: number[] = Array(7).fill(0);
+  const byMonth = new Map<string, number>();
+  const clockByHour: number[] = Array(24).fill(0);
+  const clockByWeekday: number[] = Array(7).fill(0);
+  let clockTokens = 0;
   const heat: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0));
   const byAgent = new Map<AgentId, number>();
   const modelCost = new Map<string, number>();
@@ -131,6 +158,18 @@ export async function aggregate(
     byHour[hr] = (byHour[hr] as number) + n;
     byWeekday[wd] = (byWeekday[wd] as number) + n;
     (heat[wd] as number[])[hr] = ((heat[wd] as number[])[hr] as number) + n;
+
+    // `day` slices from the local date string rather than re-reading the Date, so a month
+    // boundary lands on the same side as every other bucket in this function.
+    byMonth.set(day.slice(0, 7), (byMonth.get(day.slice(0, 7)) ?? 0) + n);
+
+    // Observed clock times only. A replayed day carries invented hours; counting it here
+    // would let "you work late" be derived from a timestamp this tool wrote itself.
+    if (hasRealClock(e)) {
+      clockTokens += n;
+      clockByHour[hr] = (clockByHour[hr] as number) + n;
+      clockByWeekday[wd] = (clockByWeekday[wd] as number) + n;
+    }
     byModel.set(e.model, (byModel.get(e.model) ?? 0) + n);
     byAgent.set(e.agent, (byAgent.get(e.agent) ?? 0) + n);
 
@@ -148,6 +187,16 @@ export async function aggregate(
   }
 
   const days = [...byDay.keys()].sort();
+
+  /* First maximum wins on a tie. An arbitrary choice, but a stable one: two days that tie
+     must not swap places between runs on identical input, or the recap changes its mind
+     about its own headline. Documented in the recap notes. */
+  let biggestDay: { day: string; tokens: number } | null = null;
+  for (const d of days) {
+    const n = byDay.get(d) as number;
+    if (!biggestDay || n > biggestDay.tokens) biggestDay = { day: d, tokens: n };
+  }
+
   const mix = [...byAgent.entries()]
     .map(([agent, n]) => ({ agent, pct: tokens ? (n / tokens) * 100 : 0 }))
     .sort((a, b) => b.pct - a.pct);
@@ -169,6 +218,11 @@ export async function aggregate(
     byAgent,
     mix,
     windows,
+    byMonth: new Map([...byMonth].sort((a, b) => a[0].localeCompare(b[0]))),
+    biggestDay,
+    clockByHour,
+    clockByWeekday,
+    clockTokens,
     models: [...byModel]
       .sort((a, b) => b[1] - a[1])
       .map(([model, n]) => ({

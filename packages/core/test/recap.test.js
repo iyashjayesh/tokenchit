@@ -142,3 +142,143 @@ test("the streak tile is the year's longest run, not the current one", async () 
   // A run belonging to another year is not this year's achievement.
   assert.equal(buildRecap(stats, { year: 2025, now }).tiles.longestStreak, "0d");
 });
+
+/* ---------------------------------------------------------------------------
+   Monthly rollup, biggest day, peak provenance, and activity badges.
+   --------------------------------------------------------------------------- */
+
+/** An event on a specific local date. */
+const day = (y, m, d, over = {}) => ({
+  agent: "claude-code",
+  ts: new Date(y, m - 1, d, 14, 0, 0),
+  model: "claude-opus-5",
+  input: 1000,
+  output: 0,
+  cacheWrite: 0,
+  cacheRead: 0,
+  ...over,
+});
+
+test("months covers the whole year, including the empty ones", async () => {
+  const stats = await aggregate([day(2026, 3, 4), day(2026, 3, 5)], { now: NOW });
+  const recap = buildRecap(stats, { year: 2026 });
+
+  assert.equal(recap.months.length, 12, "a gap is information; absent months would hide it");
+  assert.deepEqual(recap.months.map((m) => m.label).slice(0, 3), ["JAN", "FEB", "MAR"]);
+  assert.equal(recap.months[2].tokens, 2000);
+  assert.equal(recap.months[0].tokens, 0);
+  assert.equal(recap.months[2].share, 100, "the busiest month sets the scale");
+  assert.equal(recap.months[0].share, 0);
+});
+
+test("months is scoped to the year the recap names", async () => {
+  // aggregate() filters by year, so a prior-year event must not appear in this year's rollup.
+  const stats = await aggregate([day(2026, 1, 9), day(2025, 12, 9)], { year: 2026, now: NOW });
+  const recap = buildRecap(stats, { year: 2026 });
+
+  assert.equal(recap.months.reduce((a, m) => a + m.tokens, 0), 1000);
+});
+
+test("biggestDay carries both the raw number and a display string", async () => {
+  const stats = await aggregate(
+    [day(2026, 2, 1), day(2026, 2, 2, { input: 50_000 })],
+    { now: NOW },
+  );
+  const recap = buildRecap(stats, { year: 2026 });
+
+  assert.equal(recap.biggestDay.day, "2026-02-02");
+  assert.equal(recap.biggestDay.tokens, 50_000);
+  assert.equal(typeof recap.biggestDay.display, "string");
+});
+
+test("an empty year reports no biggest day and no badges", async () => {
+  const recap = buildRecap(await aggregate([], { now: NOW }), { year: 2026 });
+
+  assert.equal(recap.biggestDay, null);
+  assert.deepEqual(recap.badges, []);
+  assert.equal(recap.peak, null);
+  assert.equal(recap.peakCoverage, 0);
+  assert.equal(recap.months.length, 12);
+});
+
+test("peak ignores replayed days and reports its own coverage", async () => {
+  /* The correction this stage exists for. A history mostly recovered from the ledger used to
+     produce a confident midday peak that was an artefact of replay, not an observation. */
+  const stats = await aggregate(
+    [
+      at(0, 23, 40_000),
+      { ...day(2026, 5, 19), input: 60_000, tsPrecision: "day", ts: new Date(2026, 4, 19, 12, 0, 0) },
+    ],
+    { now: NOW },
+  );
+  const recap = buildRecap(stats, { year: 2026 });
+
+  assert.ok(recap.peak, "the observed evening event still supports a peak");
+  assert.equal(recap.peak.from, 23);
+  assert.equal(recap.peak.to, 23, "noon must not widen the window");
+  assert.equal(Math.round(recap.peakCoverage * 100), 40, "40% of tokens were observed");
+});
+
+test("peak is null when every day was replayed", async () => {
+  const stats = await aggregate(
+    [{ ...day(2026, 5, 19), tsPrecision: "day" }, { ...day(2026, 5, 20), tsPrecision: "day" }],
+    { now: NOW },
+  );
+  const recap = buildRecap(stats, { year: 2026 });
+
+  assert.equal(recap.peak, null, "no observed clock means no claim about time of day");
+  assert.equal(recap.peakCoverage, 0);
+});
+
+test("Night Owl needs observed late tokens, and does not fire on replayed ones", async () => {
+  const late = Array.from({ length: 20 }, (_, i) => at(i % 7, 23, 10_000));
+  const withClock = buildRecap(await aggregate(late, { now: NOW }), { year: 2026 });
+  assert.ok(withClock.badges.some((b) => b.id === "night-owl"));
+
+  const replayed = late.map((e) => ({ ...e, tsPrecision: "day" }));
+  const withoutClock = buildRecap(await aggregate(replayed, { now: NOW }), { year: 2026 });
+  assert.ok(
+    !withoutClock.badges.some((b) => b.id === "night-owl"),
+    "a synthesised noon must never earn a time-of-day badge",
+  );
+});
+
+test("no badge is awarded below its minimum data", async () => {
+  // One small late-night event: the right shape, nowhere near enough of it.
+  const recap = buildRecap(await aggregate([at(0, 23, 100)], { now: NOW }), { year: 2026 });
+  assert.deepEqual(recap.badges, []);
+});
+
+test("Agent Explorer counts agents with real weight, not a single stray event", async () => {
+  const many = Array.from({ length: 30 }, (_, i) => at(i % 7, 10, 10_000));
+  const stray = { ...at(0, 10, 5), agent: "codex", tsPrecision: "session" };
+
+  const withStray = buildRecap(await aggregate([...many, stray], { now: NOW }), { year: 2026 });
+  assert.ok(
+    !withStray.badges.some((b) => b.id === "agent-explorer"),
+    "one event from a second agent is not exploration",
+  );
+
+  const real = Array.from({ length: 30 }, (_, i) => ({
+    ...at(i % 7, 10, 10_000),
+    agent: "codex",
+    tsPrecision: "session",
+  }));
+  const withBoth = buildRecap(await aggregate([...many, ...real], { now: NOW }), { year: 2026 });
+  assert.ok(withBoth.badges.some((b) => b.id === "agent-explorer"));
+});
+
+test("no badge rewards spending or raw volume", async () => {
+  // A deliberately enormous single day. Nothing here should congratulate it.
+  const huge = buildRecap(
+    await aggregate([day(2026, 6, 1, { input: 50_000_000_000 })], { now: NOW }),
+    { year: 2026 },
+  );
+
+  for (const b of huge.badges) {
+    assert.ok(
+      !/token|spend|cost|goblin|hoard/i.test(`${b.id} ${b.label}`),
+      `badge ${b.id} must not celebrate volume`,
+    );
+  }
+});

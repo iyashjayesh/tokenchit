@@ -20,6 +20,158 @@ export const RAMP = ["#F0EFE9", "#BEDD6E", "#8CC42B", "#568018", "#2E420C"] as c
 
 export const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
 
+const MONTH_LABELS = [
+  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+] as const;
+
+/**
+ * A deterministic observation about the *shape* of someone's activity.
+ *
+ * Deliberately not achievements. Nothing here rewards volume: no spending milestone, no
+ * "you burned 10B tokens" trophy, no percentile against other users. This project's own
+ * position is that the card measures usage rather than output and cannot tell work from a
+ * retry loop, so a badge celebrating a bigger number would be arguing against the product.
+ *
+ * Every badge is computed from figures already in `Stats`, with a stated threshold and a
+ * stated minimum. None of them infers a session, and the time-of-day ones read only observed
+ * clocks. When the data cannot support a badge it is absent — never awarded at a lower bar.
+ */
+export type Badge = {
+  id: BadgeId;
+  label: string;
+  /** One line, in the user's terms, saying what was measured. */
+  detail: string;
+};
+
+export type BadgeId =
+  | "night-owl"
+  | "weekend-zombie"
+  | "agent-explorer"
+  | "no-days-off"
+  | "steady-hand";
+
+/**
+ * Enough observed tokens for a time-of-day claim to mean anything.
+ *
+ * Below this the clock series is a handful of events and a "night owl" verdict would be
+ * noise. Expressed in tokens rather than events because one Codex rollout is one event.
+ */
+const MIN_CLOCK_TOKENS = 100_000;
+/** Enough distinct active days for a weekday or consistency claim. */
+const MIN_ACTIVE_DAYS = 14;
+/** Share of observed tokens after 22:00 or before 05:00 that earns Night Owl. */
+const NIGHT_SHARE = 0.25;
+/** Share of observed tokens on Sat/Sun that earns Weekend Zombie. A flat week is 2/7 ≈ 0.286. */
+const WEEKEND_SHARE = 0.35;
+/** Agents that must each clear this share of tokens to count as genuinely in use. */
+const AGENT_SHARE = 0.1;
+/** Streak length that earns No Days Off. */
+const STREAK_DAYS = 14;
+
+/**
+ * Badges for a set of stats.
+ *
+ * Exported so the CLI, the JSON output, the SVG and the MCP tools all read one implementation
+ * and cannot drift into disagreeing about what somebody earned.
+ */
+export function buildBadges(stats: Stats): Badge[] {
+  const badges: Badge[] = [];
+  const clock = stats.clockTokens;
+  const enoughClock = clock >= MIN_CLOCK_TOKENS;
+  const enoughDays = stats.activeDays >= MIN_ACTIVE_DAYS;
+
+  if (enoughClock) {
+    // 22:00-23:59 plus 00:00-04:59. Local hours, matching every other bucket here.
+    let night = 0;
+    for (let h = 0; h < 24; h += 1) {
+      if (h >= 22 || h < 5) night += stats.clockByHour[h] ?? 0;
+    }
+    const share = night / clock;
+    if (share >= NIGHT_SHARE) {
+      badges.push({
+        id: "night-owl",
+        label: "Night Owl",
+        detail: `${pct(share)} of observed tokens between 22:00 and 05:00`,
+      });
+    }
+  }
+
+  if (enoughClock && enoughDays) {
+    const weekend = (stats.clockByWeekday[5] ?? 0) + (stats.clockByWeekday[6] ?? 0);
+    const share = weekend / clock;
+    if (share >= WEEKEND_SHARE) {
+      badges.push({
+        id: "weekend-zombie",
+        label: "Weekend Zombie",
+        detail: `${pct(share)} of observed tokens on Saturday and Sunday`,
+      });
+    }
+  }
+
+  /* Agent Explorer counts agents that carry real weight, not agents that appear. One stray
+     event from a second agent is not exploration, and a 1%-share tail would award this to
+     almost everyone who ever opened a different tool once. */
+  const used = stats.mix.filter((m) => m.pct / 100 >= AGENT_SHARE).length;
+  if (used >= 2) {
+    badges.push({
+      id: "agent-explorer",
+      label: "Agent Explorer",
+      detail: `${used} agents each above ${Math.round(AGENT_SHARE * 100)}% of tokens`,
+    });
+  }
+
+  if (stats.streakDays >= STREAK_DAYS) {
+    badges.push({
+      id: "no-days-off",
+      label: "No Days Off",
+      detail: `${stats.streakDays}-day active streak`,
+    });
+  }
+
+  /*
+   * Steady Hand is the counterweight, and the only badge here that a heavier user is *less*
+   * likely to earn: it describes even distribution across active days, not volume. Measured
+   * as the busiest day's share of the total — a low share means the work was spread out.
+   */
+  if (enoughDays && stats.biggestDay && stats.tokens > 0) {
+    const concentration = stats.biggestDay.tokens / stats.tokens;
+    const even = 1 / stats.activeDays;
+    if (concentration <= even * 2.5) {
+      badges.push({
+        id: "steady-hand",
+        label: "Steady Hand",
+        detail: `busiest day was only ${pct(concentration)} of the total across ${stats.activeDays} active days`,
+      });
+    }
+  }
+
+  return badges;
+}
+
+const pct = (share: number): string => `${Math.round(share * 100)}%`;
+
+/**
+ * Every month of the named year, including the empty ones.
+ *
+ * Twelve rows rather than only the months with activity, because a gap is information: a
+ * chart that silently omits March reads as though March did not exist, while a March at zero
+ * reads as a month off. `share` is against the busiest month, so the bars are comparable.
+ */
+function monthsOf(stats: Stats, year: number): Recap["months"] {
+  const raw = MONTH_LABELS.map((label, i) => {
+    const key = `${year}-${String(i + 1).padStart(2, "0")}`;
+    return { month: key, label, tokens: stats.byMonth.get(key) ?? 0 };
+  });
+
+  const busiest = Math.max(0, ...raw.map((m) => m.tokens));
+  return raw.map((m) => ({
+    ...m,
+    display: formatTokens(m.tokens),
+    share: busiest > 0 ? Math.round((m.tokens / busiest) * 100) : 0,
+  }));
+}
+
 export type RecapRow = {
   day: string;
   /** 24 ramp colours, one per hour. */
@@ -41,8 +193,23 @@ export type Recap = {
     longestStreak: string;
   };
   rows: RecapRow[];
-  /** Inclusive hour range holding the busiest stretch, or null when there is no data. */
+  /**
+   * Inclusive hour range holding the busiest stretch, or null when nothing was observed.
+   *
+   * Computed from observed clock times only. A day recovered from the ledger is replayed at
+   * local noon, and a "peak" derived from that reports the tool's own synthesised timestamp
+   * back to the user as a fact about their day. `peakCoverage` says how much of the total the
+   * window actually saw.
+   */
   peak: { from: number; to: number } | null;
+  /** Share of tokens, 0-1, whose clock time was observed rather than synthesised. */
+  peakCoverage: number;
+  /** Tokens per local month within the selected year, ascending. */
+  months: { month: string; label: string; tokens: number; display: string; share: number }[];
+  /** The heaviest single local day in the selected window. */
+  biggestDay: { day: string; tokens: number; display: string } | null;
+  /** Deterministic activity patterns. Empty when the data cannot support any. */
+  badges: Badge[];
   agents: { agent: string; pct: number; tokens: string; cost: string }[];
   models: { model: string; tokens: string; cost: string; priced: boolean }[];
   activeDays: number;
@@ -152,7 +319,21 @@ export function buildRecap(stats: Stats, opts: { year?: number; now?: Date } = {
       longestStreak: `${longestRun(stats.byDay, year)}d`,
     },
     rows,
-    peak: peakWindow(stats.byHour),
+    /* Observed clocks only. This is a change from reading `byHour`: that series includes
+       ledger replays pinned to local noon, so a heavily-recovered history used to produce a
+       confident "peak 12:00-12:00" that was an artefact of this tool's own replay and not
+       an observation of the user. */
+    peak: peakWindow(stats.clockByHour),
+    peakCoverage: stats.tokens > 0 ? stats.clockTokens / stats.tokens : 0,
+    months: monthsOf(stats, year),
+    biggestDay: stats.biggestDay
+      ? {
+          day: stats.biggestDay.day,
+          tokens: stats.biggestDay.tokens,
+          display: formatTokens(stats.biggestDay.tokens),
+        }
+      : null,
+    badges: buildBadges(stats),
     agents: stats.mix.map((m) => {
       const tokens = stats.byAgent.get(m.agent) ?? 0;
       return {

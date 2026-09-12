@@ -143,5 +143,9 @@ async function lastTotal(file: string): Promise<UsageEvent | null> {
       output: grew("output_tokens"),
       cacheWrite: 0,
       cacheRead,
+      /* One event carries a whole rollout's growth, stamped at its last turn — see the note
+         at the top of this file. The moment is real, so it is evidence; it is a session's
+         work reported at a single instant, so it is not exact. */
+      tsPrecision: "session",
   };
 }

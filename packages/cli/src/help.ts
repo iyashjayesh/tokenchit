@@ -77,11 +77,35 @@ export const COMMANDS: Record<string, Command> = {
     flags: [
       ["--out <path>", "default: tokenchit-recap.svg"],
       ["--year <yyyy>", "the year to report on"],
+      ["--week", "the last full Mon-Sun, against the week before it"],
+      ["--month", "the last full calendar month, against the month before it"],
       ["--handle <name>", "override the handle on the recap"],
       ["--theme auto|light|dark", ""],
       ["--json", "print the recap model instead of writing an SVG"],
       ["--dry-run", ""],
     ],
+    detail:
+      "--week and --month report the most recent period that has fully ended, never the one in\n" +
+      "progress: three days of this week against seven of last week is not a comparison. Both\n" +
+      "print to the terminal and to --json and write no SVG — the recap card is a year card, and\n" +
+      "a week rendered into it reads as a quiet year rather than a short window.\n\n" +
+      "The percentage against the previous period is withheld, with the reason printed, when that\n" +
+      "period began before this machine had any history. Measuring an install date and calling it\n" +
+      "growth is worse than showing no number.",
+  },
+  doctor: {
+    summary: "read-only report on sources, coverage, history and estimates",
+    flags: [["--json", "print the report as a stable JSON object"]],
+    detail:
+      "Consolidates the explanations sync, init and ledger each give separately: which agents\n" +
+      "were found and which cannot be counted, the first and last day with usage, what the\n" +
+      "ledger has banked, how much of the cost estimate is priced, and the accounting limits\n" +
+      "that actually apply to this machine.\n\n" +
+      "It writes nothing. No scan is persisted, the ledger is not rewritten or migrated, no\n" +
+      "sidecar or cache file is created, and no credential is refreshed. Remedies are printed\n" +
+      "as suggestions for you to run.\n\n" +
+      "Observed date bounds are not a completeness claim. A silent day and a day whose\n" +
+      "transcripts were deleted look identical from here, so no percentage is invented.",
   },
   ledger: {
     summary: "show the local history bank, or rebuild it",
@@ -168,7 +192,7 @@ export const COMMANDS: Record<string, Command> = {
 export const GROUPS: Array<[string, string[]]> = [
   ["start here", ["generate"]],
   ["or step by step", ["init", "sync", "publish"]],
-  ["more", ["recap", "ledger", "hook", "schedule"]],
+  ["more", ["recap", "doctor", "ledger", "hook", "schedule"]],
   ["account", ["login", "logout", "whoami", "unpublish"]],
 ];
 
