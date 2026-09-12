@@ -37,9 +37,18 @@
   color: var(--ink);
 }
 
-/* Snippet panel headers: inverted fill on hover. */
+/* Snippet panel headers: inverted fill on hover.
+
+   `min-height` rather than more padding: at 9.5px type with 3px of it, these measured 23px,
+   one short of the 24x24 WCAG 2.2 SC 2.5.8 asks of a pointer target. Raising the padding
+   would have changed the chip's proportions everywhere it appears; a floor only affects the
+   case that was under it, and the flex centring keeps the label where it already sat. */
 .lime,
 .yellow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
   border: 2px solid var(--ink);
   padding: 3px 8px;
   font-size: 9.5px;

@@ -41,6 +41,9 @@ export const metadata: Metadata = {
     description: BOARD_DESCRIPTION,
     path: "/board",
   }),
+  /* The window and agent filters are query parameters on this same path, so without a
+     canonical every combination is a separate URL advertising the same page. */
+  alternates: { canonical: "/board" },
 };
 
 /** Gold, silver, bronze. Only the top three; everyone else takes the default fill. */

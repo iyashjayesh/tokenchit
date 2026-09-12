@@ -57,6 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: summary,
       path: `/u/${profile.handle}`,
     }),
+    /* Handles are case-insensitive in the route and sanitised here, so /u/Foo and /u/foo
+       both render; the canonical names the sanitised one. */
+    alternates: { canonical: `/u/${profile.handle}` },
     twitter: { card: "summary_large_image" },
   };
 }
