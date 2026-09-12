@@ -77,11 +77,21 @@ export const COMMANDS: Record<string, Command> = {
     flags: [
       ["--out <path>", "default: tokenchit-recap.svg"],
       ["--year <yyyy>", "the year to report on"],
+      ["--week", "the last full Mon-Sun, against the week before it"],
+      ["--month", "the last full calendar month, against the month before it"],
       ["--handle <name>", "override the handle on the recap"],
       ["--theme auto|light|dark", ""],
       ["--json", "print the recap model instead of writing an SVG"],
       ["--dry-run", ""],
     ],
+    detail:
+      "--week and --month report the most recent period that has fully ended, never the one in\n" +
+      "progress: three days of this week against seven of last week is not a comparison. Both\n" +
+      "print to the terminal and to --json and write no SVG — the recap card is a year card, and\n" +
+      "a week rendered into it reads as a quiet year rather than a short window.\n\n" +
+      "The percentage against the previous period is withheld, with the reason printed, when that\n" +
+      "period began before this machine had any history. Measuring an install date and calling it\n" +
+      "growth is worse than showing no number.",
   },
   ledger: {
     summary: "show the local history bank, or rebuild it",

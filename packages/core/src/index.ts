@@ -13,6 +13,7 @@ export * from "./card-svg.js";
 export * from "./types.js";
 export * from "./aggregate.js";
 export * from "./recap.js";
+export * from "./period.js";
 export * from "./recap-svg.js";
 export * from "./pricing.js";
 export * from "./format.js";
