@@ -93,6 +93,20 @@ export const COMMANDS: Record<string, Command> = {
       "period began before this machine had any history. Measuring an install date and calling it\n" +
       "growth is worse than showing no number.",
   },
+  doctor: {
+    summary: "read-only report on sources, coverage, history and estimates",
+    flags: [["--json", "print the report as a stable JSON object"]],
+    detail:
+      "Consolidates the explanations sync, init and ledger each give separately: which agents\n" +
+      "were found and which cannot be counted, the first and last day with usage, what the\n" +
+      "ledger has banked, how much of the cost estimate is priced, and the accounting limits\n" +
+      "that actually apply to this machine.\n\n" +
+      "It writes nothing. No scan is persisted, the ledger is not rewritten or migrated, no\n" +
+      "sidecar or cache file is created, and no credential is refreshed. Remedies are printed\n" +
+      "as suggestions for you to run.\n\n" +
+      "Observed date bounds are not a completeness claim. A silent day and a day whose\n" +
+      "transcripts were deleted look identical from here, so no percentage is invented.",
+  },
   ledger: {
     summary: "show the local history bank, or rebuild it",
     flags: [
@@ -178,7 +192,7 @@ export const COMMANDS: Record<string, Command> = {
 export const GROUPS: Array<[string, string[]]> = [
   ["start here", ["generate"]],
   ["or step by step", ["init", "sync", "publish"]],
-  ["more", ["recap", "ledger", "hook", "schedule"]],
+  ["more", ["recap", "doctor", "ledger", "hook", "schedule"]],
   ["account", ["login", "logout", "whoami", "unpublish"]],
 ];
 

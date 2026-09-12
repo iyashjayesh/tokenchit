@@ -5,6 +5,7 @@ import { hook } from "./commands/hook.js";
 import { init } from "./commands/init.js";
 import { login, logout, whoami } from "./commands/login.js";
 import { publish } from "./commands/publish.js";
+import { doctor } from "./commands/doctor.js";
 import { recap } from "./commands/recap.js";
 import { ledger } from "./commands/ledger.js";
 import { schedule } from "./commands/schedule.js";
@@ -105,6 +106,8 @@ async function main(): Promise<number> {
       return sync(argv);
     case "recap":
       return recap(argv);
+    case "doctor":
+      return doctor(argv);
     case "publish":
       return publish(argv, cliVersion());
     case "schedule":

@@ -15,7 +15,7 @@ targeted reads and searches rather than graph queries.
 | --- | --- |
 | 1 — Enrich the existing recap | **Done and verified** |
 | 2 — Validated Gemini CLI support | Not started |
-| 3 — Read-only data-health diagnostics (`doctor`) | Not started |
+| 3 — Read-only data-health diagnostics (`doctor`) | **Done and verified** |
 | 4 — Local sharing pack (PNG export) | Not started |
 | 5 — Portable history and multi-device merge | Not started |
 
@@ -135,3 +135,52 @@ identical headline. Tested by feeding the same events in both orders.
   result), but its tool description does not yet mention the new fields.
 - README and `recap` long-form docs describe the new flags via `tokenchit help recap`; the
   README itself has not been updated.
+
+
+---
+
+## Stage 3 — `tokenchit doctor`
+
+### What it does
+
+One command answering "why does this number look wrong". The explanations already existed but
+were spread across three commands — `sync` warns about recovered days and price coverage,
+`init` lists detected and unsupported agents, `ledger` shows the bank — so nobody saw the whole
+picture at once, which is exactly what a discrepancy report needs.
+
+Reports: recognised agents with detection state and source glob, observed date bounds, retained
+history and what it restored this run, price coverage with the unpriced models named, and the
+accounting limitations that **actually apply to this machine** rather than a static list.
+
+`--json` emits a versioned object (`version: 1`).
+
+### Read-only is a contract, not an intention
+
+`scan({ write: false })` never calls `writeLedger`, and the OpenCode adapter already opens its
+SQLite database with `readOnly: true`, so no `-wal` or `-shm` sidecar appears. No existing
+helper needed changing — the read-only path was already there.
+
+Tests assert this rather than assuming it, by **content fingerprint** over the fixture home and
+the config directory before and after. The fingerprint deliberately hashes contents and names
+only, never mtime or atime: reading a file updates its access time on many systems, and a test
+treating that as a write would fail a command behaving perfectly. Separate tests assert no
+sidecar/temp/lock file appears anywhere, and that a machine with no ledger still has none
+afterwards.
+
+### Deliberate omissions
+
+- **No completeness percentage.** Observed bounds do not prove the days between them are
+  complete: a silent day and a day whose transcripts were deleted are indistinguishable from
+  here. A test asserts the `observed` object carries no key matching `complete|coverage|percent`.
+- **No remediation.** Suggestions are printed for the user to run. Nothing is applied, no
+  config is repaired, no hook installed, no credential refreshed.
+- **Exit code 0 for an empty machine.** A fresh install with no usage is a correct state to be
+  in, not a failure.
+
+### Limitations
+
+- Source *globs* appear in the output by design — that is documentation of where an adapter
+  looks, not a path harvested from the user. A test asserts no transcript content or project
+  path leaks.
+- `doctor` runs a full scan, so on a large corpus it takes as long as `sync` does. It has no
+  cheaper detection-only mode.
