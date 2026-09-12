@@ -14,7 +14,7 @@ targeted reads and searches rather than graph queries.
 | Stage | State |
 | --- | --- |
 | 1 — Enrich the existing recap | **Done and verified** |
-| 2 — Validated Gemini CLI support | Not started |
+| 2 — Validated Gemini CLI support | **Format verified, adapter not written** |
 | 3 — Read-only data-health diagnostics (`doctor`) | **Done and verified** |
 | 4 — Local sharing pack (PNG export) | Not started |
 | 5 — Portable history and multi-device merge | Not started |
@@ -184,3 +184,88 @@ afterwards.
   path leaks.
 - `doctor` runs a full scan, so on a large corpus it takes as long as `sync` does. It has no
   cheaper detection-only mode.
+
+
+---
+
+## Stage 2 — Gemini CLI: verified findings, adapter not yet written
+
+The research was treated as dated evidence and re-checked against real recordings on this
+machine before any parser was designed. Two things it said needed correcting, and the
+accounting question it flagged now has a measured answer.
+
+### What is actually on disk
+
+`~/.gemini/tmp/<project>/chats/session-*.jsonl`, **2,141 files** on this machine.
+
+Two distinct record shapes are present:
+
+1. **The common shape (2,139 files).** JSONL lines carrying `sessionId`, `projectHash`,
+   `startTime`, `lastUpdated`, `kind` and a `$set` envelope whose `messages[]` have only
+   `id`, `timestamp`, `type`, `content`. **No token fields at any depth.**
+2. **The token-bearing shape (2 files, 46 records).** JSONL lines with a top-level `tokens`
+   object alongside `id`, `timestamp`, `type`, `model`, `content`, `thoughts`.
+
+So the current `unsupported.ts` reason is **not simply stale** — it is accurate for the
+overwhelming majority of what this installation has written. The right description is a
+*partial* state: newer recordings are countable, older ones are not, and an installed client
+with uncountable sessions is a partial/unavailable state rather than a fabricated zero.
+
+### The accounting answer — measured, not assumed
+
+The token object is always exactly:
+
+```
+{ input, output, cached, thoughts, tool, total }
+```
+
+Four hypotheses were tested against all 46 records:
+
+| Hypothesis for `total` | Matches |
+| --- | --- |
+| `input + output + cached + thoughts + tool` (all disjoint) | **9 / 46** |
+| `input + output + thoughts + tool` (cached **inside** input) | **46 / 46** |
+| `input + output + tool` (cached and thoughts inside) | 0 / 46 |
+| `input + output` (everything else inside) | 0 / 46 |
+
+**`cached` is nested inside `input`** — the same shape Codex uses for `cached_input_tokens`.
+The first hypothesis appears to work only on the 9 records where `cached == 0`, which is
+exactly the trap the brief warns about: sampling one zero-cache record would have "confirmed"
+the wrong model.
+
+Worked example: `{input: 8684, output: 52, cached: 7061, thoughts: 40, tool: 0, total: 8776}`.
+Summing all five fields gives 15,837 against a reported total of 8,776 — an **80% inflation**
+on a cache-heavy turn.
+
+### The mapping this implies
+
+To keep tokenchit's four buckets disjoint and reconcile exactly with Gemini's own total:
+
+| tokenchit bucket | from Gemini |
+| --- | --- |
+| `input` | `input - cached` |
+| `cacheRead` | `cached` |
+| `output` | `output + thoughts + tool` |
+| `cacheWrite` | `0` (Gemini reports none) |
+
+This sums to `input + output + thoughts + tool`, which equals `total` on all 46 records. The
+reported `total` should be used as **reconciliation evidence** — parse the components, then
+assert they agree with `total`, and represent a disagreement explicitly rather than forcing it.
+
+`thoughts` (reasoning) and `tool` are folded into `output` because both are generated tokens.
+That is a judgement, not a measurement: it is the placement that preserves the disjoint-bucket
+invariant and matches how these are billed, but a future pricing table distinguishing reasoning
+rates would want them separated.
+
+### Privacy note for the implementation
+
+These files carry `projectHash` and a `content` field with full prompt and reply text. Neither
+may be collected: the brief puts hashed and truncated paths outside the contract, and `content`
+is raw transcript. Only `timestamp`, `model` and the `tokens` object may be read. Fixtures must
+be synthetic, never copied from `~/.gemini`.
+
+### What remains
+
+The adapter itself. `AgentId` is a closed union (`"claude-code" | "codex" | "opencode"`) that
+reaches validation, board filters, pricing, icons and site API checks, so adding a fourth agent
+is a wide change and was not started rather than half-applied.
