@@ -1,0 +1,184 @@
+.section {
+  padding: clamp(30px, 4vw, 56px) 0;
+  border-top: 3px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(22px, 3vw, 34px);
+  border: 2px solid var(--ink);
+  background: var(--surface-alt);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.h2 {
+  margin: 0;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.lede {
+  margin: 0;
+  max-width: 56em;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+
+.cmdRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.cmd {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 14px 16px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.prompt {
+  color: var(--text-faint);
+  margin-right: 6px;
+}
+
+.note {
+  margin: 0;
+  max-width: 56em;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+.note code {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  padding: 1px 5px;
+}
+
+.asks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+}
+
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 15px 17px;
+  border-right: 1px solid var(--hairline);
+}
+
+.ask:last-child {
+  border-right: 0;
+}
+
+.ask:hover {
+  background: var(--tint-lime);
+}
+
+.askLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.askValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ask:hover .askValue {
+  color: var(--coral-text);
+}
+
+.agents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+
+.agentsLabel {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.agentList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.agentLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid var(--ink);
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.agentLink:hover {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border: 1px solid var(--ink);
+}
+
+@media (max-width: 640px) {
+  .panel {
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+
+  .ask {
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .ask:last-child {
+    border-bottom: 0;
+  }
+}

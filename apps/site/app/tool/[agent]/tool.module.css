@@ -1,0 +1,341 @@
+/* The landing-page vocabulary, reused: 2px ink rules, hard offset shadows, 9-12px uppercase
+   mono for labels, and the display face only at heading sizes. Nothing new is invented here —
+   a per-agent page that looked like a different site would read as a doorway page. */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-block: 40px 44px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.h1 {
+  margin: 0;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: clamp(2rem, 5.2vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-wrap: balance;
+  max-width: 22ch;
+}
+
+.mark {
+  background: var(--lime);
+  box-shadow: 0 0 0 6px var(--lime);
+  /* Without this the highlight breaks flush against the glyphs on a wrap. */
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.lede {
+  margin: 0;
+  max-width: 58ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.cmdRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  max-width: 100%;
+}
+
+.cmd {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 14px 16px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 5px 5px 0 var(--lime);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.prompt {
+  color: var(--text-faint);
+  margin-right: 6px;
+}
+
+.free {
+  margin: 0;
+  max-width: 58ch;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-block: 44px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.body {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.note {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.note code,
+.body code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+  background: var(--surface-alt);
+  border: 1px solid var(--hairline);
+  padding: 1px 5px;
+}
+
+.note a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+.source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+}
+
+.sourceLabel {
+  flex: none;
+  padding: 11px 14px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.sourcePath {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 11px 14px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.caveat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 22px;
+  border: 2px solid var(--ink);
+  border-left: 8px solid var(--coral);
+  background: var(--surface);
+}
+
+.caveatHeading {
+  margin: 0;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--hairline);
+}
+
+.table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table th {
+  padding: 11px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.rank {
+  width: 1%;
+  color: var(--text-faint);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.handle:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border: 1px solid var(--ink);
+}
+
+.more,
+.otherLink {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+.others {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+}
+
+.others li {
+  border-right: 1px solid var(--hairline);
+}
+
+.others li:last-child {
+  border-right: 0;
+}
+
+.otherLink {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 16px 18px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.otherLink:hover {
+  background: var(--surface-alt);
+}
+
+.otherPath {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.cta {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 26px;
+  margin-block: 44px 0;
+  border: 2px solid var(--ink);
+  background: var(--surface-alt);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.ctaHeading {
+  margin: 0;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: clamp(1.4rem, 3.2vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .others li {
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .others li:last-child {
+    border-bottom: 0;
+  }
+
+  .cta {
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+}

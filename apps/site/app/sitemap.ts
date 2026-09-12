@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
 
+import { AGENT_PAGES } from "@/lib/agents";
 import { readBoard } from "@/lib/board-query";
 import { DEFAULT_WINDOW } from "@/lib/board";
 import { SITE_URL } from "@/lib/site";
 
 /**
- * The two static pages, plus every profile currently on the board.
+ * The static pages, plus one page per supported agent, plus every profile on the board.
  *
  * Built from `readBoard` rather than a `listHandles` helper, because the board query already
  * excludes rows held for review — a flagged profile withholds its figures, and pointing a
@@ -22,6 +23,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: SITE_URL, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/board`, changeFrequency: "daily", priority: 0.8 },
+    /* Ranked above profiles and below the board: these are the pages someone searching for
+       "claude code token usage" should land on, and there are three of them rather than
+       thirty-four. */
+    ...AGENT_PAGES.map((a) => ({
+      url: `${SITE_URL}/tool/${a.key}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
     ...rows.map((r) => ({
       url: `${SITE_URL}/u/${r.handle}`,
       lastModified: r.lastPublished ? new Date(r.lastPublished) : undefined,

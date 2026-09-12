@@ -93,6 +93,81 @@ tokenchit whoami         who this machine is signed in as
 Common flags: `--out`, `--theme auto|light|dark`, `--layout default|compact`, `--json`,
 `--dry-run`.
 
+## Keeping the card fresh
+
+The card is a file, which is the point — and a file does not update itself. Re-running
+`generate` is the honest answer, but nobody remembers to.
+
+There is an action in this repository for the half a runner can actually do:
+
+```yaml
+# .github/workflows/card.yml
+name: card
+on:
+  schedule: [{ cron: "0 6 * * *" }]
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: iyashjayesh/tokenchit@v1
+        with:
+          handle: your-handle
+```
+
+**It does not read your logs, and it cannot.** An Actions runner has no access to
+`~/.claude` or `~/.codex`, so nothing on a runner can regenerate a card from source — you
+still run `publish` from the machine that has the logs. What the action does is re-fetch the
+card you already published and commit it, so the SVG in your README stops drifting away from
+your real numbers while readers keep loading a committed file rather than an endpoint.
+
+It refuses to overwrite a good card with a bad response: a non-SVG body, a non-200, or the
+placeholder card the endpoint returns for a handle with nothing on the board. That last one
+matters — without it a typo in `handle` commits an empty card on a schedule, silently,
+forever.
+
+Inputs are `handle` (required), `output`, `layout`, `theme`, `agents`, `hide`, `commit` and
+`commit-message`; `layout`, `theme`, `agents` and `hide` are the same options the embed
+endpoint takes. It outputs `changed` so you can gate later steps on a real update.
+
+One thing to know: GitHub disables scheduled workflows in a repository after 60 days with no
+activity, and a run that finds an unchanged card makes no commit. On a quiet repository the
+schedule can switch itself off. `workflow_dispatch` is there so you can start it again, and
+the run summary says which happened.
+
+## From an agent, not a terminal
+
+There is an MCP server in `packages/mcp`, so a model can answer questions about your usage
+instead of you reading a table:
+
+```json
+{
+  "mcpServers": {
+    "tokenchit": { "command": "npx", "args": ["-y", "@tokenchit/mcp@latest"] }
+  }
+}
+```
+
+Four tools — `get_usage`, `get_daily_usage`, `get_recap` and `detect_agents`. All of them
+read the same logs the CLI reads, and **none of them can make a network request**: the
+`net.isolated` test covers `packages/mcp/src` alongside the CLI, and unlike the CLI this
+package has no allowlisted module, so every file under it must be clean. Adding a `fetch`
+anywhere in it fails the suite.
+
+Two things it does that a plain data dump would not. Every figure ships with its caveat as a
+sibling field, because a model handed `equivCostUsd` on its own will report it to you as
+money you spent — and it is not. And a tool that fails answers with `isError` rather than a
+transport error, so "no logs on this machine" reaches the model as something it can relay
+instead of something it has to guess at.
+
+It reads the ledger and never writes it. `sync` banks what it saw because you asked it to; a
+tool call is a question, and a question that mutates state on disk is a surprise you cannot
+see or undo.
+
 ## Privacy
 
 `sync` and `recap` make no network request at all.
@@ -102,7 +177,8 @@ model names, and your handle — never prompts, replies, file paths, branch name
 names. `--dry-run` prints the exact bytes so you can check rather than take our word.
 
 Five tests in `packages/cli/test/privacy.test.js` enforce this on every push, including one
-that fails if any file outside `net.ts` can open a socket.
+that fails if any file outside `net.ts` can open a socket — across the CLI, the core engine
+and the MCP server.
 
 ## The board
 

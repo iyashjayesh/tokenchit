@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { SiteHeader } from "@/components/site-header";
 import { Hero } from "@/components/hero";
 import { CardSection } from "@/components/card-section";
@@ -10,6 +12,7 @@ import { readFeatured } from "@/lib/featured";
 import { Verification } from "@/components/verification";
 import { Privacy } from "@/components/privacy";
 import { Recap } from "@/components/recap";
+import { ClosingCta } from "@/components/closing-cta";
 import { SiteFooter } from "@/components/site-footer";
 
 /**
@@ -26,6 +29,10 @@ import { SiteFooter } from "@/components/site-footer";
  * and the copy promises a row goes stale "within the hour", so five minutes is comfortably
  * inside what was advertised while keeping the marketing page effectively static.
  */
+/* Title, description and openGraph come from the root layout; only the canonical is stated
+   here, because the layout cannot name a path that is right for every route beneath it. */
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
 export const revalidate = 300;
 
 export default async function Page() {
@@ -62,6 +69,8 @@ export default async function Page() {
         <Verification />
         <Privacy />
         <Recap />
+        {/* The command appeared once, in the hero, five sections above this. */}
+        <ClosingCta />
       </main>
       <SiteFooter />
     </>

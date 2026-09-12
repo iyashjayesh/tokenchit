@@ -1,0 +1,51 @@
+{
+  "name": "@tokenchit/mcp",
+  "version": "0.8.0",
+  "description": "MCP server exposing your local AI coding agent usage. Reads logs on your machine and makes no network request.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "codex",
+    "opencode",
+    "tokens",
+    "usage",
+    "ai-agents"
+  ],
+  "license": "MIT",
+  "author": "Yash Chauhan (https://github.com/iyashjayesh)",
+  "homepage": "https://github.com/iyashjayesh/tokenchit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyashjayesh/tokenchit.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/iyashjayesh/tokenchit/issues"
+  },
+  "type": "module",
+  "bin": {
+    "tokenchit-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && npm run bundle",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/index.js --packages=bundle",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "node --test test/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

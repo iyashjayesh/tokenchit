@@ -43,19 +43,30 @@ jobs:
       # The whole gate. `npm view` answers for the registry rather than for this checkout,
       # so a re-run, a revert or a second trigger for the same version all stop here instead
       # of failing loudly over work that is already done.
+      #
+      # Asked per package. The two are versioned together by scripts/version.mjs, but a run
+      # that publishes one and fails on the other must be able to finish the job on a re-run
+      # rather than seeing "cli is already up" and skipping the half that never went out.
       - name: Is this version unpublished?
         id: check
         run: |
           version=$(node -p "require('./packages/cli/package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-          if npm view "@tokenchit/cli@$version" version >/dev/null 2>&1; then
-            echo "@tokenchit/cli@$version is already on npm — nothing to release."
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "@tokenchit/cli@$version is not on npm — releasing."
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          fi
+          any=false
+          for pkg in cli mcp; do
+            pv=$(node -p "require('./packages/$pkg/package.json').version")
+            if npm view "@tokenchit/$pkg@$pv" version >/dev/null 2>&1; then
+              echo "@tokenchit/$pkg@$pv is already on npm — skipping it."
+              echo "$pkg=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "@tokenchit/$pkg@$pv is not on npm — releasing it."
+              echo "$pkg=true" >> "$GITHUB_OUTPUT"
+              any=true
+            fi
+          done
+
+          echo "publish=$any" >> "$GITHUB_OUTPUT"
 
       # npm provenance attaches a signed attestation pointing at the source commit, which
       # requires a public repository. Publishing --provenance from a private repo fails with
@@ -94,11 +105,18 @@ jobs:
           git tag -a "$tag" -m "$tag"
           git push origin "$tag"
 
-      # One package. @tokenchit/core is private and bundled into this tarball by esbuild,
-      # so there is nothing to publish first and no ordering to get wrong.
+      # @tokenchit/core is private and esbuild inlines it into both tarballs, so there is
+      # nothing to publish first and no ordering to get wrong. Neither package declares a
+      # runtime dependency on the other.
       - name: Publish @tokenchit/cli
-        if: steps.check.outputs.publish == 'true'
+        if: steps.check.outputs.cli == 'true'
         run: npm publish -w @tokenchit/cli --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @tokenchit/mcp
+        if: steps.check.outputs.mcp == 'true'
+        run: npm publish -w @tokenchit/mcp --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -112,7 +130,12 @@ jobs:
             echo "npx @tokenchit/cli@${{ steps.check.outputs.version }} init"
             echo '```'
             echo
-            echo "- [@tokenchit/cli](https://www.npmjs.com/package/@tokenchit/cli)"
+            if [ "${{ steps.check.outputs.cli }}" = "true" ]; then
+              echo "- [@tokenchit/cli](https://www.npmjs.com/package/@tokenchit/cli)"
+            fi
+            if [ "${{ steps.check.outputs.mcp }}" = "true" ]; then
+              echo "- [@tokenchit/mcp](https://www.npmjs.com/package/@tokenchit/mcp)"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Nothing to release
