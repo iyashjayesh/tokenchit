@@ -150,7 +150,10 @@ first.
 
 ### Running the board locally
 
-The board runs against Supabase — there is no local database to start.
+The board needs a Postgres somewhere; there is no local database to start. [Neon](https://neon.com)
+is the documented default — see [`docs/research.md`](./research.md) §4 for why, and the README's
+*Supported by* section for the sponsorship that followed it. Any Postgres works: the site
+reads one `DATABASE_URL` and nothing below it knows who serves it.
 
 ```bash
 cp apps/site/.env.example apps/site/.env.local   # then fill in the password
@@ -165,10 +168,11 @@ npx @tokenchit/cli publish --api http://localhost:3000
 `.env.local` automatically and the migration runner reads the same file, so the site and the
 migrations cannot end up pointing at different databases.
 
-**Use the shared (transaction) pooler on port 6543, not the direct connection on 5432.**
-Serverless functions open a connection per invocation and exhaust a direct connection limit
-quickly; Supavisor exists for exactly that. The pool in `apps/site/lib/db.ts` is capped at 5
-to match.
+**Use the pooled endpoint, not the direct one.** Serverless functions open a connection per
+invocation and exhaust a direct connection limit quickly, and every managed Postgres ships
+something for exactly that: on Neon it is the host with `-pooler` in it, on Supabase the
+shared transaction pooler on 6543 rather than the direct connection on 5432. The pool in
+`apps/site/lib/db.ts` is capped at 5 to match.
 
 ### Rate limits
 
@@ -193,16 +197,20 @@ Every response carries `x-ratelimit-limit` and `x-ratelimit-remaining`, refusals
 
 ### Notes on the database
 
-- **`003_rls.sql` is not optional on Supabase.** Supabase exposes every `public` table
-  through PostgREST using the anon key, which is public by design. Without row level security
-  enabled, that key would read `api_tokens` and the entire submissions history. The migration
-  enables RLS with no policies, which closes that surface completely and changes nothing for
-  our server, which connects directly as the table owner.
-- **Free Supabase projects pause after 7 days of low activity** and need a human to click
-  *Resume* in the dashboard, with a 90-day window before the backup expires. A few requests a
-  day avoids it, so it bites a quiet project rather than a busy one. That is why
-  [`docs/research.md`](./docs/research.md) §4 prefers Neon, whose idle behaviour is
-  scale-to-zero with automatic resume.
+- **`003_rls.sql` is about Supabase, and runs everywhere.** Supabase exposes every `public`
+  table through PostgREST using the anon key, which is public by design — without row level
+  security enabled, that key would read `api_tokens` and the entire submissions history. The
+  migration enables RLS with no policies, which closes that surface completely. On Neon, or on
+  any plain Postgres, there is no such auto-generated API and the migration is belt and braces
+  rather than load-bearing; it is kept unconditional because a deny-all default is the right
+  posture either way, and because it changes nothing for our server, which connects directly
+  as the table owner.
+- **Idle behaviour is what decided the default.** Neon scales to zero after five minutes and
+  resumes itself on the next connection, so a quiet board comes back without anyone noticing
+  it went. Free Supabase projects instead pause after seven days of low activity and need a
+  human to click *Resume* in the dashboard — for a public leaderboard that means down until
+  somebody looks. That asymmetry, not price, is the whole argument in
+  [`docs/research.md`](./research.md) §4.
 - Migrations are plain SQL in `apps/site/db/migrations/`, applied in filename order and
   tracked in a `_migrations` table. There is no local Postgres: a contributor who only needs
   the CLI or the card never touches a database, and `npm test` requires none.

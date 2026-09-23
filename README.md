@@ -225,6 +225,21 @@ npm run dev       # the site at http://localhost:3000
 Node 22 or newer — OpenCode support uses the built-in `node:sqlite`. The site and the CLI
 render through the same `buildCardSvg()`, so they cannot drift.
 
+## Supported by
+
+<a href="https://neon.com">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://neon.com/brand/neon-logo-dark-color.svg">
+    <img alt="Neon" src="https://neon.com/brand/neon-logo-light-color.svg" height="34">
+  </picture>
+</a>
+
+[Neon](https://neon.com) supports tokenchit through their Open Source programme, and is the
+Postgres this project documents as its default — a choice
+[`docs/research.md`](./docs/research.md) §4 reached on its own merits, before the sponsorship
+existed. Any Postgres works: the site reads one `DATABASE_URL` and nothing below it knows or
+cares who serves it.
+
 ## Licence
 
 MIT.
