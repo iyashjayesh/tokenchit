@@ -225,6 +225,22 @@ npm run dev       # the site at http://localhost:3000
 Node 22 or newer — OpenCode support uses the built-in `node:sqlite`. The site and the CLI
 render through the same `buildCardSvg()`, so they cannot drift.
 
+The CLI, the card and `npm test` need no database at all — a contributor who only touches
+those never sets one up. `npm run dev` does: the site reads `DATABASE_URL` from
+`apps/site/.env.local` and any Postgres will do.
+
+The one worth knowing about is a [Neon](https://neon.com) branch. It is a copy-on-write clone
+of the board — the same rows, created in about a second, where anything you write stays yours:
+
+```bash
+neon branches create --name dev          # then point .env.local at its pooled URL
+```
+
+That matters more than it sounds. Without it the obvious thing to do is point local
+development at the live database, and then every `npm run dev`, every test publish and every
+stray query is running against real people's rows.
+[`docs/internals.md`](./docs/internals.md) has the rest.
+
 ## Supported by
 
 <a href="https://neon.com">

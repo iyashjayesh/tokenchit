@@ -168,6 +168,29 @@ npx @tokenchit/cli publish --api http://localhost:3000
 `.env.local` automatically and the migration runner reads the same file, so the site and the
 migrations cannot end up pointing at different databases.
 
+**Use a branch for local work, not the database the board is served from.**
+
+```bash
+neon set-context --project-id <your project>
+neon branches create --name dev
+neon connection-string dev --pooled        # this goes in .env.local
+```
+
+A branch is a copy-on-write clone: it carries every row the parent has, costs no storage
+until you write, and is ready in about a second. So local development gets the real dataset —
+which is the only way to catch the bugs that only appear against real data — while every
+write stays on the branch.
+
+The alternative is what this project did until it moved to Neon, and it is worth naming
+because it is the path of least resistance on any provider: point `.env.local` at production
+because it is the connection string you already have. Then `npm run dev` reads live rows, a
+test `publish` writes one, and `scripts/qa-board.mjs` — which has a delete path — is one
+careless invocation away from real people's history. None of that is hypothetical; it is
+simply what happens when the easy option and the safe option are different.
+
+Reset a branch to match the parent again with `neon branches reset dev --parent`, which is
+faster than re-seeding and makes a branch cheap to throw away.
+
 **Use the pooled endpoint, not the direct one.** Serverless functions open a connection per
 invocation and exhaust a direct connection limit quickly, and every managed Postgres ships
 something for exactly that: on Neon it is the host with `-pooler` in it, on Supabase the
