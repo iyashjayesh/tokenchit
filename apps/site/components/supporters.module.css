@@ -1,0 +1,58 @@
+.section {
+  padding: clamp(26px, 3.5vw, 44px) 0;
+  border-top: 3px solid var(--ink);
+}
+
+.label {
+  margin: 0 0 16px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* The site's usual object treatment: hard border, hard shadow, no radius. */
+.card {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 3vw, 32px);
+  flex-wrap: wrap;
+  padding: clamp(18px, 2.6vw, 26px);
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+/* The logo inherits ink for its wordmark; the mark keeps Neon's green on its own. */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--ink);
+}
+
+.logo:hover {
+  /* The wordmark follows the site's link colour; the trademarked mark does not move. */
+  color: var(--coral-text);
+}
+
+.blurb {
+  flex: 1 1 22em;
+  min-width: 0;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+
+.link {
+  font-weight: 700;
+  color: var(--ink);
+  border-bottom: 1.5px solid var(--lime);
+}
+
+.link:hover {
+  color: var(--coral-text);
+  border-bottom-color: var(--coral);
+}
