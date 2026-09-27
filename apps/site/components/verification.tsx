@@ -40,7 +40,7 @@ const TIERS = [
 export function Verification() {
   return (
     <section id="verification" className={styles.section}>
-      <SectionHeading n={3} title="Two different marks" />
+      <SectionHeading n={4} title="Two different marks" />
       <p className={styles.intro}>
         The lime <span className={styles.githubChip}>✓ GITHUB</span> mark means the account is
         real and the handle is theirs. It says nothing about the numbers. That is what the tier

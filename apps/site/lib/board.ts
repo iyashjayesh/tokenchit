@@ -83,10 +83,15 @@ export const isWindow = (value: string | null): value is BoardWindow =>
 /**
  * How many rows the landing page's preview shows.
  *
+ * Five, not ten. This is a preview whose job is to show the board is real and populated, and
+ * /board is where someone goes to read it — ten rows filled the viewport on their own, which
+ * on a page that now explains the tool above them is a screen of strangers between the
+ * instructions and everything that follows.
+ *
  * Shared so the server's first paint and the client's window refetch cannot disagree — asking
  * for a different count in each was how the table silently grew when someone changed windows.
  */
-export const LANDING_ROWS = 10;
+export const LANDING_ROWS = 5;
 
 /**
  * How old a row's newest submission has to be before the board says so.

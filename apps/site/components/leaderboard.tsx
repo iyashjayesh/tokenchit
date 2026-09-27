@@ -83,7 +83,7 @@ export function Leaderboard({ initialRows, initialWindow, featuredHandle }: {
 
   return (
     <section id="board" className={styles.section}>
-      <SectionHeading n={1} title="The board" tone="coral">
+      <SectionHeading n={2} title="The board" tone="coral">
         <span className={styles.sticker}>opt-in</span>
       </SectionHeading>
 

@@ -21,7 +21,7 @@ export const COMMANDS: Record<string, Command> = {
   generate: {
     summary: "the whole flow: detect, render the card, join the board",
     flags: [
-      ["--no-publish", "stop after writing the card"],
+      ["--no-publish", "stop after writing the card — nothing leaves your machine"],
       ["--handle <name>", "GitHub handle (default: guessed from origin remote)"],
       ["--out <path>", "where to write the card (default: tokenchit.svg)"],
       ["--theme auto|light|dark", ""],
@@ -30,6 +30,9 @@ export const COMMANDS: Record<string, Command> = {
       "One command for the three steps most people want in order. It runs `init` only when\n" +
       "there is no .tokenchit.json — re-running it would overwrite a committed file somebody\n" +
       "may have edited — then `sync`, then `publish`.\n\n" +
+      "The last of those three uploads to a public board, so at a terminal it asks first and\n" +
+      "declining still leaves you the card. Piped or scripted runs cannot be asked, so they\n" +
+      "publish as they always have: pass --no-publish to keep those local.\n\n" +
       "It is a composition, not a fourth implementation: each step is the command it is named\n" +
       "after, so running them separately does exactly the same work.",
   },

@@ -41,7 +41,7 @@ export function CardSection({ preview }: { preview: Featured }) {
 
   return (
     <section id="card" className={styles.section}>
-      <SectionHeading n={2} title="The card, up close" />
+      <SectionHeading n={3} title="The card, up close" />
 
       <p className={styles.intro}>
         SVG from the embed endpoint, shown at actual size. Default is 495 × 195;{" "}

@@ -10,7 +10,11 @@
  * runtime, and Vercel rebuilds on every push, so a bump or a rename reaches the site with the
  * deploy that carries it.
  */
-import cli from "../../../packages/cli/package.json";
+/* The `with` attribute is required by Node's ESM loader, and harmless to the bundler. Without
+   it this module is importable only through Next, which puts every value below out of reach
+   of the test suite — the values being the version, the package name and the one command the
+   whole site tells people to run. */
+import cli from "../../../packages/cli/package.json" with { type: "json" };
 
 export const CLI_VERSION: string = cli.version;
 
@@ -39,7 +43,17 @@ export const NPM_URL = `https://npmjs.com/package/${CLI_PACKAGE}`;
  * and the 404 — five places that were five separate string literals until the rename proved
  * how well that goes.
  */
-export const PRIMARY_COMMAND = `npx -y ${CLI_PACKAGE}@latest generate`;
+export const PRIMARY_COMMAND = `npx -y ${CLI_PACKAGE}@latest generate --no-publish`;
+
+/**
+ * The command that joins the board, for the places that genuinely mean publishing.
+ *
+ * Kept apart from `PRIMARY_COMMAND` on purpose. The site used to tell a first-time visitor to
+ * run `generate`, which publishes by default, two screens below a promise that publishing was
+ * "a separate step you have to ask for". The first command anyone is told to run is now the
+ * one that cannot upload; this is the one they run when they have decided to.
+ */
+export const PUBLISH_COMMAND = `npx -y ${CLI_PACKAGE}@latest publish`;
 
 /** `tokenchit sync` — the form for someone who has. */
 export const cmd = (...args: string[]) => `${CLI_BIN} ${args.join(" ")}`;

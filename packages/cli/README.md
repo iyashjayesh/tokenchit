@@ -7,6 +7,14 @@ totals them, and renders an SVG you commit to your own repo. No account, no uplo
 — the card is a file.
 
 ```bash
+npx @tokenchit/cli generate --no-publish   # detect, render tokenchit.svg, stop
+```
+
+That is the whole local flow in one command. Without `--no-publish` it goes on to offer the
+public board — at a terminal it asks first; see [Publishing is opt-in](#publishing-is-opt-in)
+for what a scripted run does. The two steps it composes are also commands of their own:
+
+```bash
 npx @tokenchit/cli init     # detect agents, write .tokenchit.json
 npx @tokenchit/cli sync     # render tokenchit.svg
 ```
@@ -36,6 +44,12 @@ file contents, and no paths — not hashed, not truncated, absent.
 ## Commands
 
 ```
+tokenchit generate        init if needed, then sync, then offer the board
+  --no-publish             stop after writing the card; nothing leaves your machine
+  --handle <name>          GitHub handle (default: guessed from your origin remote)
+  --out <path>             default: tokenchit.svg
+  --theme auto|light|dark
+
 tokenchit init            detect agents, write .tokenchit.json
   --handle <name>          GitHub handle (default: guessed from your origin remote)
 
@@ -45,6 +59,9 @@ tokenchit sync            render the card
   --theme auto|light|dark
   --json                   print the aggregate instead of writing an SVG
   --dry-run
+
+tokenchit doctor          check what is detected, readable and configured
+  --json                   machine-readable, for a CI step or an issue report
 
 tokenchit recap           year in review: heatmap, models, totals
   --out <path>             default: tokenchit-recap.svg
@@ -81,7 +98,7 @@ tokenchit unpublish       remove your row from the board, and your data with it
   --yes                    skip the confirmation prompt
   --export <path>          save everything to JSON first
 
-tokenchit publish         the only command that uploads anything
+tokenchit publish         upload to the board (`generate` ends by calling this)
   --dry-run                print the exact bytes and send nothing
   --api <url>
 
@@ -114,10 +131,17 @@ The card in your repo is a file you committed. It stays where it is; removing it
 
 ## Publishing is opt-in
 
-`sync` and `recap` are local forever. `publish` is the only command that sends anything, and
-there is deliberately no config switch to change that: `.tokenchit.json` is a committed
-file, and a committed file must never be able to cause a network call on someone else's
-machine.
+`init`, `sync`, `recap`, `ledger` and `doctor` are local forever — they do not import the
+networking module at all, which a test enforces rather than a promise. `publish` is the only
+code path that sends anything, and `generate` reaches it by ending with a call to it.
+
+So `generate` is the one command that can upload, and it asks before it does. At a terminal
+it names the board and waits for a `y`; anything else keeps the card and stops. A piped or
+scripted run has no one to ask, so it publishes as it always has — `--no-publish` is the way
+to keep those local, and it returns before any network code is even loaded.
+
+There is deliberately no config switch for this: `.tokenchit.json` is a committed file, and a
+committed file must never be able to cause a network call on someone else's machine.
 
 `--dry-run` prints the exact bytes that would be uploaded — the same string, not a rendering
 of it, which a test in this package enforces by comparing against what a real publish puts on

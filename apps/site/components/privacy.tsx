@@ -6,11 +6,11 @@ import styles from "./privacy.module.css";
 const totalMs = (tests: typeof PRIVACY_TESTS): number =>
   tests.reduce((sum, t) => sum + Number.parseInt(t.ms, 10), 0);
 
-/** Section 04 — the privacy guarantees rendered as literal `npm test` output. */
+/** Section 05 — the privacy guarantees rendered as literal `npm test` output. */
 export function Privacy() {
   return (
     <section id="privacy" className={styles.section}>
-      <SectionHeading n={4} title="Enforced by the test suite" />
+      <SectionHeading n={5} title="Enforced by the test suite" />
       <p className={styles.intro}>
         Not a policy page. These are real tests in{" "}
         <span className={styles.strong}>packages/cli/test/privacy.test.js</span>, run on every

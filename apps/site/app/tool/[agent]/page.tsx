@@ -39,9 +39,15 @@ export async function generateMetadata({
   if (!page) return {};
 
   const title = `${page.name} token usage · tokenchit`;
+  /* Scoped in the sentence itself. A meta description is the one piece of copy that is
+     read with nothing around it — it becomes a search snippet and a link preview, where the
+     paragraph that qualifies it three screens down does not travel with it. This said "no
+     account, no upload, and no hosted badge to depend on" flatly, while the same site serves
+     /api/card/<handle>.svg and ships an Action that depends on it. */
   const description =
     `Read your local ${page.name} logs and render your token usage as an SVG card you ` +
-    `commit to your repo. No account, no upload, and no hosted badge to depend on.`;
+    `commit to your repo. Reading and rendering need no account and send nothing; ` +
+    `publishing to the public board is a separate command.`;
 
   return {
     title,
@@ -111,10 +117,14 @@ export default async function ToolPage({
           <span className={styles.sourceLabel}>Source</span>
           <code className={styles.sourcePath}>{page.source}</code>
         </div>
+        {/* The scope comes before the claim, not after it. This opened "nothing is sent"
+            and narrowed to sync and recap two clauses later — by which point a skimming
+            reader has already taken the broad version, which is the one that is false. */}
         <p className={styles.note}>
-          Nothing else is read, and nothing is sent. <code>{syncCommand}</code> and{" "}
-          <code>{cmd("recap")}</code> make no network request at all; five tests in the repo
-          fail on every push if that stops being true.
+          Nothing else is read. <code>{syncCommand}</code> and <code>{cmd("recap")}</code>{" "}
+          send nothing — they make no network request at all, and five tests in the repo fail
+          on every push if that stops being true. <code>{cmd("publish")}</code> is the command
+          that uploads, and it is the only one that does.
         </p>
       </section>
 

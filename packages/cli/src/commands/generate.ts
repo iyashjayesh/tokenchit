@@ -1,4 +1,6 @@
-import { has } from "../args.js";
+import { flag, has } from "../args.js";
+import { resolveApi } from "../api.js";
+import { ask, interactive } from "../prompt.js";
 import { CONFIG_FILE, readConfig } from "../config.js";
 import { banner } from "../banner.js";
 import { bold, chip, dim, grey, rule, say, step, under, wordmark } from "../ui.js";
@@ -78,6 +80,31 @@ export async function generate(argv: string[], version: string): Promise<number>
   say(rule());
   say();
   say(step(3, total, "the board"));
+
+  /*
+   * Asked before the only step that leaves the machine.
+   *
+   * `generate` is what someone runs having read one line on a website, and until now that one
+   * line ended with their usage history on a public board. At a terminal `publish` does prompt
+   * for a sign-in, but a sign-in prompt reads as "prove who you are", not as "this is about to
+   * be published" — and declining it is an error path rather than an answer.
+   *
+   * Gated on `interactive()` — a TTY, on both stdin and stderr, and not CI — so a pipe, a cron
+   * entry or a runner keeps exactly the behaviour it had. A prompt there is a hang, not a
+   * question. Anyone automating this already chose `generate` over `sync` deliberately.
+   */
+  if (interactive()) {
+    /* No fallback string: `ask` renders one as "(N)" beside the question, which next to an
+       explicit [y/N] reads as two different defaults. Empty input returns null and declines. */
+    const answer = await ask(`Publish to the public board at ${resolveApi(flag(argv, "--api"))}? [y/N]`);
+    if (!/^y(es)?$/i.test(answer ?? "N")) {
+      say();
+      say(`  ${bold("Kept local.")} ${grey("The card is written and nothing was uploaded.")}`);
+      say(`  ${grey("Change your mind with")} ${bold("tokenchit publish")}${grey(".")}`);
+      say();
+      return 0;
+    }
+  }
 
   const published = await publish(argv, version);
   if (published !== 0) {

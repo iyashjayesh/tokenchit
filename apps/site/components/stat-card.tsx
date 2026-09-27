@@ -6,7 +6,7 @@ import styles from "./stat-card.module.css";
 /**
  * The hero's live preview card. Deliberately HTML/CSS rather than SVG: the handle is
  * live-bound to the input below it, and text injected into an <svg><text> node does
- * not lay out. The static cards in section 01 stay SVG (see lib/card-svg.ts).
+ * not lay out. The static cards in section 03 stay SVG (see lib/card-svg.ts).
  *
  * Geometry mirrors the SVG card exactly. Note the streak is not coloured here.
  *

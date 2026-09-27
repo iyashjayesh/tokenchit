@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { SiteHeader } from "@/components/site-header";
 import { Hero } from "@/components/hero";
+import { Setup } from "@/components/setup";
 import { CardSection } from "@/components/card-section";
 import { Leaderboard } from "@/components/leaderboard";
 import { DEFAULT_WINDOW } from "@/lib/board";
@@ -17,7 +18,7 @@ import { ClosingCta } from "@/components/closing-cta";
 import { SiteFooter } from "@/components/site-footer";
 
 /**
- * One page, eight blocks, all of it a server component.
+ * One page, nine blocks, all of it a server component.
  *
  * There used to be a SiteStateProvider here holding a `handle` that a hero input edited. The
  * input is gone and nothing ever called the setter again, so the state could only ever hold
@@ -37,9 +38,7 @@ export const metadata: Metadata = { alternates: { canonical: "/" } };
 export const revalidate = 300;
 
 export default async function Page() {
-  /* Ten, not the default twenty-five. This is a marketing page whose job is to show that the
-     board is real and populated; the board's own page is where someone goes to read all of it.
-     A long table here pushes every section below it off the first two screens. */
+  /* LANDING_ROWS, not the default twenty-five — see the constant for why it is five. */
   const [rows, totals] = await Promise.all([
     readBoard(DEFAULT_WINDOW, LANDING_ROWS).catch(() => []),
     /* Read for the hero. The figures already existed and only /board showed them, so the
@@ -57,10 +56,14 @@ export default async function Page() {
           no main, so there was nothing for a screen reader to skip the ticker and nav to. */}
       <main id="content">
         <Hero preview={preview} totals={totals} />
-        {/* The board above the reference material. Section 01 is a query-parameter table, two
-            SVG variants and two copyable snippets — everything a reader wants *after* they
-            have installed — and it was occupying the whole second screen, pushing the one
-            section that proves other people use this onto the third. */}
+        {/* Setup above the board, board above the reference material.
+
+            The board came first for a reason that still holds — section 03 is a
+            query-parameter table and two SVG variants, everything a reader wants *after*
+            they have installed, and it used to occupy the whole second screen. But a
+            leaderboard of strangers is not what someone who has just read the hero is
+            looking for either. What goes between them is the instructions. */}
+        <Setup />
         <Leaderboard
           initialRows={rows}
           initialWindow={DEFAULT_WINDOW}

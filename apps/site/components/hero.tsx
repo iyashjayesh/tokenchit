@@ -17,23 +17,27 @@ export function Hero({ preview, totals }: { preview: Featured; totals: BoardTota
   return (
     <section className={styles.hero}>
       <div className={styles.left}>
+        {/* "no hosted endpoint" was wrong, not merely loose: this site serves
+            /api/card/<handle>.svg, and the GitHub Action depends on it. The honest version
+            names the path this page actually recommends. */}
         <div className={styles.chips}>
-          <span className={styles.chipInk}>no hosted endpoint</span>
+          <span className={styles.chipInk}>commit your svg</span>
           <span className={styles.chipYellow}>parsed locally</span>
           <span className={styles.chipWhite}>no prompts sent</span>
         </div>
 
+        {/* Kept as an eyebrow rather than deleted. It is the line people quote, but it says
+            nothing about what the tool does, and it was the only headline a first-time
+            visitor got. */}
+        <p className={styles.eyebrow}>Receipts for your robots.</p>
+
         <h1 className={styles.h1}>
-          Receipts for
-          <br />
-          your <span className={styles.robots}>robots.</span>
+          Your AI coding usage, in a card you <span className={styles.robots}>own.</span>
         </h1>
 
         <p className={styles.lede}>
-          tokenchit reads your local Claude Code, Codex, Gemini CLI and OpenCode logs and renders one
-          embeddable card straight into your repo. The card is a file you commit, not a URL
-          you depend on — nothing to rate-limit, nothing to go down, and it keeps working if
-          this site does not.
+          See token usage from Claude Code, Codex, Gemini CLI and OpenCode on your machine.
+          Save an SVG in your repo, or choose to publish a hosted card and join the board.
         </p>
 
         <div className={styles.install}>
@@ -56,7 +60,15 @@ export function Hero({ preview, totals }: { preview: Featured; totals: BoardTota
             for the catch did not find the answer — which reads as "pricing later" rather
             than "there is none". */}
         <p className={styles.free}>
-          Free, MIT, and no account needed to read your own numbers.
+          Free and MIT · Node.js 22+ · Local stats need no account.
+        </p>
+
+        {/* The network boundary, stated where the command is rather than ten screens down.
+            Derived from what the code actually does: init and sync import no networking
+            module at all, and the payload's field list is pinned by a test. */}
+        <p className={styles.disclosure}>
+          This command sends nothing. Publishing is a separate command that sends daily
+          totals by agent and model, plus your handle — never prompts, replies or file paths.
         </p>
 
         {/* Proof that the board is a place rather than a demo. The figures already existed
@@ -67,7 +79,7 @@ export function Hero({ preview, totals }: { preview: Featured; totals: BoardTota
             Equivalent cost is deliberately not here. It was the largest number on the page
             and the one the page spends three paragraphs explaining is not real money, so a
             cold reader met the claim well before the caveat. It still leads the board and
-            section 02, where the explanation is next to it. */}
+            section 03, where the explanation is next to it. */}
         {totals && totals.developers > 0 && (
           <p className={styles.proof}>
             <Link href="/board" className={styles.proofLink}>

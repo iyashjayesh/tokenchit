@@ -1,0 +1,286 @@
+.section {
+  padding: clamp(30px, 4vw, 56px) 0;
+  border-top: 3px solid var(--ink);
+}
+
+.intro {
+  margin: 0 0 26px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  max-width: 56em;
+}
+
+.strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ── the two paths ────────────────────────────────────────────────────────── */
+
+/* Grid rather than flex: the two cards hold different amounts of text, and equal columns
+   that stay equal are the whole point of putting them side by side. Below 720px they stack
+   in source order, which puts the local path first — the one most people want. */
+.paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: clamp(18px, 2.6vw, 28px);
+  margin-bottom: clamp(32px, 4vw, 52px);
+}
+
+.pathLime,
+.pathYellow {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 20px;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+}
+
+.pathLime {
+  box-shadow: 7px 7px 0 var(--lime);
+}
+
+.pathYellow {
+  box-shadow: 7px 7px 0 var(--yellow);
+}
+
+.pathStrip {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 13px 18px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--surface-alt);
+}
+
+.pathLabel {
+  padding: 3px 7px;
+  background: var(--ink);
+  color: var(--lime);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pathTitle {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(17px, 1.8vw, 21px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.pathSummary {
+  margin: 16px 18px 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  font-weight: 600;
+}
+
+/* ── command strips ───────────────────────────────────────────────────────── */
+
+.terminal,
+.stepTerminal {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+}
+
+.terminal {
+  margin: 0 18px 18px;
+}
+
+.stepTerminal {
+  margin-top: 12px;
+}
+
+.command,
+.stepCommand {
+  /* Basis zero, as in the hero: flex breaks a line on an item's hypothetical size, so a
+     nowrap command wider than its box would put the copy button on a row of its own at every
+     viewport rather than only the narrow ones. The command scrolls inside what is left. */
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 11px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.prompt {
+  color: var(--text-faint);
+}
+
+/* ── the get / cost lists ─────────────────────────────────────────────────── */
+
+.listHead {
+  margin: 0 18px 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.list {
+  margin: 0 18px 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.list:last-of-type {
+  margin-bottom: 0;
+}
+
+.get,
+.cost {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* A mark, not a colour, carries the distinction: red-versus-green alone is invisible to the
+   most common form of colour blindness, and these two lists say opposite things. */
+.get::before,
+.cost::before {
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+.get::before {
+  content: "+";
+}
+
+.cost {
+  color: var(--text-muted);
+}
+
+.cost::before {
+  content: "−";
+  color: var(--alert);
+}
+
+/* ── the five steps ───────────────────────────────────────────────────────── */
+
+.stepsHead {
+  margin: 0 0 10px;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(19px, 2.1vw, 25px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.steps {
+  margin: 0 0 clamp(26px, 3vw, 38px);
+  padding: 0;
+  list-style: none;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 7px 7px 0 var(--grid);
+}
+
+.step {
+  padding: 18px 18px 20px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.step:last-child {
+  border-bottom: 0;
+}
+
+.stepHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.stepNum {
+  font-family: var(--font-display), sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-faint);
+}
+
+.stepVerb {
+  padding: 3px 7px;
+  background: var(--lime);
+  border: 1.5px solid var(--ink);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.stepBody {
+  margin: 0;
+  max-width: 62em;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+/* ── the two markdown snippets ────────────────────────────────────────────── */
+
+.snippets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+  gap: 16px;
+}
+
+.snippet {
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: 5px 5px 0 var(--grid);
+}
+
+.snippetStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--surface-alt);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.code {
+  display: block;
+  padding: 13px 12px;
+  font-family: inherit;
+  font-size: 11.5px;
+  line-height: 1.6;
+  /* Wrapped, not scrolled. These are long single lines whose *end* is the part that differs
+     between the two, so a horizontal scrollbar would hide exactly what the pair exists to
+     show. `anywhere` rather than `break-all` so it breaks at the slashes first. */
+  overflow-wrap: anywhere;
+}
+
+.footnote {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
