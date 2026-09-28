@@ -11,7 +11,7 @@ import styles from "./recap.module.css";
 import { cmd } from "@/lib/cli";
 
 /**
- * Section 05 — the standalone recap page preview. Server component: every figure
+ * Section 06 — the standalone recap page preview. Server component: every figure
  * is precomputed in @/lib/sample-data, so this section ships no JavaScript.
  *
  * The only inline styles are per-item data values — bar widths, ramp colours and
@@ -20,7 +20,7 @@ import { cmd } from "@/lib/cli";
 export function Recap() {
   return (
     <section id="recap" className={styles.section}>
-      <SectionHeading n={5} title="Year in review" tone="coral" />
+      <SectionHeading n={6} title="Year in review" tone="coral" />
       <p className={styles.intro}>
         <code>{cmd("recap")}</code> renders this as a second committable SVG. Same
         data, no card constraints.

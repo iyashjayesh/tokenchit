@@ -27,6 +27,9 @@
 
 .rowB {
   align-items: flex-start;
+  /* The snippets and their footnote sit above this now, and the footnote carries no bottom
+     margin of its own. */
+  margin-top: 32px;
 }
 
 .rowC {

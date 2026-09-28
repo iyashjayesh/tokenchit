@@ -149,6 +149,18 @@ export default async function BoardPage({
 
   const query = (params.q ?? "").trim();
 
+  /* What the collapsed disclosure has to say for itself. Both default to the value the page
+     loads with, so the summary reads "this year · all agents" rather than going blank when
+     nothing has been chosen. */
+  const windowLabel = WINDOWS.find((w) => w.key === window)?.label ?? window;
+  const agentLabel = agent === null
+    ? "all agents"
+    : (BOARD_AGENTS.find((a) => a.key === agent)?.label ?? agent);
+
+  /* Open when a filter is doing something, so a short list never looks like an empty board.
+     Search is not a filter here: it renders its own result panel above the table. */
+  const filtered = window !== "year" || agent !== null;
+
   const [rows, totals, found] = await Promise.all([
     readBoard(window, PER_PAGE, offset, agent).catch(() => []),
     readBoardTotals(window, agent).catch(() => null),
@@ -202,33 +214,28 @@ export default async function BoardPage({
         count over the selected window, not a skill score.
       </p>
 
+      {/* The page that asks people to join had no way to. Every other surface on the site
+          carries the command; this one carried only the name of it, in a sentence about
+          somebody else. It links rather than copies, because the useful thing here is the
+          explanation of the choice, not another terminal string. */}
+      <Link href="/#start" className={styles.getCard}>
+        Get your own card →
+      </Link>
+
       {/* Filters and search travel together and pin on scroll: on a long board the controls
           were a screen and a half behind the rows they govern. Sticky rather than a sidebar,
           because the table needs 720px of width more than the page needs a second column.
 
-          One row per axis, each named. Both sets of chips share a style, so putting eight of
-          them in a single run read as one group of eight rather than four-and-four — and with
-          an active chip in each half, two black chips in one line implied one choice had been
-          made twice. The label also stops the second row being a guess. */}
+          Search is out in the open and the two filter axes are behind a disclosure. Nine
+          chips across four wrapped lines, two labels and a search field filled two thirds of
+          a 390px screen before the first developer appeared — on the page whose entire job is
+          to show that people are on it. The summary names what is selected, so the collapsed
+          state still answers "what am I looking at", and a non-default filter renders it open
+          rather than hiding the reason the list is short.
+
+          A <details> rather than a media query: it behaves the same on every viewport and
+          needs no JavaScript, which this page still ships none of. */}
       <div className={styles.controls}>
-      <div className={styles.controlsRow}>
-      <span className={styles.filterLabel} id="filter-window">
-        window
-      </span>
-      <nav className={styles.windows} aria-labelledby="filter-window">
-        {WINDOWS.map((w) => (
-          <Link
-            key={w.key}
-            href={boardHref({ window: w.key, page: 1 })}
-            className={w.key === window ? styles.windowActive : styles.window}
-            /* The active window differed only by background colour, so which one was
-               selected was invisible to assistive tech on all three surfaces. */
-            aria-current={w.key === window ? "true" : undefined}
-          >
-            {w.label}
-          </Link>
-        ))}
-      </nav>
 
       {/* A GET form, so a search is a URL: shareable, reloadable, and back-button-able, and it
           keeps this page free of client JavaScript. Both filters ride along in hidden fields so
@@ -256,6 +263,37 @@ export default async function BoardPage({
           </Link>
         )}
       </form>
+
+      <details className={styles.filters} open={filtered}>
+        <summary className={styles.filtersSummary}>
+          <span className={styles.filtersWord}>filters</span>
+          <span className={styles.filtersState}>
+            {windowLabel} · {agentLabel}
+          </span>
+        </summary>
+
+      {/* One row per axis, each named. Both sets of chips share a style, so putting eight of
+          them in a single run read as one group of eight rather than four-and-four — and with
+          an active chip in each half, two black chips in one line implied one choice had been
+          made twice. The label also stops the second row being a guess. */}
+      <div className={styles.controlsRow}>
+      <span className={styles.filterLabel} id="filter-window">
+        window
+      </span>
+      <nav className={styles.windows} aria-labelledby="filter-window">
+        {WINDOWS.map((w) => (
+          <Link
+            key={w.key}
+            href={boardHref({ window: w.key, page: 1 })}
+            className={w.key === window ? styles.windowActive : styles.window}
+            /* The active window differed only by background colour, so which one was
+               selected was invisible to assistive tech on all three surfaces. */
+            aria-current={w.key === window ? "true" : undefined}
+          >
+            {w.label}
+          </Link>
+        ))}
+      </nav>
       </div>
 
       {/* The second axis. `user_days` has carried the agent since the first migration and every
@@ -290,6 +328,7 @@ export default async function BoardPage({
         ))}
       </nav>
       </div>
+      </details>
       </div>
 
       {found && <SearchResult found={found} window={window} query={query} />}
@@ -310,6 +349,24 @@ export default async function BoardPage({
         </div>
       )}
 
+
+      {/* The two marks, next to the rows that carry them.
+          What each one means was explained in the notes under the table — past the rows, the
+          pager and four paragraphs — so a reader met the tick roughly forty rows before the
+          sentence defining it, on the page where the distinction matters most. */}
+      {rows.length > 0 && (
+        <p className={styles.legend}>
+          <span className={styles.verified} aria-hidden="true">✓</span>
+          <span>GitHub sign-in proves the handle</span>
+          <span className={styles.legendSep} aria-hidden="true">|</span>
+          <span className={styles.unverified} aria-hidden="true">cli</span>
+          <span>self-reported, handle unproved</span>
+          <span className={styles.legendSep} aria-hidden="true">|</span>
+          <span className={styles.legendNote}>
+            Neither audits the figures — see the notes below the table.
+          </span>
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <p className={styles.empty}>

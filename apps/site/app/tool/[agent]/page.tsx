@@ -10,6 +10,7 @@ import { CopyButton } from "@/components/copy-button";
 import { AGENT_PAGES, agentPage, codeSpans, UNSUPPORTED } from "@/lib/agents";
 import { readBoard } from "@/lib/board-query";
 import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
+import { FREE_LINE, NETWORK_LINE, PUBLISH_NOTE } from "@/lib/setup";
 import { openGraphFor } from "@/lib/site";
 
 import styles from "./tool.module.css";
@@ -39,9 +40,15 @@ export async function generateMetadata({
   if (!page) return {};
 
   const title = `${page.name} token usage · tokenchit`;
+  /* Scoped in the sentence itself. A meta description is the one piece of copy that is
+     read with nothing around it — it becomes a search snippet and a link preview, where the
+     paragraph that qualifies it three screens down does not travel with it. This said "no
+     account, no upload, and no hosted badge to depend on" flatly, while the same site serves
+     /api/card/<handle>.svg and ships an Action that depends on it. */
   const description =
     `Read your local ${page.name} logs and render your token usage as an SVG card you ` +
-    `commit to your repo. No account, no upload, and no hosted badge to depend on.`;
+    `commit to your repo. Reading and rendering need no account and send nothing; ` +
+    `publishing to the public board is a separate command.`;
 
   return {
     title,
@@ -98,10 +105,10 @@ export default async function ToolPage({
           </code>
           <CopyButton value={PRIMARY_COMMAND} variant="lime" event="tool-page-command" />
         </div>
-        <p className={styles.free}>
-          Free and MIT. No account is needed to read your own numbers — publishing to the
-          board is a separate, opt-in command.
-        </p>
+        {/* The same two sentences the homepage shows, from the same constants. These two
+            surfaces had already drifted into different claims about the same command. */}
+        <p className={styles.free}>{FREE_LINE}</p>
+        <p className={styles.free}>{NETWORK_LINE}</p>
       </header>
 
       <section className={styles.section}>
@@ -111,10 +118,14 @@ export default async function ToolPage({
           <span className={styles.sourceLabel}>Source</span>
           <code className={styles.sourcePath}>{page.source}</code>
         </div>
+        {/* The scope comes before the claim, not after it. This opened "nothing is sent"
+            and narrowed to sync and recap two clauses later — by which point a skimming
+            reader has already taken the broad version, which is the one that is false. */}
         <p className={styles.note}>
-          Nothing else is read, and nothing is sent. <code>{syncCommand}</code> and{" "}
-          <code>{cmd("recap")}</code> make no network request at all; five tests in the repo
-          fail on every push if that stops being true.
+          Nothing else is read. <code>{syncCommand}</code> and <code>{cmd("recap")}</code>{" "}
+          send nothing — they make no network request at all, and five tests in the repo fail
+          on every push if that stops being true. <code>{cmd("publish")}</code> is the command
+          that uploads, and it is the only one that does.
         </p>
       </section>
 
@@ -213,8 +224,8 @@ export default async function ToolPage({
       <section className={styles.cta}>
         <h2 className={styles.ctaHeading}>Read your own numbers</h2>
         <p className={styles.body}>
-          One command. It finds your agents, shows your stats and writes the card. Publishing
-          is a separate step you have to ask for.
+          One command. It finds your agents, shows your stats and writes the card.{" "}
+          {PUBLISH_NOTE}
         </p>
         <div className={styles.cmdRow}>
           <code className={styles.cmd}>

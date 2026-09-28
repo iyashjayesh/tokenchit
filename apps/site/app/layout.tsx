@@ -32,7 +32,11 @@ export const metadata: Metadata = {
   // shared from production would advertise a localhost preview image whenever the page was
   // rendered anywhere but the live host.
   metadataBase: new URL(SITE_URL),
-  title: "tokenchit — receipts for your robots",
+  /* The title matches the h1 rather than the tagline. "Receipts for your robots" is the line
+     people quote, but a browser tab, a search result and a link preview are all places where
+     it is the *only* text, and it says nothing about what the tool does. The tagline is still
+     on the page, above the headline, where there is something around it to explain it. */
+  title: "tokenchit — your AI coding usage, in a card you own",
   description: DESCRIPTION,
 
   /*
@@ -43,14 +47,14 @@ export const metadata: Metadata = {
    * convention supplies each route's image without being named here.
    */
   openGraph: openGraphFor({
-    title: "tokenchit — receipts for your robots",
+    title: "tokenchit — your AI coding usage, in a card you own",
     description: DESCRIPTION,
   }),
   twitter: {
     // The wide format, because the image is a 1200x630 card whose figures are unreadable at
     // the small square size the default `summary` gives it.
     card: "summary_large_image",
-    title: "tokenchit — receipts for your robots",
+    title: "tokenchit — your AI coding usage, in a card you own",
     description: DESCRIPTION,
   },
 };

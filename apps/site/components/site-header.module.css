@@ -88,6 +88,10 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
+  /* It is an <a> now. Without these it inherits the global link colour and underline, which
+     on the coral fill is both the wrong colour and a failing contrast ratio. */
+  text-decoration: none;
+  white-space: nowrap;
 }
 .signIn:hover {
   box-shadow: 2px 2px 0 var(--ink);

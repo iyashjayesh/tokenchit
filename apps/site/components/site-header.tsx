@@ -1,13 +1,8 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
 
 import { GithubMark } from "./github-mark";
 import styles from "./site-header.module.css";
-import { PRIMARY_COMMAND, VERSION_LABEL } from "@/lib/cli";
-
-const LOGIN = PRIMARY_COMMAND;
+import { VERSION_LABEL } from "@/lib/cli";
 
 /*
  * One destination.
@@ -25,30 +20,21 @@ const NAV = [{ href: "/board", label: "leader board" }];
  * The header's one action.
  *
  * This was a "sign in with GitHub" button that called `setSignedIn(true)` and did nothing
- * else — it put a ✓ and a handle in the header for an account nobody had proved. On a site
- * whose whole argument is that a tick should mean something, that was the wrong thing to
- * ship, so it now hands over the command that actually establishes identity.
+ * else — it put a ✓ and a handle in the header for an account nobody had proved. It then
+ * became a button that copied a command, labelled "verify with the cli", which was wrong in
+ * both halves: the command it copied verifies nothing, and a clipboard write is not what
+ * somebody reaching for the one button in the header is asking for.
+ *
+ * It is a link now, to the section that explains the choice. That also retires this file's
+ * hand-rolled copy handler, which reported success unconditionally — `navigator.clipboard`
+ * is undefined outside a secure context, and `?.` made that look like a copy that worked.
+ * The section it points at uses `CopyButton`, which reports what actually happened.
  *
  * There is deliberately no browser session. Nothing on this site is per-user: no settings, no
  * upload form, no private page. Identity exists to stamp a row on the board, and only the CLI
  * can produce a row.
  */
 export function SiteHeader() {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
-
-  const copy = () => {
-    void navigator.clipboard?.writeText(LOGIN).catch(() => {});
-    setCopied(true);
-    if (timer.current) clearTimeout(timer.current);
-    // 1400ms, the same swap the copy buttons in the card section use.
-    timer.current = setTimeout(() => setCopied(false), 1400);
-  };
-
   return (
     <header className={styles.header}>
       {/*
@@ -80,15 +66,12 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          onClick={copy}
-          className={styles.signIn}
-          title={`Copy "${LOGIN}" — verification happens in your terminal`}
-        >
+        {/* Absolute rather than a bare hash: on /board and /u/<handle> a "#start" would
+            scroll to nothing. */}
+        <Link href="/#start" className={styles.signIn}>
           <GithubMark size={15} />
-          {copied ? "copied · run it in your terminal" : "verify with the cli"}
-        </button>
+          Get your card
+        </Link>
       </div>
     </header>
   );

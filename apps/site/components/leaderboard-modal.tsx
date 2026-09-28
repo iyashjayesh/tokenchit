@@ -30,7 +30,17 @@ const PANELS = [
 ] as const;
 
 /**
- * "Press L to see the Leaderboards" — a pinned pill, and the board in a modal.
+ * Press L for the board in a modal.
+ *
+ * This used to advertise itself with a pill fixed to the bottom-right corner, above
+ * everything. Fixed chrome on a page with no fixed chrome is a thing that sits on top of
+ * whatever you are reading, and on the landing page it covered the board's own footnote at
+ * 1280px and a table row at 390px. Worse, on a touch device it collapsed to a "Leaderboards"
+ * button duplicating a nav link two thumb-widths away, while the shortcut it existed to
+ * teach is one a phone cannot press.
+ *
+ * So the pill is gone and the shortcut stays. It is named once, quietly, in the footer, and
+ * only where there is a keyboard to press it with.
  *
  * Mounted once in the root layout rather than per page, because a keyboard shortcut that only
  * works on the landing page is a shortcut nobody learns. It is deliberately absent from
@@ -142,22 +152,6 @@ export function LeaderboardModal() {
 
   return (
     <>
-      <button
-        type="button"
-        className={styles.pill}
-        onClick={open}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        // Hidden rather than left underneath: it is the thing that opened the panel and it has
-        // nothing to say while the panel is open.
-        hidden={isOpen}
-      >
-        <span className={styles.press}>Press</span>
-        <kbd className={styles.key}>L</kbd>
-        <span className={styles.long}>to see the Leaderboards</span>
-        <span className={styles.short}>Leaderboards</span>
-      </button>
-
       <dialog
         ref={dialogRef}
         className={styles.dialog}

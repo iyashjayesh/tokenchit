@@ -92,7 +92,12 @@
   border: 2px solid var(--ink);
   box-shadow: 6px 6px 0 var(--lime);
   background: var(--surface);
-  max-width: 540px;
+  max-width: 620px;
+  /* The last resort, for a viewport too narrow even for the button. What actually keeps the
+     two on one line is `flex-basis: 0` below: flex breaks lines on an item's hypothetical
+     size, before any shrinking happens, so a command whose nowrap content is wider than the
+     column would push the button onto a second row however much it could shrink. */
+  flex-wrap: wrap;
 }
 
 .command {
@@ -103,10 +108,13 @@
   font-family: inherit;
   font-size: clamp(12.5px, 1.2vw, 15px);
   font-weight: 500;
-  flex: 1;
+  /* Basis zero, not auto: the button takes its intrinsic width and the command takes
+     whatever is left, at every viewport. It scrolls inside that, which is the affordance —
+     at 320px the old rule let the string run past the edge of the page instead. */
+  flex: 1 1 0;
   min-width: 0;
   white-space: nowrap;
-  overflow: auto;
+  overflow-x: auto;
 }
 
 .prompt {
@@ -170,10 +178,31 @@
    because it answers the question the command provokes: "and then what?" */
 /* Sits directly under the command, tighter than .proof so the two read as one block
    rather than two unrelated footnotes. */
+/* Sits above the h1 as a kicker. Small, uppercase and muted so it reads as a tagline rather
+   than competing with the headline it used to be. */
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .free {
   margin: 14px 0 0;
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* The network boundary, next to the command it describes. Same scale as .free; it is a
+   qualification of the line above rather than a new claim competing with it. */
+.disclosure {
+  margin: 6px 0 0;
+  max-width: 46em;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-faint);
 }
 
 .proof {

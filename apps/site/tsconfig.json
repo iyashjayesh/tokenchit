@@ -10,6 +10,10 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    /* So a module can be imported with its real extension. `node --experimental-strip-types`
+       resolves like Node, not like a bundler, and will not guess `.ts` — without this the
+       test suite cannot reach anything that imports another module at runtime. */
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
