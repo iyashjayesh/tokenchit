@@ -210,8 +210,9 @@ export default async function BoardPage({
           govern it are worth stating and are stated — underneath the table, where they answer
           a question the reader has by then actually formed. */}
       <p className={styles.intro}>
-        Everyone who ran <span className={styles.strong}>{cmd("publish")}</span>. A usage
-        count over the selected window, not a skill score.
+        Everyone who ran <span className={styles.strong}>{cmd("publish")}</span>, or a bare{" "}
+        <span className={styles.strong}>{cmd("generate")}</span>, which ends by calling it. A
+        usage count over the selected window, not a skill score.
       </p>
 
       {/* The page that asks people to join had no way to. Every other surface on the site

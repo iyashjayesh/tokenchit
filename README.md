@@ -81,8 +81,9 @@ repository, so the SVG has to be committed to *that* repo.
   that — GitHub serves it directly, and it keeps working if this site goes away.
 - **Nothing leaves your machine unless you ask.** `init`, `sync`, `recap`, `ledger` and
   `doctor` do not import the networking module at all — a test enforces that, rather than a
-  promise. `publish` is the only code path that uploads, `generate` reaches it only after
-  asking, and `--dry-run` prints the exact bytes.
+  promise. `publish` holds the only code that uploads; `generate` ends by calling it, asking
+  first at a terminal but not in a script, which is what `--no-publish` is for. `--dry-run`
+  prints the exact bytes.
 - **Honest about what it cannot see.** Logs get rotated, prices change, and some models have
   no public price. Where a number is incomplete, the tool says so.
 
@@ -231,9 +232,13 @@ see or undo.
 
 `sync` and `recap` make no network request at all.
 
-`publish` is the only command that uploads anything. It sends daily token totals per agent,
-model names, and your handle — never prompts, replies, file paths, branch names, or repository
+`publish` holds the only code that uploads. It sends daily token totals per agent, model
+names, and your handle — never prompts, replies, file paths, branch names, or repository
 names. `--dry-run` prints the exact bytes so you can check rather than take our word.
+
+`generate` ends by calling `publish`, so it is the one other command that can upload. At a
+terminal it names the board and waits for a `y`; a piped or scripted run has nobody to ask and
+publishes as it always has. `generate --no-publish` returns before any of that.
 
 Five tests in `packages/cli/test/privacy.test.js` enforce this on every push, including one
 that fails if any file outside `net.ts` can open a socket — across the CLI, the core engine

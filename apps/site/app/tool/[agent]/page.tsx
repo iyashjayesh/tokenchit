@@ -48,7 +48,7 @@ export async function generateMetadata({
   const description =
     `Read your local ${page.name} logs and render your token usage as an SVG card you ` +
     `commit to your repo. Reading and rendering need no account and send nothing; ` +
-    `publishing to the public board is a separate command.`;
+    `generate --no-publish is guaranteed local.`;
 
   return {
     title,
@@ -120,12 +120,18 @@ export default async function ToolPage({
         </div>
         {/* The scope comes before the claim, not after it. This opened "nothing is sent"
             and narrowed to sync and recap two clauses later — by which point a skimming
-            reader has already taken the broad version, which is the one that is false. */}
+            reader has already taken the broad version, which is the one that is false.
+
+            It then closed by calling `publish` "the only one that does", which is false in a
+            different direction: `publish` holds the only code that uploads, but `generate`
+            ends by calling it. Naming the code path is accurate; naming the command is not. */}
         <p className={styles.note}>
           Nothing else is read. <code>{syncCommand}</code> and <code>{cmd("recap")}</code>{" "}
           send nothing — they make no network request at all, and five tests in the repo fail
-          on every push if that stops being true. <code>{cmd("publish")}</code> is the command
-          that uploads, and it is the only one that does.
+          on every push if that stops being true. <code>{cmd("publish")}</code> holds the only
+          code that uploads, and <code>{cmd("generate")}</code> ends by calling it: at a
+          terminal it asks first, in a script or CI it does not. That is what{" "}
+          <code>--no-publish</code> is for.
         </p>
       </section>
 

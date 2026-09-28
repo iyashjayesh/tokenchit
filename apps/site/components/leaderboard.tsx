@@ -87,10 +87,15 @@ export function Leaderboard({ initialRows, initialWindow, featuredHandle }: {
         <span className={styles.sticker}>opt-in</span>
       </SectionHeading>
 
+      {/* "who chose to publish" was doing work the board cannot back up: a bare `generate`
+          in CI publishes without anyone choosing anything that day. Naming the commands that
+          put a row here is both shorter and true. */}
       <p className={styles.intro}>
-        Public ranking of developers who chose to publish. Run{" "}
-        <span className={styles.strong}>{cmd("publish")}</span> and you are on it. Stop
-        publishing and your row goes stale, then falls out of the window on its own.
+        Public ranking of everyone who has published. Run{" "}
+        <span className={styles.strong}>{cmd("publish")}</span> — or a bare{" "}
+        <span className={styles.strong}>{cmd("generate")}</span>, which ends by calling it —
+        and you are on it. Stop publishing and your row goes stale, then falls out of the
+        window on its own.
       </p>
 
       <div className={styles.filters}>
