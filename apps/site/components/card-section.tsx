@@ -68,31 +68,6 @@ export function CardSection({ preview }: { preview: Featured }) {
         </figure>
       </div>
 
-      <div className={styles.rowB}>
-        <figure className={styles.compactCol}>
-          <figcaption className={styles.label}>layout=compact · 340px</figcaption>
-          <div
-            className={styles.compactCard}
-            dangerouslySetInnerHTML={{ __html: compact }}
-          />
-        </figure>
-
-        <div className={styles.optionsPanel}>
-          <div className={styles.strip}>query options</div>
-          <table className={styles.table}>
-            <tbody>
-              {QUERY_OPTIONS.map((o) => (
-                <tr key={o.key}>
-                  <td className={styles.key}>{o.key}</td>
-                  <td className={styles.def}>{o.def}</td>
-                  <td className={styles.note}>{o.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       <div className={styles.rowC}>
         <div className={styles.snippet}>
           <div className={styles.snippetStrip}>
@@ -127,6 +102,35 @@ export function CardSection({ preview }: { preview: Featured }) {
         Markdown will not place two images on one line. The HTML form is the only way to
         sit cards side by side in a README, which is why the compact width exists.
       </p>
+
+      {/* The variants, after the snippet that works. This section used to run cards →
+          query-parameter table → snippets, so the two things a reader came to copy were the
+          last thing on a long page of reference material. The footnote above is what leads
+          here: it is the compact width's reason for existing. */}
+      <div className={styles.rowB}>
+        <figure className={styles.compactCol}>
+          <figcaption className={styles.label}>layout=compact · 340px</figcaption>
+          <div
+            className={styles.compactCard}
+            dangerouslySetInnerHTML={{ __html: compact }}
+          />
+        </figure>
+
+        <div className={styles.optionsPanel}>
+          <div className={styles.strip}>query options</div>
+          <table className={styles.table}>
+            <tbody>
+              {QUERY_OPTIONS.map((o) => (
+                <tr key={o.key}>
+                  <td className={styles.key}>{o.key}</td>
+                  <td className={styles.def}>{o.def}</td>
+                  <td className={styles.note}>{o.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <p className={styles.footnote}>
         <strong>Equiv. cost is not what you paid.</strong> It is what these tokens would

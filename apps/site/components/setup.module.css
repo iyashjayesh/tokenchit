@@ -241,14 +241,21 @@
 
 .snippets {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 
-.snippet {
+.snippet,
+.snippetHosted {
   border: 2px solid var(--ink);
   background: var(--surface);
   box-shadow: 5px 5px 0 var(--grid);
+}
+
+/* Yellow, matching path B's card above. The three snippets sit in one row and two of them
+   are the local path; without this the hosted one reads as a third local variant. */
+.snippetHosted {
+  box-shadow: 5px 5px 0 var(--yellow);
 }
 
 .snippetStrip {

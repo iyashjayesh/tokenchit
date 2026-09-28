@@ -1,6 +1,6 @@
 import { CopyButton } from "@/components/copy-button";
 import { SectionHeading } from "@/components/section-heading";
-import { EMBED_LOCAL, EMBED_NESTED, PATHS, STEPS } from "@/lib/setup";
+import { EMBED_HOSTED, EMBED_LOCAL, EMBED_NESTED, PATHS, STEPS } from "@/lib/setup";
 import styles from "./setup.module.css";
 
 /**
@@ -110,8 +110,12 @@ export function Setup() {
         ))}
       </ol>
 
-      {/* The two forms side by side rather than one form and a caveat. The caveat is the
-          thing people get wrong, so it gets equal weight and its own copy button. */}
+      {/* Three snippets, in the order the decision is made: the card you committed, the same
+          card from a README one directory down — the caveat gets equal weight, because it is
+          the thing people get wrong — and the hosted form for path B. Section 03 has the
+          variants, the query parameters and the two-cards-on-one-line HTML; this is the
+          shortest thing that works, which is what somebody who has just run the command is
+          looking for. */}
       <div className={styles.snippets}>
         <div className={styles.snippet}>
           <div className={styles.snippetStrip}>
@@ -139,6 +143,20 @@ export function Setup() {
             />
           </div>
           <code className={styles.code}>{EMBED_NESTED}</code>
+        </div>
+
+        <div className={styles.snippetHosted}>
+          <div className={styles.snippetStrip}>
+            <span>hosted card · after publish</span>
+            <CopyButton
+              value={EMBED_HOSTED}
+              event="embed-hosted"
+              variant="yellow"
+              idleLabel="copy"
+              copiedLabel="copied ✓"
+            />
+          </div>
+          <code className={styles.code}>{EMBED_HOSTED}</code>
         </div>
       </div>
 

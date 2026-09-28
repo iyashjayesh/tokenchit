@@ -5,6 +5,7 @@ import { agentColour } from "@tokenchit/core";
 import { CopyButton } from "@/components/copy-button";
 import { AGENT_PAGES } from "@/lib/agents";
 import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
+import { PUBLISH_NOTE } from "@/lib/setup";
 
 import styles from "./closing-cta.module.css";
 
@@ -30,9 +31,8 @@ export function ClosingCta() {
         <div className={styles.head}>
           <h2 className={styles.h2}>Read your own numbers.</h2>
           <p className={styles.lede}>
-            One command. It finds your agents, prints your stats and writes the card. Free,
-            MIT, and no account — publishing to the board is a separate step you have to ask
-            for.
+            One command. It finds your agents, prints your stats and writes the card.{" "}
+            {PUBLISH_NOTE}
           </p>
         </div>
 

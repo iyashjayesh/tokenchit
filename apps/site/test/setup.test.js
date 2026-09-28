@@ -1,11 +1,22 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { PRIMARY_COMMAND, PUBLISH_COMMAND } from "../lib/cli.ts";
-import { CARD_FILE, EMBED_LOCAL, EMBED_NESTED, PATHS, STEPS } from "../lib/setup.ts";
+import {
+  CARD_FILE,
+  EMBED_HOSTED,
+  EMBED_LOCAL,
+  EMBED_NESTED,
+  FREE_LINE,
+  NETWORK_LINE,
+  PATHS,
+  PUBLISH_NOTE,
+  STEPS,
+} from "../lib/setup.ts";
 
 /**
  * The site told visitors that "publishing to the board is a separate step you have to ask
@@ -148,6 +159,124 @@ test("section ids on the homepage are unique", async () => {
     for (const m of text.matchAll(/<section\s+id="([\w-]+)"/g)) ids.push(m[1]);
   }
   assert.deepEqual([...new Set(ids)], ids, `duplicate section id: ${ids.join(",")}`);
+});
+
+test("both embed forms are offered, local and hosted", () => {
+  /* One of each, next to each other. The section led with the local pair alone, which is the
+     path the page recommends but not the only one it documents — somebody who has just read
+     path B and gone off to publish came back to three snippets, none of them theirs. */
+  assert.ok(EMBED_HOSTED.includes("/api/card/"), "the hosted snippet must use the card endpoint");
+  assert.ok(EMBED_HOSTED.includes("/u/"), "a hosted card links back to the profile");
+  assert.ok(!EMBED_LOCAL.includes("http"), "the local snippet must not reach for a host");
+
+  const setup = readFileSync(join(SITE, "components", "setup.tsx"), "utf8");
+  for (const name of ["EMBED_LOCAL", "EMBED_NESTED", "EMBED_HOSTED"]) {
+    assert.ok(setup.includes(name), `the setup section does not show ${name}`);
+  }
+});
+
+test("every surface that shows a command shows the same claims about it", async () => {
+  /*
+   * The drift this catches, which had already happened: the hero, the tool page header, the
+   * tool page CTA and the closing CTA each wrote their own sentence about what the command
+   * sends, and one of them promised publishing was "a separate step you have to ask for"
+   * beside a command that published by default.
+   *
+   * Checked by import rather than by matching the text, because a surface that copied the
+   * sentence into its own JSX would satisfy a text match on the day it was copied and fail
+   * nobody on the day the constant changed.
+   */
+  const surfaces = [
+    [join(SITE, "components", "hero.tsx"), ["FREE_LINE", "NETWORK_LINE"]],
+    [join(SITE, "app", "tool", "[agent]", "page.tsx"), ["FREE_LINE", "NETWORK_LINE", "PUBLISH_NOTE"]],
+    [join(SITE, "components", "closing-cta.tsx"), ["PUBLISH_NOTE"]],
+  ];
+
+  for (const [file, names] of surfaces) {
+    const text = await readFile(file, "utf8");
+    assert.match(text, /from "@\/lib\/setup"/, `${file} does not import the shared copy`);
+    for (const name of names) {
+      assert.ok(text.includes(`{${name}}`), `${file} does not render ${name}`);
+    }
+  }
+});
+
+test("the shared claims say what the CLI does", () => {
+  /* Cheap, and it is the sentence a reader trusts most. `--no-publish` returns before any
+     networking module is loaded, which `packages/cli/test/generate.test.js` proves. */
+  assert.match(FREE_LINE, /Node\.js 22\+/);
+  assert.match(NETWORK_LINE, /sends nothing/);
+  assert.ok(
+    /never prompts/.test(NETWORK_LINE),
+    "the payload's exclusions are the point of the sentence",
+  );
+  assert.match(PUBLISH_NOTE, /separate command/);
+});
+
+test("nothing is pinned over the page any more", async () => {
+  /*
+   * A pill fixed to the bottom-right corner advertised the L shortcut on every page. It sat
+   * on top of the board's footnote at 1280px and a table row at 390px, and on a touch device
+   * it collapsed to a button duplicating a nav link — for a shortcut a phone cannot press.
+   *
+   * The shortcut still works; only the thing covering the page is gone.
+   */
+  const modal = await readFile(join(SITE, "components", "leaderboard-modal.tsx"), "utf8");
+  assert.ok(!modal.includes("styles.pill"), "the fixed pill is back");
+  assert.match(modal, /addEventListener\("keydown"/, "the shortcut itself must survive");
+
+  const modalCss = await readFile(join(SITE, "components", "leaderboard-modal.module.css"), "utf8");
+  assert.ok(!/position:\s*fixed/.test(modalCss), "the modal must pin nothing to the viewport");
+
+  const footer = await readFile(join(SITE, "components", "site-footer.tsx"), "utf8");
+  assert.match(footer, /press <kbd[^>]*>L<\/kbd>/, "a shortcut nothing names is a shortcut nobody has");
+});
+
+test("the board page offers a way onto the board", async () => {
+  /* It asked people to publish and gave them nowhere to go. Every other surface carries the
+     command; this one named it inside a sentence about other people. */
+  const board = await readFile(join(SITE, "app", "board", "page.tsx"), "utf8");
+  assert.match(board, /href="\/#start"/, "the board does not link to the setup section");
+
+  const setup = await readFile(join(SITE, "components", "setup.tsx"), "utf8");
+  assert.ok(setup.includes('id="start"'), 'nothing renders id="start"');
+});
+
+test("the board's filters collapse but always say what is selected", async () => {
+  /*
+   * Nine chips over four wrapped lines filled two thirds of a 390px screen before the first
+   * developer appeared — on the page whose whole job is to show that people are on it.
+   *
+   * The disclosure is only acceptable because the collapsed summary names the active window
+   * and agent, and because a non-default filter renders it open rather than leaving a short
+   * list looking like an empty board.
+   */
+  const board = await readFile(join(SITE, "app", "board", "page.tsx"), "utf8");
+  assert.match(board, /<details[^>]*open=\{filtered\}/, "the filters are not a disclosure");
+  assert.match(board, /\{windowLabel\} · \{agentLabel\}/, "the summary does not name the selection");
+  assert.match(
+    board,
+    /const filtered = window !== "year" \|\| agent !== null;/,
+    "an active filter must open the disclosure",
+  );
+  /* Search stays out in the open: it is the control people arrive wanting. */
+  const searchAt = board.indexOf('role="search"');
+  /* The element, not the prose: a comment above the form explains why this is a <details>,
+     and matching on the bare tag found that sentence instead. */
+  const detailsAt = board.indexOf("<details className=");
+  assert.ok(searchAt > 0 && searchAt < detailsAt, "search must not be inside the disclosure");
+});
+
+test("the two board marks are explained beside the rows that carry them", async () => {
+  /* They were defined in the notes under the table — past the rows, the pager and four
+     paragraphs — so a reader met the tick about forty rows before the sentence defining it. */
+  const board = await readFile(join(SITE, "app", "board", "page.tsx"), "utf8");
+  const legendAt = board.indexOf("styles.legend");
+  const tableAt = board.indexOf("styles.tableWrap");
+  assert.ok(legendAt > 0, "the board has no mark legend");
+  assert.ok(legendAt < tableAt, "the legend must come before the table, not after it");
+  assert.match(board, /GitHub sign-in proves the handle/);
+  assert.match(board, /self-reported, handle unproved/);
 });
 
 async function* walk(dir) {

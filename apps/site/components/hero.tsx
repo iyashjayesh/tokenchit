@@ -8,6 +8,7 @@ import type { Featured } from "@/lib/featured";
 import { StatCard } from "./stat-card";
 import styles from "./hero.module.css";
 import { PRIMARY_COMMAND } from "@/lib/cli";
+import { FREE_LINE, NETWORK_LINE } from "@/lib/setup";
 
 // Scoped, because the bare `tokenchit` name on npm is a 2018 tombstone: it was published
 // and unpublished within a fortnight, and npm never lets an unpublished name be reused.
@@ -59,17 +60,12 @@ export function Hero({ preview, totals }: { preview: Featured; totals: BoardTota
             header and the footer, but that is a licence, not a price, and a reader scanning
             for the catch did not find the answer — which reads as "pricing later" rather
             than "there is none". */}
-        <p className={styles.free}>
-          Free and MIT · Node.js 22+ · Local stats need no account.
-        </p>
+        <p className={styles.free}>{FREE_LINE}</p>
 
         {/* The network boundary, stated where the command is rather than ten screens down.
             Derived from what the code actually does: init and sync import no networking
             module at all, and the payload's field list is pinned by a test. */}
-        <p className={styles.disclosure}>
-          This command sends nothing. Publishing is a separate command that sends daily
-          totals by agent and model, plus your handle — never prompts, replies or file paths.
-        </p>
+        <p className={styles.disclosure}>{NETWORK_LINE}</p>
 
         {/* Proof that the board is a place rather than a demo. The figures already existed
             and only /board showed them, so the page invited people to join something whose

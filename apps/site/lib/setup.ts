@@ -41,6 +41,37 @@ export const EMBED_HOSTED =
   `[![tokenchit — @${PLACEHOLDER_HANDLE} AI coding agent usage]` +
   `(${SITE_URL}/api/card/${PLACEHOLDER_HANDLE}.svg)](${SITE_URL}/u/${PLACEHOLDER_HANDLE})`;
 
+/*
+ * The three sentences every surface that shows a command has to get right.
+ *
+ * The hero, the tool page header, the tool page CTA and the closing CTA each wrote their own
+ * version of these, and they had already drifted: one said publishing was "a separate step
+ * you have to ask for" while the command beside it published by default. The command itself
+ * has been a shared constant since the tokenstats rename taught that lesson; the claims
+ * around it had not caught up.
+ *
+ * Shared as strings rather than as a component because the four surfaces are styled quite
+ * differently — the hero has a typing cursor and a hard shadow, the tool pages do not — and
+ * what drifts is the wording, not the markup.
+ */
+
+/** The price, the requirement and the account question, in the order people ask them. */
+export const FREE_LINE = "Free and MIT · Node.js 22+ · Local stats need no account.";
+
+/**
+ * The network boundary, stated beside the command rather than ten screens below it.
+ *
+ * Every clause is checkable: the `--no-publish` path imports no networking module, and the
+ * payload's field list is pinned by `packages/cli/test/privacy.test.js`.
+ */
+export const NETWORK_LINE =
+  "This command sends nothing. Publishing is a separate command that sends daily totals by " +
+  "agent and model, plus your handle — never prompts, replies or file paths.";
+
+/** The short form, for a CTA that has already said what the command does. */
+export const PUBLISH_NOTE =
+  "Publishing to the board is a separate command, and this one cannot reach it.";
+
 export type Step = {
   verb: string;
   title: string;

@@ -536,19 +536,15 @@
   margin-bottom: 0;
 }
 
-/* Pushed to the far edge when there is room; the wrap below drops it onto its own line before
-   the two ever collide. */
+/* Left-aligned, on its own row. The auto margin that used to push it to the far edge was
+   there to close a gap beside the window chips it shared a line with; those chips are behind
+   a disclosure now, so the same rule left a whole empty half-row instead. */
 .controls .search {
   flex: 0 0 auto;
-  margin-left: auto;
 }
 
-/* Narrow enough that the four window buttons and a usable field cannot share a line, so stop
-   pretending and let the search have its own — full width and left-aligned, rather than
-   stranded against the right edge with the gap the auto margin leaves behind. */
 @media (max-width: 860px) {
   .controls .search {
-    margin-left: 0;
     width: 100%;
   }
 
@@ -668,3 +664,124 @@
 }
 
 
+
+/* ── Get your own card, and the mark legend ─────────────────────────────────── */
+
+/* The one way onto the board, on the page that describes it. Sized as a real target rather
+   than an inline link: it is the only action on a page that is otherwise all reading. */
+.getCard {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 18px;
+  padding: 11px 16px;
+  min-height: 44px;
+  background: var(--lime);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.getCard:hover {
+  box-shadow: 2px 2px 0 var(--ink);
+  transform: translate(2px, 2px);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 0 0 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* Three statements on one line need something between them, or they read as one sentence
+   that has lost its punctuation. Its own element rather than a ::before, so it wraps as a
+   unit instead of stranding a mark at the start of a line. */
+.legendSep {
+  color: var(--hairline);
+}
+
+.legendNote {
+  color: var(--text-faint);
+}
+
+/* ── The filter disclosure ─────────────────────────────────────────────────── */
+
+.filters {
+  border-top: 1.5px solid var(--hairline);
+  padding-top: 8px;
+}
+
+/* The marker is the caret the browser draws; only the layout is ours. 44px tall, because on
+   a phone this is now the control that reaches the filters at all. */
+.filtersSummary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* `display: flex` on a <summary> drops the browser's own triangle, so the affordance has to
+   be drawn back. Without it this reads as a label, not a control — which on a phone is now
+   the only route to the filters at all. */
+.filtersSummary::-webkit-details-marker {
+  display: none;
+}
+
+.filtersSummary::after {
+  content: "▾";
+  font-size: 11px;
+  color: var(--ink);
+  transition: transform 120ms ease;
+}
+
+.filters[open] > .filtersSummary::after {
+  transform: rotate(180deg);
+}
+
+.filtersSummary:hover .filtersState {
+  background: var(--lime);
+}
+
+/* Carries the answer the collapsed state would otherwise hide: which window and which agent
+   the table below is showing. */
+.filtersState {
+  padding: 3px 7px;
+  border: 1.5px solid var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+
+.filters[open] > .filtersSummary {
+  margin-bottom: 8px;
+}
+
+/* Tighter chips once opened on a phone: four to a line instead of three, which is the
+   difference between two wrapped rows per axis and four. */
+@media (max-width: 640px) {
+  .window,
+  .windowActive {
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+
+  .filterLabel {
+    width: auto;
+  }
+}

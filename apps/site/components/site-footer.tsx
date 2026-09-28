@@ -18,6 +18,14 @@ export function SiteFooter() {
             </a>
           ))}
         </div>
+        {/* Names the shortcut that used to name itself from a pill fixed over the corner of
+            every page. The listener lives in LeaderboardModal, mounted in the root layout,
+            so this is a label rather than a control — which is why it is not a button. */}
+        <div className={styles.legal}>
+          <span className={styles.shortcut}>
+            press <kbd className={styles.key}>L</kbd> for the leaderboards
+          </span>
+        </div>
         <div className={styles.legal}>MIT License · © 2026 tokenchit contributors</div>
       </div>
     </footer>

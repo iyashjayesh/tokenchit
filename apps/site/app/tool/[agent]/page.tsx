@@ -10,6 +10,7 @@ import { CopyButton } from "@/components/copy-button";
 import { AGENT_PAGES, agentPage, codeSpans, UNSUPPORTED } from "@/lib/agents";
 import { readBoard } from "@/lib/board-query";
 import { cmd, PRIMARY_COMMAND } from "@/lib/cli";
+import { FREE_LINE, NETWORK_LINE, PUBLISH_NOTE } from "@/lib/setup";
 import { openGraphFor } from "@/lib/site";
 
 import styles from "./tool.module.css";
@@ -104,10 +105,10 @@ export default async function ToolPage({
           </code>
           <CopyButton value={PRIMARY_COMMAND} variant="lime" event="tool-page-command" />
         </div>
-        <p className={styles.free}>
-          Free and MIT. No account is needed to read your own numbers — publishing to the
-          board is a separate, opt-in command.
-        </p>
+        {/* The same two sentences the homepage shows, from the same constants. These two
+            surfaces had already drifted into different claims about the same command. */}
+        <p className={styles.free}>{FREE_LINE}</p>
+        <p className={styles.free}>{NETWORK_LINE}</p>
       </header>
 
       <section className={styles.section}>
@@ -223,8 +224,8 @@ export default async function ToolPage({
       <section className={styles.cta}>
         <h2 className={styles.ctaHeading}>Read your own numbers</h2>
         <p className={styles.body}>
-          One command. It finds your agents, shows your stats and writes the card. Publishing
-          is a separate step you have to ask for.
+          One command. It finds your agents, shows your stats and writes the card.{" "}
+          {PUBLISH_NOTE}
         </p>
         <div className={styles.cmdRow}>
           <code className={styles.cmd}>
