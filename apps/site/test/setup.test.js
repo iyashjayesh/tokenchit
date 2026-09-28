@@ -201,6 +201,63 @@ test("every surface that shows a command shows the same claims about it", async 
   }
 });
 
+test("no page claims that generate cannot publish", async () => {
+  /*
+   * The overclaim this exists to stop, which shipped and had to be walked back.
+   *
+   * `generate --no-publish` is guaranteed local, and the site is right to say so. But the
+   * copy generalised from the flag to the command: "publishing is a different command you
+   * run when you have decided to, and never a side effect of one you have already run", and
+   * on the tool pages "`publish` ... is the only one that does".
+   *
+   * Both are true at a terminal and false everywhere else. `generate` ends by calling
+   * `publish`; the confirmation is gated on `interactive()`, so a pipe, a cron job or a CI
+   * step uploads without asking. A reader who took the site at its word and put bare
+   * `generate` in a workflow published their usage believing it could not.
+   *
+   * Phrases, not semantics — a regex cannot read. These are the exact shapes that were
+   * wrong, so reintroducing any of them fails here.
+   */
+  const FORBIDDEN = [
+    /never a side effect/i,
+    /\bis the only command that uploads\b/i,
+    /and it is the only one that does/i,
+    /publishing is a (?:different|separate) command\b/i,
+  ];
+
+  const offenders = [];
+  for (const dir of ["app", "components", "lib"]) {
+    for await (const file of walk(join(SITE, dir))) {
+      if (!/\.tsx?$/.test(file)) continue;
+      const text = await readFile(file, "utf8");
+      /* Block comments are where the old wording is quoted to explain the fix, which is the
+         one place it should still appear. */
+      const prose = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+      for (const pattern of FORBIDDEN) {
+        const hit = pattern.exec(prose);
+        if (hit) offenders.push(`${file.slice(REPO.length + 1)}: "${hit[0]}"`);
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    "scope the guarantee to --no-publish; bare generate publishes in CI",
+  );
+});
+
+test("the claims name the flag, not just the command", () => {
+  /* The positive half of the test above. Saying less is not the fix — a reader still has to
+     learn that the flag is what makes the run local, or they will drop it. */
+  assert.match(NETWORK_LINE, /--no-publish/, "the guarantee must attach to the flag");
+  assert.match(
+    NETWORK_LINE,
+    /script|CI/i,
+    "the exception is the part a reader needs before writing a workflow",
+  );
+  assert.match(PUBLISH_NOTE, /script|CI/i);
+});
+
 test("the shared claims say what the CLI does", () => {
   /* Cheap, and it is the sentence a reader trusts most. `--no-publish` returns before any
      networking module is loaded, which `packages/cli/test/generate.test.js` proves. */
@@ -210,7 +267,10 @@ test("the shared claims say what the CLI does", () => {
     /never prompts/.test(NETWORK_LINE),
     "the payload's exclusions are the point of the sentence",
   );
-  assert.match(PUBLISH_NOTE, /separate command/);
+  /* Was /separate command/, which pinned the overclaim itself: it passed for the whole time
+     the site was telling people bare `generate` could not publish. What the line has to do is
+     scope the promise to the command it sits beside. */
+  assert.match(PUBLISH_NOTE, /cannot publish/i);
 });
 
 test("nothing is pinned over the page any more", async () => {

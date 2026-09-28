@@ -61,16 +61,30 @@ export const FREE_LINE = "Free and MIT · Node.js 22+ · Local stats need no acc
 /**
  * The network boundary, stated beside the command rather than ten screens below it.
  *
- * Every clause is checkable: the `--no-publish` path imports no networking module, and the
- * payload's field list is pinned by `packages/cli/test/privacy.test.js`.
+ * Scoped to *this* command, because that is the only thing the site can promise. The first
+ * half is checkable — the `--no-publish` path imports no networking module and the payload's
+ * fields are pinned by `packages/cli/test/privacy.test.js` — but the previous wording went on
+ * to say publishing was "a separate command", which is true at a terminal and false in a
+ * pipe. Bare `generate` ends by calling `publish`; the confirmation that makes it a choice is
+ * gated on `interactive()`, and a script has nobody to ask.
+ *
+ * So the guarantee attaches to the flag, not to the command name.
  */
 export const NETWORK_LINE =
-  "This command sends nothing. Publishing is a separate command that sends daily totals by " +
-  "agent and model, plus your handle — never prompts, replies or file paths.";
+  "This command sends nothing: --no-publish returns before any networking code loads. Bare " +
+  "generate ends by publishing — at a terminal it asks first, in a script or CI it does not. " +
+  "Publishing sends daily totals by agent and model, plus your handle, and never prompts, " +
+  "replies or file paths.";
 
-/** The short form, for a CTA that has already said what the command does. */
+/**
+ * The short form, for a CTA that has already said what the command does.
+ *
+ * Position-neutral: it renders above the command row in the closing CTA and above it again on
+ * the tool pages, so it says "the command shown" rather than pointing up or down at it.
+ */
 export const PUBLISH_NOTE =
-  "Publishing to the board is a separate command, and this one cannot reach it.";
+  "The command shown cannot publish. Bare generate can, and in a script or CI it does so " +
+  "without asking, so keep the flag for a guaranteed local run.";
 
 export type Step = {
   verb: string;

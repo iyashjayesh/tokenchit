@@ -20,10 +20,17 @@ export function Setup() {
     <section id="start" className={styles.section}>
       <SectionHeading n={1} title="Two ways to use it" />
 
+      {/* Scoped to the command this page shows, which is the only thing it can promise.
+          This used to say publishing was "never a side effect of one you have already run" —
+          true at a terminal, false in a pipe. `generate` ends by calling `publish`, and the
+          confirmation that makes it a choice is gated on `interactive()`. */}
       <p className={styles.intro}>
         Everything below the first command is optional. Reading your logs and rendering a card
-        happen entirely on your machine; publishing is a different command you run when you
-        have decided to, and never a side effect of one you have already run.
+        happen entirely on your machine, and{" "}
+        <span className={styles.strong}>--no-publish</span> guarantees that is all that
+        happens. Bare <span className={styles.strong}>generate</span> finishes by publishing:
+        at a terminal it asks first, but a script or a CI job has nobody to ask, so it
+        uploads. Keep the flag and the choice stays yours.
       </p>
 
       <div className={styles.paths}>
