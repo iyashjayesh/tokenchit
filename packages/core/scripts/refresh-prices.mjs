@@ -9,7 +9,7 @@
  *
  *   node packages/core/scripts/refresh-prices.mjs
  */
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -30,11 +30,51 @@ const PROVIDERS = new Set([
 
 const perMillion = (n) => (typeof n === "number" ? Math.round(n * 1e6 * 1e6) / 1e6 : 0);
 
+/**
+ * Long-prompt tiers, from LiteLLM's `*_above_<N>k_tokens` fields.
+ *
+ * Only the standard-rate fields: the `_batches`, `_priority`, `_flex` variants and the
+ * 1-hour cache write (`_above_1hr_above_<N>k_tokens`) describe ways of buying that the
+ * transcripts cannot tell apart, so they are not read — the same reason the base rates
+ * ignore them. Dropping these fields used to flatten Claude Haiku 5.5 to its cheap tier and
+ * understate every long prompt fivefold. A field a tier leaves out keeps its base rate.
+ */
+const TIER_FIELD =
+  /^(input_cost_per_token|output_cost_per_token|cache_creation_input_token_cost|cache_read_input_token_cost)_above_(\d+)k_tokens$/;
+const TIER_KEY = {
+  input_cost_per_token: "input",
+  output_cost_per_token: "output",
+  cache_creation_input_token_cost: "cacheWrite",
+  cache_read_input_token_cost: "cacheRead",
+};
+
+function tiersOf(spec, base) {
+  const byThreshold = new Map();
+  for (const [field, value] of Object.entries(spec)) {
+    const m = TIER_FIELD.exec(field);
+    if (!m || typeof value !== "number") continue;
+    const above = Number(m[2]) * 1000;
+    const tier = byThreshold.get(above) ?? { above, ...base };
+    tier[TIER_KEY[m[1]]] = perMillion(value);
+    byThreshold.set(above, tier);
+  }
+  return [...byThreshold.values()].sort((a, b) => a.above - b.above);
+}
+
 const res = await fetch(SOURCE);
 if (!res.ok) throw new Error(`${SOURCE} responded ${res.status}`);
 const raw = await res.json();
 
-const prices = {};
+const target = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "prices.json");
+
+/*
+ * Start from the table already vendored, so a model LiteLLM stops listing keeps its last
+ * known price. Retired models vanish from the upstream map, but transcripts that name them
+ * stay on disk for years, and dropping the row would quietly turn that history unpriced.
+ * The 2026-10 refresh would have removed 83 rows this way, `claude-opus-4-1` among them.
+ */
+const previous = JSON.parse(await readFile(target, "utf8")).prices;
+const fresh = {};
 for (const [model, spec] of Object.entries(raw)) {
   if (model === "sample_spec" || typeof spec !== "object" || spec === null) continue;
   if (spec.mode !== "chat" || !PROVIDERS.has(spec.litellm_provider)) continue;
@@ -43,15 +83,20 @@ for (const [model, spec] of Object.entries(raw)) {
   // Strip the provider prefix LiteLLM uses for routing ("anthropic/claude-opus-5"); agents
   // log the bare model id.
   const id = model.includes("/") ? model.slice(model.lastIndexOf("/") + 1) : model;
-  if (prices[id]) continue;
+  if (fresh[id]) continue;
 
-  prices[id] = {
+  const base = {
     input: perMillion(spec.input_cost_per_token),
     output: perMillion(spec.output_cost_per_token),
     cacheWrite: perMillion(spec.cache_creation_input_token_cost ?? spec.input_cost_per_token),
     cacheRead: perMillion(spec.cache_read_input_token_cost ?? spec.input_cost_per_token),
   };
+  const tiers = tiersOf(spec, base);
+  fresh[id] = tiers.length ? { ...base, tiers } : base;
 }
+
+const prices = { ...previous, ...fresh };
+const kept = Object.keys(previous).filter((id) => !fresh[id]).length;
 
 const out = {
   $comment:
@@ -61,6 +106,7 @@ const out = {
   prices: Object.fromEntries(Object.entries(prices).sort(([a], [b]) => a.localeCompare(b))),
 };
 
-const target = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "prices.json");
 await writeFile(target, `${JSON.stringify(out, null, 2)}\n`);
-console.log(`wrote ${Object.keys(prices).length} models to ${target}`);
+console.log(
+  `wrote ${Object.keys(prices).length} models to ${target} (${kept} kept from the previous table)`,
+);
