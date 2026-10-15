@@ -1,13 +1,28 @@
 import table from "./prices.json" with { type: "json" };
 
-import type { UsageEvent } from "./types.js";
+import { precisionOf, type UsageEvent } from "./types.js";
 
-export type Price = {
+export type Rates = {
   /** USD per million tokens. */
   input: number;
   output: number;
   cacheWrite: number;
   cacheRead: number;
+};
+
+/**
+ * Rates that replace the base ones for a request whose prompt is longer than `above` tokens.
+ *
+ * The prompt is every input token the request sent — uncached, cache reads and cache writes
+ * alike — and a request over the line pays the higher rates on all of it, output included.
+ * Claude Haiku 5.5 is $0.10/$0.50 up to 100,000 prompt tokens and $0.50/$2.50 above, so a
+ * 100,001-token request costs five times what a 100,000-token one does per token.
+ */
+export type Tier = Rates & { above: number };
+
+export type Price = Rates & {
+  /** Ascending by `above`. Absent for the many models priced the same at any length. */
+  tiers?: Tier[];
 };
 
 const PRICES = table.prices as Record<string, Price>;
@@ -43,6 +58,24 @@ export function priceOf(model: string): Price | null {
 }
 
 /**
+ * The rates one request pays, given how long its prompt was.
+ *
+ * Only an event that *is* one request can choose a tier. Codex reports a whole rollout as one
+ * event and a ledger replay reports a whole day, and their prompt sums say nothing about any
+ * single request in them — a day of 50,000-token prompts would add up to millions and be
+ * priced as if every one had crossed the line. Those pay the base rates, which can understate
+ * a long-prompt day but never invent one.
+ */
+export function ratesFor(price: Price, event: UsageEvent): Rates {
+  if (!price.tiers || precisionOf(event) !== "exact") return price;
+
+  const prompt = event.input + event.cacheRead + event.cacheWrite;
+  let rates: Rates = price;
+  for (const tier of price.tiers) if (prompt > tier.above) rates = tier;
+  return rates;
+}
+
+/**
  * What one exchange would have cost at list API rates.
  *
  * Deliberately *not* called "spend". Most tokens read by this tool were spent under a
@@ -52,9 +85,10 @@ export function priceOf(model: string): Price | null {
  * treat it as free.
  */
 export function costOf(event: UsageEvent): number | null {
-  const p = priceOf(event.model);
-  if (!p) return null;
+  const price = priceOf(event.model);
+  if (!price) return null;
 
+  const p = ratesFor(price, event);
   return (
     (event.input * p.input +
       event.output * p.output +
