@@ -297,8 +297,9 @@ sits in the gap between codex and opencode; `#8AB4F8` (dark, 0.448) is 0.162 cle
 
 ### Limitations
 
-- Gemini models are **unpriced** — `prices.json` has no entry, so they contribute tokens and no
-  cost. That is the designed behaviour for an unknown model, not a gap to paper over.
+- Gemini models are priced from the same vendored table as every other agent, long-prompt tier
+  included. An id the table does not know contributes tokens and no cost — the designed
+  behaviour for an unknown model, not a gap to paper over.
 - `thoughts` and `tool` are folded into `output`. A pricing table distinguishing reasoning rates
   would want them separate.
 - A turn with no `id` cannot be deduplicated and is kept under a synthetic key: losing real usage

@@ -34,7 +34,7 @@ export const PRICES_GENERATED: string = table.$generated;
  * Look up a model, tolerating the decorations providers add around a base id.
  *
  * Agents log whatever the provider returned, which may carry a routing prefix
- * (`anthropic/`), a region prefix (`us.`), a deployment suffix (`-v1:0`) or a snapshot date
+ * (`anthropic/`), a region and vendor prefix (`us.anthropic.`), a deployment suffix (`-v1:0`) or a snapshot date
  * (`-20260514`). Returns null for anything still unrecognised — including OpenCode's
  * bundled aliases like `big-pickle`, which have no public price at all.
  */
@@ -43,7 +43,8 @@ export function priceOf(model: string): Price | null {
 
   const bare = model.includes("/") ? model.slice(model.lastIndexOf("/") + 1) : model;
   candidates.push(bare);
-  candidates.push(bare.replace(/^(us|eu|apac|global)\./, ""));
+  // Bedrock ids put the vendor after the region: `us.anthropic.claude-opus-5-5-v1:0`.
+  candidates.push(bare.replace(/^(us|eu|apac|global)\./, "").replace(/^anthropic\./, ""));
 
   const last = candidates[candidates.length - 1] as string;
   candidates.push(last.replace(/-v\d+:\d+$/, ""));

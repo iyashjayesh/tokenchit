@@ -24,6 +24,12 @@ test("the 5.5 generation is priced", () => {
   assert.equal(priceOf("claude-haiku-5-5")?.input, 0.1);
 });
 
+test("Bedrock ids resolve past their region and vendor prefix", () => {
+  assert.equal(priceOf("us.anthropic.claude-opus-5-5")?.input, 4);
+  assert.equal(priceOf("anthropic.claude-haiku-5-5")?.input, 0.1);
+  assert.equal(priceOf("us.anthropic.claude-3-7-sonnet-20250219-v1:0")?.input, 3);
+});
+
 test("a prompt of exactly 100,000 tokens stays on Haiku 5.5's base rate", () => {
   const cost = costOf(event({ input: 100_000, output: 1_000 }));
   assert.equal(usd(cost), usd((100_000 * 0.1 + 1_000 * 0.5) / 1e6));
