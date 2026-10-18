@@ -157,6 +157,22 @@ export async function publish(argv: string[], version: string): Promise<number> 
     say();
   }
 
+  /* The row is replaced by each publish, so two machines publishing separately each erase the
+     other (#76). The server measures what this one dropped; the merge itself belongs here, by
+     session, where it can tell two machines' work from one machine's work copied twice. */
+  const dropped = res.body?.dropped as { days?: unknown; tokens?: unknown } | null | undefined;
+  if (dropped && typeof dropped.days === "number" && typeof dropped.tokens === "number") {
+    warn(
+      `This publish dropped ${formatTokens(dropped.tokens)} tokens across ${dropped.days} ` +
+        `${dropped.days === 1 ? "day" : "days"} that your previous one included.`,
+    );
+    say(dim("  If that history is on another machine, merge it here and publish again:"));
+    say(`    ${grey("there")}  tokenchit ledger --export tokenchit-ledger.json`);
+    say(`    ${grey("here")}   tokenchit ledger --import tokenchit-ledger.json --apply`);
+    say(dim("  If you rebuilt your ledger on purpose, nothing is wrong."));
+    say();
+  }
+
   // The point of publishing. Printed last, because this is what someone actually wants out
   // of the command, and printed as full URLs so they survive a copy out of scrollback.
   const profile = `${api}/u/${payload.handle}`;
