@@ -143,6 +143,11 @@ reading, and different sessions add. History banked before this version carries 
 identity, so it is kept and reported but never added — nothing in an aggregate distinguishes
 independent work from a duplicate.
 
+Your board row is whatever the last `publish` sent, so if you use more than one machine, merge
+first and publish from the machine holding the merged history. Publishing from two machines
+separately means each replaces the other. When a publish drops history the previous one
+included, `publish` says how much and how to merge it.
+
 > **Upgrading migrates the ledger, and going back a version is not safe.**
 > An older tokenchit reads the new format as unrecognised, falls back to an empty bank and
 > rewrites it from whatever logs are still on disk. Upgrading itself is lossless and the CLI

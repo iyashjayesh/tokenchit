@@ -174,26 +174,53 @@ export async function POST(req: Request) {
          nothing back — but guarding the write while the flag was still recomputed left a
          worse hole: a flagged series survived an unflagged empty submission and returned to
          the board. Rejecting the shape fixes both ends. */
+      const days = JSON.stringify(
+        payload.days.map((d) => ({
+          day: d.day,
+          agent: d.agent,
+          tokens: d.tokens,
+          cost: d.equivCostUsd,
+        })),
+      );
+
+      /*
+       * What the replacement is about to throw away, measured before it does.
+       *
+       * Wholesale replacement is right for one machine, whose ledger only ever grows. It is
+       * silently wrong for two: each publishes its own history, and the last one wins (#76).
+       * Summing per device is not the answer — a device is not evidence of distinct work, see
+       * packages/core/src/ledger.ts — so the merge stays on the client, by session, and the
+       * server's job is to say when a publish is dropping history so the owner can merge it.
+       *
+       * Per (day, agent) cell rather than on the headline: a second machine with more usage
+       * than the first raises the total while still discarding every token the first one
+       * sent. And no device id is needed — two machines that have already merged their ledgers
+       * each cover everything the other published, so neither trips this.
+       */
+      const { rows: droppedRows } = await client.query<{ days: number; tokens: string }>(
+        `SELECT count(DISTINCT d.day)::int AS days,
+                coalesce(sum(d.tokens - coalesce(n.tokens, 0)), 0)::bigint AS tokens
+         FROM user_days d
+         LEFT JOIN jsonb_to_recordset($2::jsonb) AS n(day text, agent text, tokens bigint)
+                ON n.day::date = d.day AND n.agent = d.agent
+         WHERE d.user_id = $1 AND d.tokens > coalesce(n.tokens, 0)`,
+        [user.id, days],
+      );
+      const dropped =
+        droppedRows[0] && droppedRows[0].days > 0
+          ? { days: droppedRows[0].days, tokens: Number(droppedRows[0].tokens) }
+          : null;
+
       await client.query("DELETE FROM user_days WHERE user_id = $1", [user.id]);
       await client.query(
         `INSERT INTO user_days (user_id, day, agent, tokens, cost_usd)
          SELECT $1, d.day::date, d.agent, d.tokens::bigint, d.cost::numeric
          FROM jsonb_to_recordset($2::jsonb)
               AS d(day text, agent text, tokens bigint, cost numeric)`,
-        [
-          user.id,
-          JSON.stringify(
-            payload.days.map((d) => ({
-              day: d.day,
-              agent: d.agent,
-              tokens: d.tokens,
-              cost: d.equivCostUsd,
-            })),
-          ),
-        ],
+        [user.id, days],
       );
 
-      return { submissionId: subRows[0]!.id, tier: user.tier, review };
+      return { submissionId: subRows[0]!.id, tier: user.tier, review, dropped };
     });
 
     return NextResponse.json(
@@ -208,6 +235,9 @@ export async function POST(req: Request) {
         // bug to its owner, and someone whose real usage tripped the threshold deserves to
         // know why and to be able to say so.
         review: result.review,
+        // Stored all the same — shrinking is legitimate after `ledger --rebuild` — but never
+        // in silence, because the other common cause is a second machine's history lost.
+        dropped: result.dropped,
       },
       { status: 201, headers: tightest ? limitHeaders(tightest) : undefined },
     );
